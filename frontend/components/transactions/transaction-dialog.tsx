@@ -1,0 +1,417 @@
+"use client"
+
+import { useRef, useState } from "react"
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleAlert, Plus } from "lucide-react"
+import { toast } from "sonner"
+
+import { useIsBalanceHidden } from "@/components/balance-visibility"
+import { CategoryDialog } from "@/components/categories/category-dialog"
+import { useData } from "@/components/data-provider"
+import { DatePicker } from "@/components/date-picker"
+import { AmountInput } from "@/components/amount-input"
+import { Field } from "@/components/form-field"
+import { CategoryOption, WalletOption, selectTriggerClasses } from "@/components/transactions/options"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { errorMessage } from "@/lib/api"
+import { formToNewCategory, type CategoryForm } from "@/lib/category-form"
+import { suggestCategory, type CategorySuggestion } from "@/lib/category-suggestion"
+import {
+  emptyForm,
+  formToTransaction,
+  transactionToForm,
+  validateForm,
+  walletGoingBelowZero,
+  type FormErrors,
+  type FormField,
+  type TransactionForm,
+} from "@/lib/transaction-form"
+import type { NewTransaction, Transaction, TransactionType } from "@/lib/types"
+import { cn } from "@/lib/utils"
+
+interface TransactionDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** The transaction being edited. Leave out to add a new one. */
+  editing?: Transaction
+  /** The wallet to pre-select when adding, so repeat entries are quicker. */
+  defaultWalletId: string
+  /** Saves the transaction. Throws if it couldn't be saved, which keeps the dialog open. */
+  onSave: (input: NewTransaction, editing?: Transaction) => Promise<void>
+  /** Called as the dialog closes, to put keyboard focus back where it came from. */
+  onCloseAutoFocus?: (event: Event) => void
+}
+
+export function TransactionDialog({
+  open,
+  onOpenChange,
+  editing,
+  defaultWalletId,
+  onSave,
+  onCloseAutoFocus,
+}: TransactionDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-h-[calc(100svh-2rem)] grid-cols-1 gap-5 overflow-y-auto sm:max-w-lg"
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
+        {/* The form is mounted only while the dialog is open, so it starts fresh every time. */}
+        <TransactionFormBody
+          editing={editing}
+          defaultWalletId={defaultWalletId}
+          onCancel={() => onOpenChange(false)}
+          onSave={async (input) => {
+            await onSave(input, editing)
+            onOpenChange(false)
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** The last choice in the category list. It is never saved: it opens a small dialog to add a category instead. */
+const NEW_CATEGORY = "__new__"
+
+const TYPE_OPTIONS: { value: TransactionType; label: string; icon: typeof ArrowUpRight; selectedTone: string }[] = [
+  { value: "income", label: "Income", icon: ArrowDownLeft, selectedTone: "peer-checked:text-positive" },
+  { value: "expense", label: "Expense", icon: ArrowUpRight, selectedTone: "peer-checked:text-negative" },
+  { value: "transfer", label: "Transfer", icon: ArrowLeftRight, selectedTone: "peer-checked:text-foreground" },
+]
+
+interface BodyProps {
+  editing?: Transaction
+  defaultWalletId: string
+  onCancel: () => void
+  onSave: (input: NewTransaction) => Promise<void>
+}
+
+function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: BodyProps) {
+  const { wallets, categories, transactions, addCategory } = useData()
+  const isHidden = useIsBalanceHidden()
+  const [form, setForm] = useState<TransactionForm>(() =>
+    editing ? transactionToForm(editing) : emptyForm(defaultWalletId, new Date())
+  )
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [saving, setSaving] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  // A category suggested from what the note says, and whether the owner has picked one by hand. From then on
+  // nothing is suggested, so their choice is never overwritten. Suggestions are only for a new transaction.
+  const [suggestion, setSuggestion] = useState<CategorySuggestion>()
+  const [chosenByHand, setChosenByHand] = useState(false)
+  // The small dialog for adding a category without leaving this form.
+  const [addingCategory, setAddingCategory] = useState(false)
+  // True from choosing "Add new category" until the list has closed, so the list doesn't hand focus back to its own
+  // button behind the little dialog (the dialog owns the keyboard then).
+  const openingCategoryDialog = useRef(false)
+
+  const isTransfer = form.type === "transfer"
+  // A quiet heads-up, never a block. Left out while that wallet's balance is hidden, because it would give the balance away.
+  const goingBelow = walletGoingBelowZero(form, wallets, editing)
+  const belowZero = goingBelow && !isHidden(goingBelow.id) ? goingBelow : undefined
+  const categoryChoices = categories.filter((category) => category.type === form.type)
+
+  /** Fixing a field clears its message straight away. */
+  function clearError(field: FormField) {
+    if (field in errors) {
+      setErrors((current) => {
+        const next = { ...current }
+        delete next[field]
+        return next
+      })
+    }
+  }
+
+  function update<K extends keyof TransactionForm>(field: K, value: TransactionForm[K]) {
+    setForm((current) => ({ ...current, [field]: value }))
+    clearError(field as FormField)
+  }
+
+  function changeType(type: TransactionType) {
+    // A new transaction may already have a note to suggest a category from.
+    const found = !editing && type !== "transfer" ? suggestCategory(form.note, type, transactions, categories) : undefined
+    setChosenByHand(false)
+    setSuggestion(found)
+    setForm((current) => ({
+      ...current,
+      type,
+      // An income category can't be used for spending (or the other way round), and transfers have none.
+      categoryId:
+        found?.category.id ?? (categories.some((c) => c.id === current.categoryId && c.type === type) ? current.categoryId : ""),
+      toWalletId: type === "transfer" && current.toWalletId !== current.walletId ? current.toWalletId : "",
+    }))
+    setErrors({})
+  }
+
+  /** Typing a note suggests the category it was filed under before, until the owner picks one themselves. */
+  function changeNote(note: string) {
+    const suggesting = !editing && !chosenByHand && form.type !== "transfer"
+    const found = suggesting ? suggestCategory(note, form.type, transactions, categories) : undefined
+    setForm((current) => ({ ...current, note, ...(suggesting ? { categoryId: found?.category.id ?? "" } : {}) }))
+    if (suggesting) {
+      setSuggestion(found)
+      if (found) clearError("categoryId")
+    }
+  }
+
+  function chooseCategory(value: string) {
+    // The list never reports "nothing chosen" when a person picks something. It does report it by itself when a
+    // category has only just been added (its hidden native list doesn't know the new option yet), and that must
+    // not wipe the category we have just chosen.
+    if (value === "") return
+    if (value === NEW_CATEGORY) {
+      openingCategoryDialog.current = true
+      setAddingCategory(true)
+      return
+    }
+    setChosenByHand(true)
+    setSuggestion(undefined)
+    update("categoryId", value)
+  }
+
+  /** Saves a category made from inside this form, and picks it for the transaction. */
+  async function handleNewCategory(categoryForm: CategoryForm) {
+    try {
+      const saved = await addCategory(formToNewCategory(categoryForm))
+      setChosenByHand(true)
+      setSuggestion(undefined)
+      update("categoryId", saved.id)
+      toast.success("Category added", { description: saved.name })
+    } catch (error) {
+      toast.error("Couldn't save that", { description: errorMessage(error) })
+      throw error // tells the little form to stay open
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    const found = validateForm(form)
+    setErrors(found)
+    if (Object.keys(found).length > 0) {
+      // Send the keyboard to the first field that needs attention.
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus())
+      return
+    }
+    setSaving(true)
+    try {
+      await onSave(formToTransaction(form, new Date(), editing))
+    } catch {
+      // The page has already explained what went wrong. Stay open so nothing typed is lost.
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-5">
+        <DialogHeader>
+          <DialogTitle className="type-title">{editing ? "Edit transaction" : "Add transaction"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Record money coming in, money going out, or a move between your wallets.
+          </DialogDescription>
+        </DialogHeader>
+
+        <fieldset>
+          <legend className="sr-only">Type of transaction</legend>
+          <div className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1">
+            {TYPE_OPTIONS.map(({ value, label, icon: Icon, selectedTone }) => (
+              <label key={value} className="relative cursor-pointer">
+                <input
+                  type="radio"
+                  name="transaction-type"
+                  value={value}
+                  checked={form.type === value}
+                  onChange={() => changeType(value)}
+                  className="peer sr-only"
+                />
+                <span
+                  className={cn(
+                    "flex h-9 items-center justify-center gap-1.5 rounded-full text-sm font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground peer-checked:bg-card peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring",
+                    selectedTone
+                  )}
+                >
+                  <Icon className="size-4" aria-hidden />
+                  {label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <Field
+          label="Amount"
+          htmlFor="tx-amount"
+          error={errors.amount}
+          hint={
+            belowZero ? (
+              <span role="status" data-slot="below-zero" className="flex items-start gap-1.5">
+                <CircleAlert className="mt-0.5 size-4 shrink-0 text-negative" aria-hidden />
+                <span>This takes {belowZero.name} below zero. You can still save it.</span>
+              </span>
+            ) : undefined
+          }
+        >
+          <AmountInput
+            id="tx-amount"
+            autoFocus
+            value={form.amount}
+            onChange={(digits) => update("amount", digits)}
+            invalid={!!errors.amount}
+            describedBy={errors.amount ? "tx-amount-error" : undefined}
+          />
+        </Field>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          {isTransfer ? null : (
+            <Field
+              label="Category"
+              htmlFor="tx-category"
+              error={errors.categoryId}
+              hint={suggestion ? <>Suggested from your earlier &ldquo;{suggestion.basedOn}&rdquo;.</> : undefined}
+            >
+              <Select value={form.categoryId} onValueChange={chooseCategory}>
+                <SelectTrigger
+                  id="tx-category"
+                  className={selectTriggerClasses}
+                  aria-invalid={errors.categoryId ? true : undefined}
+                  aria-describedby={errors.categoryId ? "tx-category-error" : undefined}
+                >
+                  <SelectValue placeholder="Choose a category" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  onCloseAutoFocus={(event) => {
+                    if (!openingCategoryDialog.current) return
+                    openingCategoryDialog.current = false
+                    event.preventDefault()
+                  }}
+                >
+                  {categoryChoices.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <CategoryOption category={category} />
+                    </SelectItem>
+                  ))}
+                  <SelectSeparator />
+                  {/* The text value starts with "+", so typing letters to pick a category can never land here by accident. */}
+                  <SelectItem value={NEW_CATEGORY} textValue="+ Add new category">
+                    <span className="flex items-center gap-2.5">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                        <Plus className="size-3.5" aria-hidden />
+                      </span>
+                      Add new category
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          <Field label={isTransfer ? "From wallet" : "Wallet"} htmlFor="tx-wallet" error={errors.walletId}>
+            <Select value={form.walletId} onValueChange={(value) => update("walletId", value)}>
+              <SelectTrigger
+                id="tx-wallet"
+                className={selectTriggerClasses}
+                aria-invalid={errors.walletId ? true : undefined}
+                aria-describedby={errors.walletId ? "tx-wallet-error" : undefined}
+              >
+                <SelectValue placeholder="Choose a wallet" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {wallets.map((wallet) => (
+                  <SelectItem key={wallet.id} value={wallet.id}>
+                    <WalletOption wallet={wallet} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          {isTransfer ? (
+            <Field label="To wallet" htmlFor="tx-to-wallet" error={errors.toWalletId}>
+              <Select value={form.toWalletId} onValueChange={(value) => update("toWalletId", value)}>
+                <SelectTrigger
+                  id="tx-to-wallet"
+                  className={selectTriggerClasses}
+                  aria-invalid={errors.toWalletId ? true : undefined}
+                  aria-describedby={errors.toWalletId ? "tx-to-wallet-error" : undefined}
+                >
+                  <SelectValue placeholder="Choose a wallet" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {wallets.map((wallet) => (
+                    <SelectItem key={wallet.id} value={wallet.id} disabled={wallet.id === form.walletId}>
+                      <WalletOption wallet={wallet} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+
+          <Field label="Date" htmlFor="tx-date" error={errors.date}>
+            <DatePicker
+              id="tx-date"
+              value={form.date}
+              onChange={(value) => update("date", value)}
+              invalid={!!errors.date}
+              describedBy={errors.date ? "tx-date-error" : undefined}
+            />
+          </Field>
+
+          <Field label="Note (optional)" htmlFor="tx-note">
+            <Input
+              id="tx-note"
+              value={form.note}
+              maxLength={100}
+              autoComplete="off"
+              placeholder="e.g. Lunch with the team"
+              onChange={(event) => changeNote(event.target.value)}
+              className="h-10 bg-card dark:bg-card"
+            />
+          </Field>
+        </div>
+
+        <DialogFooter className="mt-1">
+          <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? "Saving..." : editing ? "Save changes" : "Add transaction"}
+          </Button>
+        </DialogFooter>
+      </form>
+
+      {/* Outside the form on purpose: a form inside this dialog's form would also submit this one. */}
+      {isTransfer ? null : (
+        <CategoryDialog
+          open={addingCategory}
+          onOpenChange={setAddingCategory}
+          fixedType={form.type === "income" ? "income" : "expense"}
+          onSave={handleNewCategory}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            document.getElementById("tx-category")?.focus({ preventScroll: true })
+          }}
+        />
+      )}
+    </>
+  )
+}

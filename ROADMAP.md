@@ -1,0 +1,609 @@
+# KAYA roadmap
+
+Build one step at a time. **Stop after each step for review.** Read DESIGN.md and PRODUCT.md before UI work.
+
+## How the project is laid out
+
+```
+KAYA/
+  frontend/    what you see: the Next.js app (pages, design, components)
+  backend/     what saves your data: a small server and a SQLite database file
+  PRODUCT.md, DESIGN.md, ROADMAP.md, README.md   these docs stay at the top
+```
+
+- **Run everything:** `npm run dev` from this folder. It starts both parts (frontend on port 3000, backend on port 4000). Open http://localhost:3000.
+- **Your data** lives in one file, `backend/data/nabungbego.db`, created with the sample data the first time the backend starts. It is never committed (see `.gitignore`) and survives refreshes, restarts and other browsers. The **Back up now** button at the bottom of the sidebar copies it into `backend/data/backups/` (also never committed), and the README says how to go back to a copy.
+- **Start again from the sample data:** `npm run db:reset -- --yes` (it refuses to run without `--yes`, because it erases everything you entered).
+- **Tests:** `npm test` (backend), `npm run typecheck`, `npm run lint`. When testing, point the backend at a throwaway database with the `DB_PATH` environment variable, never at your real file.
+- **Testing in a browser while your own `npm run dev` is running** (it uses ports 3000 and 4000 and your real data): don't touch it. Start a second backend with `PORT=4100` and `DB_PATH=<a throwaway file>`, and a second frontend from a copy of `frontend/` placed inside the repo (for example `.nb-test/frontend`, so `node_modules` is found and Next's per-folder dev lock doesn't clash), started with `BACKEND_URL=http://127.0.0.1:4100 next dev -p 3100`. Point the tests at port 3100, have them reset the throwaway database first, and stop if it doesn't show the sample data (41 transactions, BCA Rp 8.742.300). Delete the copy afterwards. **When a step changes the database, don't edit `backend/src` while you work:** your backend restarts on every edit and would run the one-time upgrade on your real file half-finished. Build in a copy of `backend/` as well (for example `.nb-test/backend`, without its `data` folder, but with its own `node_modules`), run that on port 4100, and copy the finished files across in one go.
+- **The two parts talk like this:** the browser only ever calls `/api/...` on the frontend's own address; Next passes those calls to the backend (`frontend/next.config.ts`). The backend listens on this computer only (127.0.0.1). This is also what lets a phone on the same Wi-Fi use the app: open the "Network" address the dev server prints, such as `http://192.168.1.3:3000`. There is no login, so anyone on your Wi-Fi who knows that address could open it.
+- **Types are shared as types only:** `backend/src/types.ts` describes the data; `frontend/lib/types.ts` re-exports it, so no backend code is bundled into the frontend.
+
+## Done
+
+### Setup (29 Sep 2026)
+- Next.js 16 + TypeScript, Tailwind v4, shadcn/ui, Recharts, lucide-react, next-themes
+- Theme tokens for light and dark (`app/globals.css`), Source Serif 4 + Inter
+- `lib/types.ts`, `lib/mock-data.ts`, `lib/format.ts`
+- Sidebar layout, theme switch, placeholder pages, `/styleguide`
+
+### Step 1: Home page (30 Sep 2026)
+Top to bottom: greeting and date pill; total balance card with a wallet-share bar; 4 wallet cards (Pluang marked "Investment"); "This month" income vs spending with what was saved or overspent; donut of spending by category with a Rp and % legend; savings goals; last 5 transactions with "See all".
+
+Where things live:
+- `app/page.tsx` reads the mock data and hands it to the sections in `components/home/`.
+- `lib/stats.ts`: pure helpers (`totalBalance`, `walletShares`, `pickMonth`, `monthTotals`, `spendingByCategory`, `recentTransactions`, `describeTransaction`).
+- `lib/format.ts` gained `formatMonth` and `formatPercent`. `lib/icons.ts` gained `walletIcons`.
+- Shared pieces: `Panel`, `SeeAllLink`, `GoalRow`, `TransactionRow`. The style guide uses the same row components.
+- The donut (`components/home/donut-chart.tsx`) is the only client component on the page. It has no tab stop and is hidden from screen readers; the legend carries the same data as text.
+
+Decisions worth knowing:
+- Amounts follow the money-direction rule: income green with "+", spending clay with "−", transfers neutral.
+- "This month" is the calendar month. If it has no transactions (the mock data ends 28 Sep 2026), the page shows the latest month that has some and labels it by name, so it never renders empty.
+- `type-amount-hero` grew to 64px (40px on phones) so the total balance is clearly the biggest number.
+- Checked at 320, 390, 768, 1024, 1280, 1440 and 1920px in both themes: no sideways scroll, no console errors.
+
+Follow-up tweaks (30 Sep 2026, owner feedback):
+- Removed the note line under each wallet on Home (the notes stay in the data for the Wallets page).
+- The greeting now reads "Good morning, Mario". The name is `user` in `lib/mock-data.ts`.
+- Light-mode page background made a touch creamier: `#FAF7F0` → `#F7F2E7` (muted, secondary and the cream text/pill colors moved with it).
+
+### Hide balances (30 Sep 2026)
+An eye icon at the top-right of the total balance card and of each wallet card hides or shows that one amount. A hidden amount reads "Rp •••••••" (always seven dots, so the length says nothing about the amount) and screen readers hear "Amount hidden". Hiding the total also hides the wallet-share bar and its legend, because the split would give the amount away. A wallet's own eye only hides that wallet's balance, so its slice stays in the bar while the total is visible.
+
+How it works:
+- The choice is kept in a cookie (`hidden_balances`, one id per hidden card), not localStorage. The server reads it and draws the dots from the first paint, so the real numbers never flash on reload. Every page shares it through `BalanceVisibilityProvider` in `app/layout.tsx`.
+- `components/balance-visibility.tsx` holds `BalanceToggle` (the eye button), `HideableMoney` (a `Money` that follows the choice) and `ShowWhenVisible` (leaves anything that would give the amount away, like the share bar, out of the page entirely). `Money` gained a `hidden` prop. `lib/balance-visibility.ts` has the cookie helpers and `TOTAL_BALANCE_ID`.
+- Ids: `total` for the total card, and each wallet's own id.
+- This hides amounts on screen only; the numbers are still in the page's data.
+- Checked with 24 browser tests: mouse and keyboard (Enter and Space), cookie saved and removed, choice kept across reload and page changes, the amounts and the bar absent from the server-sent HTML when hidden, the bar coming back with the total, no console errors.
+
+### Step 2: Transactions page and add/edit form (30 Sep 2026)
+`/transactions` has search (notes and category names), filters for date range, type, category and wallet, "Clear filters", and an "Add transaction" button. The list is grouped by day (Today, Yesterday, then weekday and date). Each row shows the category icon, note, category and wallet, and the amount: income green with "+", spending red with "−", transfers neutral as "BCA → Pluang". Every row has edit and delete; delete asks first and says the wallet balance will be adjusted. An empty state covers "no matches" and "no transactions yet".
+
+The add/edit form is a dialog: Income / Expense / Transfer switch, an amount box that adds the dots as you type, category and wallet dropdowns with icons, a calendar date picker (dates read "30 Sep 2026"), and an optional note. Transfers show From and To wallets, and the To list disables the From wallet. Errors are plain English under each field, and the cursor jumps to the first problem. Saving shows a toast with a recap. It opens on the amount, defaults to an expense dated today in the wallet used last, and works by keyboard alone (Tab, typing to pick from a dropdown, Enter to save).
+
+How it works:
+- **Shared in-memory data.** `components/data-provider.tsx` holds wallets, categories, goals and transactions, started from `lib/mock-data.ts` by the root layout. Home now reads it through `components/home/home-content.tsx`, so changes show everywhere. Nothing is saved: a refresh goes back to the starting data.
+- **Balances follow transactions.** `lib/ledger.ts` moves wallet balances when a transaction is added, edited or deleted (a transfer moves money between two wallets). The Home total and wallet cards update to match.
+- **Pure logic, no React:** `lib/transaction-form.ts` (form values, checks, conversion), `lib/transaction-filters.ts` (filter, group by day), `lib/dates.ts` (calendar-date helpers; new transactions keep the local UTC offset so they stay in the right month).
+- **Screens:** `components/transactions/` (view, filter bar, list, form dialog, delete dialog; the amount input later moved to `components/amount-input.tsx` so wallets could use it too), `components/date-picker.tsx`, and the shared `TransactionRow`, which can now hide its date and show action buttons.
+- **shadcn parts added:** select, dialog, alert-dialog, popover, calendar, label, sonner (toasts).
+- Verified with 47 browser tests (add, edit and delete by keyboard and mouse, balances on Home, every filter, validation, focus handling, calendar) plus fit checks from 320px to 1440px, and a clean production build.
+
+Gotchas found on the way:
+- Any `grid` needs `grid-cols-1` as its base, including small ones inside a field, or its column refuses to shrink below its widest child and pushes a phone screen wider.
+- When a dialog is opened by a plain button, hand keyboard focus back yourself (`onCloseAutoFocus`), because an auto-focused field hides the opener from the browser.
+- Typing backslash-u escapes into the editing tools can turn them into invisible literal characters. Check special characters in source files.
+
+### Database and backend/frontend split (30 Sep 2026)
+Everything you enter is now saved in a real database and stays after a refresh, a restart, or opening the app another day.
+
+- **Folders:** the app moved into `frontend/`; new `backend/`. One root `package.json` (npm workspaces) starts both with `npm run dev`.
+- **Backend:** Hono web server + Node's built-in SQLite (nothing to compile). `backend/src/`: `db.ts` (schema with database-level guards), `store.ts` (reads, writes, balance arithmetic, all inside database transactions), `validate.ts` (plain-English checks; the backend never trusts the form), `app.ts` (routes), `sample-data.ts` (the seed), `reset.ts`, `ledger.ts`.
+- **API:** `GET /api/data`, `POST /api/transactions`, `PUT` and `DELETE /api/transactions/:id`. Saving or deleting returns every wallet with its new balance, so the screen and the database never disagree.
+- **Sample data is seeded once,** when the database file is created (tracked with SQLite's `user_version`). Restarting never brings it back.
+- **Frontend:** the root layout loads the data on the server, so a page arrives with your data in it. `DataProvider` now saves through the API and only updates the screen once the backend has saved. If saving fails, a toast explains why and the form stays open with everything you typed. Coming back to the tab (or the app on your phone) re-checks for changes made elsewhere. If the backend isn't running, a friendly page says so.
+- **Removed from the frontend:** `lib/mock-data.ts` and `lib/ledger.ts` (moved to the backend as the seed and the balance logic).
+- **Verified:** 27 backend tests (balance maths, validation, "all or nothing" saving, reset, HTTP); over 110 browser checks (transactions, the new features, Home and the eye icon); the same data found after stopping everything and starting again; production build and `npm run start`.
+
+### Transactions extras (30 Sep 2026)
+- **Date presets:** the date filter opens with "This month", "Last month" and "Last 3 months" above the calendar. The chosen one shows as pressed.
+- **Load more:** the list shows the newest 30 and a "Load more (11 left)" button adds 30 more. A summary line says what you are seeing. Changing a filter starts again from the newest. A transaction you just saved with an old date is always revealed, never hidden below the fold.
+- **Swipe on a phone:** swipe a row left to reveal Edit and Delete behind it (drag past about halfway, or flick, to snap open; let go sooner and it springs back). Only one row is open at a time, tapping elsewhere closes it, and vertical swipes still scroll. On touch screens the small icons are hidden to give the text room; with a mouse the small icons stay. The buttons are still in the page for screen readers and keyboards.
+- **Rows slide in and out:** a new row eases in and a deleted row slides away (a new or vanishing day moves as one piece). Only adding and deleting animate; filtering and paging don't. It respects "reduce motion". Built with the `motion` library.
+
+### Step 3: Wallets page (30 Sep 2026)
+`/wallets` shows the total balance at the top (the same card as Home, with the wallet-share bar), then a "Your wallets" heading with an "Add wallet" button, then one card per wallet, two columns wide (one column on phones). Each card shows the wallet's icon, name and note and its balance (it first also had a "7 transactions this month" line, taken out again, see the follow-ups). **The whole card is a link:** clicking it opens Transactions already filtered to that wallet. The eye (hide balance), the "more" menu (edit, correct balance, history, delete; see the follow-ups below) and, on Pluang, "Update value" sit on top of the card so they work on their own.
+
+- **Add wallet** (a dialog): name, type (Bank account, Digital bank, E-wallet, Investment, Cash), optional note, optional starting balance. The starting balance is where the wallet begins. It is not income and makes no transaction. The new card eases in, and on a phone the page scrolls to it.
+- **Edit wallet:** rename it, change its note, colour or icon. The type and the balance are not edited here (the type decides the default icon and whether "Update value" appears).
+- **Update value** (investment wallets only, so Pluang): enter what it is worth now. The balance is set to that number and **no transaction is created**, so income, spending and the month totals don't move. The card then shows "+Rp 120.000 since last update" in green, "−Rp 150.000 since last update" in clay, or "No change since last update", with a small line saying value changes don't count as income or spending. While that wallet's balance is hidden, the change line is left out too, because it would give the balance away. Every update is stored (old value, new value, time) in the table `wallet_value_updates`, ready for a history later.
+- Names must differ from each other, ignoring capitals ("You already have a wallet called BCA."). A name can be 40 characters and a note 80. Long ones wrap on the card instead of being cut off.
+- A new wallet automatically gets the palette colour used by the fewest wallets so far (it shows in the total's share bar).
+
+How it works:
+- **Backend:** `POST /api/wallets` (adds), `PUT /api/wallets/:id` (renames, changes the note) and `POST /api/wallets/:id/value` (updates an investment's value). Each replies with the saved wallet and every wallet, like the transaction routes. Plain-English checks live in `validate.ts`, saving happens inside a database transaction in `store.ts`, and the new table is created in place when an existing database is opened, so your data is untouched. `time.ts` writes the timestamp. 20 new backend tests (47 in all).
+- **Frontend:** `components/wallets/` (`wallets-view`, `wallet-card`, `wallet-dialog`, `update-value-dialog`), `lib/wallet-form.ts` (the form's checks, no React), `lib/wallet-kinds.ts`, and `involvesWallet` in `lib/stats.ts`. `DataProvider` gained `addWallet`, `updateWallet` and `updateWalletValue`.
+- **Transactions filtered from the address:** `/transactions?wallet=<id>` starts with that wallet chosen in the wallet filter (an unknown id is ignored, and the plain Transactions link starts with everything).
+- **Pieces now shared:** `components/form-field.tsx` (a label with its error), `components/amount-input.tsx` (moved out of `transactions/`), and `hooks/use-return-focus.ts` (gives keyboard focus back after a dialog closes; it no longer scrolls the page).
+- **A card that is one big link:** the wallet's name is the link and an invisible overlay stretches it over the whole card. Buttons inside sit above it (`relative z-10`). The focus ring is drawn around the whole card.
+- Verified with about 120 browser checks (each card against the database, adding, editing and updating a value, every message, hiding balances, keyboard and focus, click-through to Transactions, 360 to 1440px, dialogs on a phone, dark mode) and the earlier browser suites re-run after the refactor.
+
+Gotchas found on the way:
+- After choosing an option in a dropdown inside a dialog, the dropdown gives focus back to itself a moment later, so a test that types into the next box instantly loses keystrokes. Real typing is fine.
+- A long unbroken word in a note (or a 40-character name) would push a phone screen wider until the text was allowed to wrap (`break-words`), and the Investment chip needed to be allowed to drop to its own line at 360px.
+
+### Step 3 follow-ups (30 Sep 2026)
+Seven things asked for after reviewing Step 3. Each wallet card's pencil became a round "more" menu (**Edit details, Correct balance, History, Delete wallet**), so there is one place for everything about a wallet.
+
+- **Delete a wallet.** In the menu. It opens a dialog that lists what will go ("Its 22 transactions are deleted too. 6 of them are transfers with another wallet. That wallet keeps its balance.") and asks you to type **Delete <name>** (capitals and spaces don't matter) before the red button turns on. Deleting removes the wallet, every transaction that touches it (transfers to and from other wallets included) and its history. The *other* wallets keep exactly the balance they have, because their real accounts still hold it. It can't be undone. Two rules stop it, and the dialog explains instead of asking: you can't delete the **last** wallet, and you can't delete a wallet a **goal is saved in** (Emergency fund and Japan in spring are in Superbank, Home down payment is in Pluang). Goals can be moved to another wallet on the Goals page (Step 4), which frees the wallet.
+- **Correct a balance** (every wallet except an investment). Type the balance your real account shows. The wallet is set to it and the difference is recorded as a **correction**: no transaction, so income, spending and the month's totals don't move. Investments keep "Update value".
+- **History.** In the menu, and as a "History" link on Pluang's card next to its change. It lists every balance set by hand for that wallet, newest first (date, "Value update" or "Balance correction", the new balance, and the change in green or clay), and draws a small line chart once there are two or more. The chart is decorative (the list carries the same numbers as text), and while the wallet's balance is hidden the chart is left out and amounts show as dots.
+- **The change as you type** in "Update value" and "Correct balance": under the box, "+Rp 120.000 from the current value" (green) or "−Rp 25.000 (−3%) from the current balance" (clay). A percentage is added from 1% up, so a stray zero shows up as "+Rp 140.070.000 (+908%)". Left out while the balance is hidden, because it would give the balance away.
+- **Colour and icon.** In Add wallet and Edit wallet: ten colours and twelve icons, each with a **Default** choice. Default colour is the one the app picked when the wallet was made (kept even after you change it, so you can always go back); default icon follows the type (bank, phone, wallet, growth, cash). The badge, in its colour, now shows on the wallet's card, on Home, in every wallet dropdown, and the colour is also the wallet's slice in the total's share bar. The icon and colour previews update as you choose.
+- **Reorder.** A "Reorder" button beside "Add wallet" (just an icon on a phone) opens a list you drag by its handle, or move with up and down arrows. Nothing is saved until "Save order". The order is used on Wallets, Home, and every wallet list. A wallet added later goes last.
+- **Tap a Home wallet card** to open that wallet's transactions. The eye still works on its own.
+- **The "N transactions this month" line is gone from the Wallets cards** (asked after reviewing all of the above; the count, its hairline and its arrow are removed, and so is the code behind them). The card is still one link to that wallet's transactions, and its name is now underlined on hover so the link can still be found. Nothing else changed: Home's cards, History, and the transactions themselves are as they were.
+
+How it works:
+- **Backend** (`backend/src/`): `DELETE /api/wallets/:id`, `POST /api/wallets/:id/correction`, `GET /api/wallets/:id/history`, `PUT /api/wallets/order`, and colour and icon on `POST /api/wallets` and `PUT /api/wallets/:id`. The rules are in `validate.ts` and `store.ts` (deleting and reordering are all-or-nothing database transactions), the colour and icon lists in the new `wallet-look.ts`. The table `wallet_value_updates` now has a `kind` ("value" or "correction"), and `wallets` gained `default_color` and `icon`. **An older database is upgraded in place** when it is opened (`addMissingColumns` in `db.ts`): the colour a wallet already had becomes its default, and old updates count as value updates. 34 new backend tests (81 in all), including one that builds a database exactly as the previous version left it and upgrades it.
+- **Frontend:** `components/wallets/` gained `balance-dialog` (Update value and Correct balance are one dialog with two wordings), `history-dialog` and `history-chart`, `delete-wallet-dialog`, `reorder-dialog` and `look-pickers`; `components/wallet-badge.tsx` draws a wallet's badge everywhere; `components/ui/dropdown-menu.tsx` is the menu. `DataProvider` gained `correctWalletBalance`, `deleteWallet` and `reorderWallets` (deleting also drops the wallet's transactions from the screen).
+- **Reorder uses the `motion` library already in the project** (`Reorder`), in a dialog, rather than a drag-and-drop package. Only the handle starts a drag, so a phone can still scroll.
+- **Focus:** a dialog opened from the menu hands focus back to the menu's button when it closes (after a delete, to "Add wallet", because the card is gone). Moving a row with the arrows keeps focus on the arrow.
+- Verified with 166 new browser checks (every flow by mouse, keyboard and touch; every message; hidden balances; the numbers in the database; 360, 390 and 1024px; dark mode) and every earlier browser suite re-run.
+
+Decisions worth knowing:
+- Deleting takes the wallet's transactions with it. It never changes another wallet's balance. (When this was built it was permanent; since Step 5e an Undo button can put the wallet back for ten seconds.)
+- "Correct balance" and history are recorded apart from transactions, so a correction never shows in the Transactions list (see possible improvements).
+- The history chart spaces points evenly (one per update), not by date.
+
+Gotchas found on the way:
+- **Never test against the app you are running.** The owner can have `npm run dev` going on ports 3000 and 4000 (using the real database) while the work happens, and a second `npm run dev` then fails while a request to port 3000 still answers. Test on other ports with a throwaway database (see "How the project is laid out").
+- A component chosen by a function call during render (`const Icon = pickIcon(x)`) trips the React lint rule; look it up in an object instead (`walletIconChoices[walletIconName(x)]`).
+- Opening a keyboard-driven menu highlights its first item; a test pressing the arrow once too often lands on the wrong item.
+
+### Step 4: Goals page (30 Sep 2026)
+*Some of this was changed by the follow-ups below: Add money can now also move the money, reached goals fold into a Completed section, and a goal has take-out, history, a pace note and its own order.*
+
+`/goals` opens with one quiet line about all the goals together ("Rp 164.720.000 left to save across 3 goals") and an "Add goal" button, then a card for each goal: one wide card per row below 1280px, two across from 1280px. Each card shows the goal's icon, its name and the wallet it is saved in, the saved amount with the percentage, a progress bar, "of Rp 30.000.000" and "Rp 11.500.000 to go". With a target date it also says how much to save each month: "Rp 1.916.667 a month to reach it by 31 Mar 2027 · 6 months left". A date that has gone by says "The target date was 15 Jan 2026." calmly, with no figure.
+
+- **Add money** (a small box that opens under the button, not a dialog): type an amount, see where the goal would then stand ("That makes Rp 20.000.000 of Rp 30.000.000 (67%)."), press Enter. It only updates the goal: no wallet balance moves and no transaction is made, and the box says so.
+- **Add goal and Edit goal** (a dialog): name, target amount, saved so far (optional), the wallet it is saved in, target date (optional, today or later, with a "Clear date" button) and one of twelve icons. A new goal starts in the wallet the last goal used.
+- **Moving a goal to another wallet** is the "Saved in" choice in Edit goal. That is what frees Superbank and Pluang to be deleted: the blocked-wallet dialog now says "Move it to another wallet on the Goals page first." and has a "Go to Goals" button.
+- **Delete goal** asks first ("Japan in spring will be removed. The Rp 6.350.000 you saved for it stays in Superbank.") and leaves the money where it is.
+- **A reached goal** turns green: a "Goal reached" chip replaces the percentage, the bar is full and green, and the monthly line and "Add money" go. Reached goals sort after the others, here and on Home. Raising the target in Edit goal brings a goal back to in progress.
+- **No goals:** "What are you saving for?" with a "Create your first goal" button, and Home's panel says "No goals yet. Start one on the Goals page."
+- **On Home** the goals panel now shows at most four goals (in progress first), marks a reached one with a green check, lets long names wrap, and its summary line only counts goals still being saved for.
+
+How it works:
+- **Backend** (`backend/src/`): `POST /api/goals`, `PUT /api/goals/:id`, `POST /api/goals/:id/add-money` and `DELETE /api/goals/:id`, each replying with the saved goal and every goal (delete replies with the goals left). The checks are `parseGoal` and `parseGoalAddition` in `validate.ts` (a name of up to 40 characters, whole rupiah, a wallet that exists, a real date between 2000 and 2100, an icon from the list in the new `goal-look.ts`); saving is in `store.ts`. The `goals` table already existed, so there is no database change and nothing to upgrade: a goal with no date is stored with an empty date, the same way a wallet with no note has an empty note. 35 new backend tests (116 in all), including the wallet-delete rules.
+- **Frontend:** `lib/goals.ts` (pure: progress, order, whole months between two dates, the monthly figure), `lib/goal-form.ts` (the form's checks, no React), `components/goals/` (`goals-view`, `goal-card`, `goal-dialog`, `delete-goal-dialog`, `goal-icon-picker`), `components/goal-summary.tsx` (the "left to save" line, shared with Home) and `addGoal`, `updateGoal`, `addToGoal` and `deleteGoal` in `DataProvider`. `DatePicker` gained `min`, `placeholder` and `clearable`, and `Field`'s hint can hold more than plain text.
+- The Goals page is read on the server with today's date, like Home, so the monthly figures never disagree between the server and the browser.
+- Verified with 236 browser checks on the goal flows (every card against the database; Add money by mouse, keyboard and touch, including a failed save; add, edit, move, clear the date, delete; the reached state; the empty state; Home; the first paint already holding the goals; 360, 390, 768, 1024, 1280 and 1440px; contrast in both themes; keyboard order) and every earlier browser suite re-run, on the dev server and on a production build.
+
+Decisions worth knowing:
+- A goal is a note about money already in a wallet, so "Add money" changes only the goal. When you move money into Superbank you still record that as a transfer in Transactions (see the improvements below for making the two one step).
+- Nothing stops a wallet's goals adding up to more than the wallet holds. Saved can pass the target; the goal then reads as reached.
+- Months are whole and rounded down (never fewer than one), so the monthly figure is never too small: from 30 Sep to 31 Mar is 6 months, to 29 Mar is 5.
+- The percentage never says 100% before a goal is reached (99.6% reads 99%), and under 1% reads "<1%".
+- Add money is a small box under the button, not a dialog: it is one field, so the card stays in view.
+- Two columns from 1280px, like Home's panels. At 1024px two columns squeezed the monthly line into four short lines.
+
+Gotchas found on the way:
+- After deleting the last goal, keyboard focus was lost: the dialog handed focus back to the toolbar's Add button, which had just been swapped for the empty state's button. The dialog now looks the button up when it closes.
+- A number split from its unit ("4" then "months left") or a dot starting a wrapped line looks careless; no-break spaces, and keeping the date in one piece, fix both.
+- In browser tests: a request cancelled on purpose logs "Failed to load resource" in the console, so that one line is expected; a text search for "a month" doesn't match a no-break space unless it uses `\s`; and a menu opened by keyboard needs about 300ms before the arrow key, because it moves focus onto its first item a moment after it opens.
+
+### Step 4 follow-ups (30 Sep 2026)
+Eight things chosen from the list after Step 4 (the numbers are the ones on that list): take money out (2), Add money that moves the money (3), a history for each goal (4), the reached date (5), the pace note (6), what a wallet has set aside (7), reordering goals (9) and a Completed section (10).
+
+- **Take money out** (2). The money box has an **Add | Take out** switch. Taking out lowers what is saved for the goal, by no more than is saved ("Only Rp 18.500.000 is saved for this goal."). It only changes the goal: no wallet moves and no transaction is made, and the box says the money stays in the wallet. A reached goal has a quiet "Take money out" button where "Add money" was, and its box has no switch.
+- **Add money that moves the money** (3). "Money comes from" starts on "It's already in Superbank", which does what Add money always did (only the goal changes). Choosing another wallet makes the app record a **transfer** from that wallet into the goal's wallet, called "Saved for Emergency fund", and add the same amount to the goal, all in one step that either happens completely or not at all. BCA goes down, Superbank goes up, the goal goes up, and the transfer is at the top of Transactions without a reload. The goal's own wallet can't be chosen as the source (that would be a transfer to itself).
+- **A history for each goal** (4). "History" in the goal's menu. Every change is kept in a new table, `goal_movements` (started with, added, taken out, corrected by hand, plus the wallet it came from and the transfer it made), and shown as a chart and a list, newest first. Changing "Saved so far" in Edit goal is kept as "Corrected by hand". Deleting a goal deletes its history. Goals that existed before this update start with an empty history.
+- **When it was reached** (5). Stored on the goal (`reached_at`) the moment what is saved passes the target. The card says "Reached on 30 Sep 2026" at the right of the "of Rp ..." line, and Home's row ends with " · on 30 Sep 2026". Dropping below the target clears it, and reaching it again sets it again. A goal that was already reached before this update shows no date.
+- **The pace note** (6). "On pace" in green, or "A little behind · about Rp 3.179.000 to catch up", above the monthly figure. A goal's own pace is measured from a starting point kept on the goal (`pace_from` and `pace_amount`: the day it began and what was saved then). The starting point moves to today whenever money is taken out or a hand edit lowers what is saved, so a spent goal starts fresh instead of looking hopelessly behind. By today it should have saved (target minus starting amount) times days gone divided by days from the start to the target date. Within a tenth of that is on pace. Nothing is shown for a goal with no date, one that began today, one whose date has passed, or one already reached. The sample goals: the emergency fund is on pace, the trip and the house are a little behind. Goals that existed before this update start measuring on the day of the upgrade.
+- **Set aside on wallet cards** (7). Under a wallet's balance: "Rp 19.500.000 set aside for 2 goals · Rp 5.350.000 free". When the goals add up to more than the wallet holds: "Rp 31.000.000 is set aside for 2 goals, more than this wallet holds.", with a small clay mark. It is left out while the balance is hidden with the eye, because it would give the balance away.
+- **Reorder goals** (9). A "Reorder" button beside "Add goal" (only with two or more goals; an icon on a phone) opens the same drag-or-arrows list as Reorder wallets. The order is used on Goals and on Home. Goals that are reached still go last.
+- **A Completed section** (10). Reached goals leave the main grid and wait in a folded "Completed (N)" line under it. Opening it shows them, each with "Take money out". When every goal is reached the main area says "Every goal is fully funded. Add another when you think of one."
+
+How it works:
+- **Backend** (`backend/src/`): `POST /api/goals/:id/take-out`, `GET /api/goals/:id/history` and `PUT /api/goals/order` were added, and `POST /api/goals/:id/add-money` now takes an optional `fromWalletId` and replies with the goal, every goal, every wallet and the transfer it made. `PUT /api/goals/order` is registered before `PUT /api/goals/:id`, or "order" would be taken for a goal's id. The checks (`parseGoalAddition`, `parseGoalAmount`, `parseGoalOrder`) are in `validate.ts`. In `store.ts` each write is all-or-nothing, and the transfer is written with the same helper that Transactions uses, inside the same database transaction as the goal change, so the goal and the balances can't disagree. `db.ts` upgrades an older database in place when it is opened: the new `goal_movements` table, and `pace_from`, `pace_amount` and `reached_at` on `goals`. `sample-data.ts` has 12 history rows, one of them a transfer. 45 new backend tests in `goals-extras.test.ts` (161 in all), including one that builds a database exactly as the previous version left it and upgrades it.
+- **Frontend:** `lib/goals.ts` gained `daysBetween`, `goalPace` and `walletGoals` (all pure). `components/goals/` gained `move-money-popover` (Add money and Take money out are one box), `goal-history-dialog`, `goal-history-chart` and `goal-reorder-dialog`; `goal-card` and `goals-view` were reworked; `wallets/wallet-card` gained the set-aside line. `DataProvider` gained `takeFromGoal` and `reorderGoals`, `loadGoalHistory` is in `lib/api.ts`, and `addToGoal` now also updates the wallets and adds the transfer to the transactions on screen.
+- Verified with 143 new browser checks (`goals3`: every flow against the database, the transfer showing in Transactions and Wallets, every message, focus, keyboard, touch, 360, 390 and 1024px, contrast of both pace notes in both themes) and the two older goal suites brought up to date (150 and 91 checks), plus every wallet, Home and Transactions suite re-run, on the dev server and on a production build.
+
+Decisions worth knowing:
+- Add money still starts on "It's already in Superbank", so money never moves by surprise. Moving it is a choice made in the box.
+- Taking money out only changes the goal. It does not record spending, and it does not move money back to another wallet (see the improvements below).
+- The Completed fold starts closed, as asked. A goal that is reached says so in a toast ("Goal reached") and keyboard focus goes to the fold, so nothing seems to vanish.
+- The pace note is deliberately gentle: no red, never "late", and a tenth of slack.
+- If you later edit or delete, in Transactions, the transfer that Add money made, the goal does not follow. The goal is still a note; only the transfer is a real transaction.
+
+Gotchas found on the way:
+- A goal card that moves between the "in progress" list and the Completed list is a new element on the page, so keyboard focus (on a button inside the old card) is lost. The page sends it to the goal's "more" button, or to the fold button when the fold is closed (`moveFocusTo` in `goals-view.tsx`).
+- In React 19 `useRef` needs a starting value even for "nothing yet": `useRef<string | undefined>(undefined)`.
+- In browser tests: a menu opened by keyboard ignores a key pressed in the very next instant, so wait a moment between arrow presses; the date picker is a `role="dialog"` too and can be fading out at the same time as the goal dialog, so a test should find the goal dialog by its `data-slot="dialog-content"`; and focus that moves "a frame later" (to the first problem in a form) needs a short wait before a test reads it.
+
+### Step 5: Categories page (30 Sep 2026)
+`/categories` has two cards, **Expense categories** and **Income categories** (side by side from 1280px, stacked below). Each row is the category's icon in its colour, its name, and what was spent (or earned) in it this month: spending in clay with "−", income in green with "+", and a plain "Rp 0" when nothing happened. "This month" is the month Home shows (the current one, or the latest with transactions while the current one is empty), and each card says which ("Spent in September 2026"); the follow-ups below add a month switcher. Where a row is narrow the amount sits under the name, so a long name never breaks in the middle of a word (at first that was "under 640px"; the follow-ups made the row's own width decide).
+
+- **Presets.** Food, Transport, Bills, Shopping, Entertainment, Health and Other for spending, and Salary, Bonus and Other for income. They show a small lock and can't be changed or deleted (the backend refuses too).
+- **Your own categories** have a round "more" menu: Edit category and Delete category (the follow-ups add "Set monthly budget", which a spending preset's menu has too). The sample data has three: Groceries, Family & giving and Side income.
+- **Add category** (one button at the top, opens a dialog): an Expense | Income switch, a name, ten colours and 24 icons. It starts on Expense, the plain tag icon and the colour the fewest expense categories use. The name is required, at most 30 characters, and can't repeat another category of the same kind (capitals and spaces around it don't count; Expense and Income may each have an "Other"). The new row eases in at the end of its card, and on a phone the page scrolls to it.
+- **Edit category:** its name, colour and icon. Whether it is for spending or income can't change, because the transactions in it would no longer fit. Its transactions keep it, and show the new name and look everywhere.
+- **Delete category** asks first, and says where its transactions go: "Groceries will be removed. Its 3 transactions move to Other, so nothing is lost and no balance changes." They move to "Other" of the same kind (that is why Other can't be deleted), in one all-or-nothing step. "Keep it" has the focus.
+- **The old sample categories were lined up with the presets.** "Food & drinks" is now "Food" and "Home & bills" is "Bills". A new database has 13 categories: the 10 presets plus Groceries, Family & giving and Side income.
+
+How it works:
+- **Backend** (`backend/src/`): `POST /api/categories`, `PUT /api/categories/:id` and `DELETE /api/categories/:id`, each replying with every category (delete also says which transactions moved, and to which category). The checks are `parseNewCategory` and `parseCategoryChanges` in `validate.ts`; saving is in `store.ts`. The new `category-look.ts` holds the 24 icons, the ten presets (`presetCategories`) and which "Other" takes a deleted category's transactions (`OTHER_CATEGORY_ID`). The `categories` table gained a `preset` column, and **an older database is upgraded in place** the first time it is opened (`addPresetCategories` in `db.ts`, all or nothing): the categories that match a preset are marked as presets and take its name, the presets it lacks are added, presets go first, and everything else is left exactly as it was. Transactions are never touched by the upgrade. 39 new backend tests in `categories.test.ts` (200 in all), including one that builds a database exactly as the previous version left it and upgrades it. The upgrade was also forced to fail halfway by hand once: the database came back exactly as it was.
+- **Frontend:** `components/categories/` (`categories-view`, `category-row`, `category-dialog`, `category-pickers`, `delete-category-dialog`), `lib/category-form.ts` (the form's checks, no React), `categoryTotals` and `categoryTransactionCount` in `lib/stats.ts`, and `addCategory`, `updateCategory` and `deleteCategory` in `DataProvider` (deleting also moves the transactions on screen, so Home and Transactions agree at once). `lib/icons.ts` holds the 24 category icons (the old list of 13 was too short to choose from). The ten colour swatches were pulled out of the wallet picker as `ColorSwatches`, so wallets and categories share them. Home's spending legend now wraps a long category name onto a second line instead of cutting it short with "...": a name can be 30 characters now, and that was the one place a realistic long name was cut off. `components/placeholder-panel.tsx` is gone: nothing needs it any more.
+- The page is read on the server with today's date, like Home and Goals, so the month never disagrees between the server and the browser.
+- Verified with 256 browser checks on the Categories page (every number against the database; adding, editing and deleting by mouse and keyboard with the database checked each time; every message; the shared data on Home and Transactions with no reload; failed and stale saves; focus; 320 to 1920px; contrast in both themes) and every earlier browser suite re-run, on the dev server and on a production build.
+
+Decisions worth knowing:
+- Presets are fixed: only categories you made can be edited or deleted. (They can still be moved and, for spending, given a budget: see the follow-ups. See the improvements below for letting presets change colour and icon.)
+- Deleting moves the transactions to "Other" rather than refusing to delete, or deleting them. It never changes a balance.
+- Rows follow the order categories were added, presets first, so a category you add goes after "Other" (until you reorder them: see the follow-ups).
+- The amounts are for one month, not for all time: the one Home shows, unless another is picked with the month switcher (added in the follow-ups).
+- The upgrade renames two of the old categories on your real data ("Food & drinks" to "Food", "Home & bills" to "Bills"). Categories you had beyond the presets stay as they were and are now yours to edit or delete.
+
+Gotchas found on the way:
+- The owner's backend restarts on every backend edit, so a step that changes the database can't be built in `backend/src` while it runs: the one-time upgrade would run on the real file half-finished. Build in a copy and copy the finished files across (see "How the project is laid out").
+- A name and an amount on one line squeezed "Entertainment" into "Entertainme / nt" at 390px. The amount now sits under the name when the row is narrow (see the follow-ups for how that is decided).
+- The repo mixes Windows (CRLF) and Unix (LF) line endings. Keep each file's own, and write new files as LF.
+- In browser tests: an Expense and an Income category may share a name, so a test that finds "More options for X" or a row by name must look inside one card. Typing a whole word into a dropdown to pick an option ("Food") works on the dev server but not on a production build, where each letter is a fresh search and "o" now finds the new "Other": type the first letter only.
+- Some earlier browser suites keep their own copy of the throwaway database's path for direct changes to it (`wallets2` does). When the test stack moves, point that path at the new file too, or the suite quietly changes the wrong one.
+
+### Step 5 follow-ups (1 Oct 2026)
+*The month switcher, totals, shares, counts and comparisons described below (items 4 and 6) moved to the Insights page later the same day: see Step 5b. The Categories page keeps the rest.*
+
+Seven things chosen from the list after Step 5 (the numbers are the ones on that list): click through to the transactions (1), add a category from inside the transaction form (3), totals, shares and counts (4), other months and the comparison (6), reordering (7), suggesting a category from the note (11) and monthly budgets (12).
+
+- **Click a category** (1). Each row is a link. It opens Transactions filtered to that category and to the month shown, so the list adds up to the number you clicked (the address is `/transactions?category=<id>&month=2026-09`, and an unknown category or an impossible month is ignored). As on the wallet cards, the name is the link with an overlay stretched over the row, the name is underlined on hover, and the "more" menu sits above it.
+- **Add a category from the transaction form** (3). The category list ends with "Add new category", which opens the same dialog on top of the form, for the form's kind (no Expense | Income switch). Saving it picks the new category in the form; Cancel and Escape leave the form as it was. Typing letters to pick a category can never land on it.
+- **Totals, shares and counts** (4). Each card opens with its total. Each row says how many transactions it has, and a spending row also shows its share of the month's spending ("5%", "<1%").
+- **Other months, and the comparison with the month before** (6). A month switcher above the cards steps from the first month with a transaction up to this month, and every figure follows it. Each row and each card also says how it compares with the month before, in plain words and never coloured ("Rp 162.000 more than in August", "Same as in August"). There is nothing to compare with before the first transaction, or when neither month had anything.
+- **Reorder categories** (7). A "Reorder" button beside "Add category" opens the same drag-or-arrows dialog as wallets and goals, with two lists (spending and income). Presets can move too, so "Other" can go last. The order is used on the Categories page and in every list of categories (the transaction form, the filter). A category added later goes last.
+- **Suggest a category from the note** (11). In the transaction form, typing a note picks the category the owner used before for the same or a similar note, with a quiet line saying which earlier note it comes from. It looks only at the owner's own transactions: the same note, then the start of an earlier note (from three letters, so it works as you type), then a word in common. The category used most often wins, and on a tie the most recent. It never replaces a category picked by hand, it is taken back when the note stops matching, and it isn't offered when editing or for a transfer.
+- **Monthly budgets** (12). A spending category, presets included, can have a budget: "Set monthly budget" in its "more" menu opens a small dialog with one amount (and a reminder of what was spent that month, and "Remove budget" once there is one). The row then shows a thin bar with "61% of Rp 500.000" and "Rp 196.000 left". Past the budget the bar is full and it says "110% of Rp 300.000" and "Rp 29.000 over" in the muted clay: no alarm colours, no banners, and nothing stops spending from going past it. The budget is the same every month and is set against the month shown. Income has none.
+
+How it works:
+- **Backend:** `PUT /api/categories/order` (every category id, once each) and `PUT /api/categories/:id/budget` (`{ "budget": 500000 }`, or `null` to take it away), both replying with every category. The `categories` table gained a nullable `budget` column, and **an older database gets it added in place** when it is opened, with nothing else touched (a category with no budget simply has none). The checks are `parseCategoryOrder` and `parseBudget` in `validate.ts`, and the saving is `reorderCategories` and `setCategoryBudget` in `store.ts`. A budget belongs to its category: editing or moving the category keeps it, and deleting the category takes it along. 224 backend tests in all (24 new, in `categories-extras.test.ts`), including one that builds a database exactly as Step 5 left it and upgrades it.
+- **Frontend:** `components/categories/` gained `month-switcher`, `budget-dialog` and `category-reorder-dialog`, and `category-row` and `categories-view` were reworked. New pure modules: `lib/category-summary.ts` (counts, comparison wording, budget progress) and `lib/category-suggestion.ts`; month helpers were added to `lib/stats.ts`, `lib/dates.ts` and `lib/format.ts`; `DataProvider` gained `reorderCategories` and `setCategoryBudget`. The transaction form (`transaction-dialog.tsx`) gained the suggestion and the shortcut, `CategoryDialog` can be opened for a fixed kind, and Transactions reads `category` and `month` from the address. `Panel`'s caption can now hold more than plain text.
+- Verified with 501 browser checks on the Categories page (every figure against the database for every month, the comparison, click-through, reordering by arrows, keyboard and a real mouse drag, budgets of every kind, the shortcut and the suggestions, focus, 320 to 1920px, contrast in both themes), a table of 20 cases for the suggestion logic, and every earlier browser suite re-run on the dev server and on a production build.
+
+Decisions worth knowing:
+- The link opens that category's transactions for the month shown, not for all months, so the list adds up to the number. "Clear filters" shows everything.
+- A budget is a guide, not a limit, and only for spending. Presets can have one, because a budget isn't part of what makes a preset a preset. Going over is said plainly in the muted clay, never with an alarm.
+- Suggestions only repeat what the owner did before (no guessing), and always give way to a choice made by hand.
+- A row puts its amount under its name when the row is narrow: on a phone, at about 768px (where the sidebar has just appeared and taken room), and in the two-column layout of a laptop narrower than about 1380px. The row's own width decides (a container query), not the window's.
+- The order of categories now follows the owner's own order. Until they reorder, it is presets first and then the ones they added.
+
+Gotchas found on the way:
+- A dialog opened from a dropdown item lost keyboard focus. The dropdown hands focus back to its own button about 100ms after it closes, behind the new dialog, and the new dialog's focus trap never learned where its own focus was (the name box had focused itself before the trap was listening). The dropdown's `onCloseAutoFocus` now lets the dialog keep it.
+- A dropdown reports "nothing chosen" (an empty value) by itself when the category just chosen was added a moment ago and isn't in its hidden native list yet. That wiped the new category from the form, so an empty value from the category list is now ignored.
+- A second form inside the first form's dialog must not sit inside the first form: React passes a submit from the inner form up to the outer one. The little dialog is a sibling of the form.
+- While one dialog is open on top of another, everything underneath is hidden from role queries (correct for screen readers). Browser tests read the form underneath by its id.
+- Tablet width again: a name and its lock at 768px with the sidebar open left only about 120px, and "Entertainment" wrapped. Rows now follow their own width.
+- Browser tests that expect a fixed "today" (the older ones expect 30 Sep 2026) go wrong as soon as the machine's date moves on: every page takes "today" from the server's clock and the backend stamps goal and wallet dates itself, so setting only the browser's clock is not enough. Shift the clock of both scratch servers as well (a small file loaded with `node --require` that moves `Date` by a fixed amount) and give the browser the same shift. Time keeps running: freezing it would stop anything that measures elapsed time.
+
+### Step 5b: the Insights page (1 Oct 2026)
+*Step 5c below added two more views (Compare and Year), a Savings view of the chart and several more panels to Insights, so the list below is what it was at the end of Step 5b.*
+
+The Categories page had become crowded: besides looking after the categories it showed months, totals, shares, counts and comparisons. The owner asked to move the analysis to a page of its own, with some graphs. The sidebar now has **Insights** (last, with a column-chart icon).
+
+- **Categories is simple again.** One quiet line, "Reorder" and "Add category", and the two cards. Each row is the badge, the name (with a lock for a preset), what was spent or earned this month and the "more" menu, plus the budget bar when there is a budget. Clicking a row still opens that category's transactions for the month. The month switcher, card totals, shares, transaction counts and "more or less than last month" lines are gone from it.
+- **Insights** (`/insights`) has, top to bottom: the month switcher; three cards, **Spent**, **Earned** and **Left over**, each saying how it compares with the month before in plain, uncoloured words; the **Month by month** chart; then **Spending by category** (ranked, with share, count, comparison and a share bar), **Budgets**, and **Income by category**.
+- **The chart** shows up to 12 months (fewer on a narrow screen, so the labels never touch). A switch chooses **Totals** (income next to spending, moss and sand) or **By category** (spending stacked, each category in its own colour). The chosen month is on a soft band, hovering a month shows its figures, and clicking a month picks it for the whole page. It is a picture for the eye only, so screen readers get the same figures as a hidden table.
+- **Budget bars are on both pages**, as the owner asked, from one component (`BudgetBar`), so they always say the same thing. On Insights they sit in the Budgets panel (not in every row, so a row never has two bars).
+- **Clicking a category goes to its transactions on both pages**, for the month shown. Back from Transactions lands on the same Insights month, because the month is kept in the address (`/insights?month=2026-08`).
+- The pages ask for nothing new from the backend and the database is not touched: Insights only reads what Home, Transactions and Categories already read.
+
+How it works:
+- **Frontend only.** New: `app/insights/page.tsx`, `components/insights/` (`insights-view`, `month-chart`, `category-breakdown`, `budgets-panel`, `month-switcher`, which moved here from `components/categories/`), `components/categories/budget-bar.tsx` and `lib/insights.ts` (pure functions: which months a chart shows, what each month held, and a month's breakdown by category). Changed: `lib/navigation.ts` (the sidebar), `lib/format.ts` (`formatMonthShort`), `category-row.tsx` and `categories-view.tsx` (slimmer).
+- Verified with 30 checks of the number-crunching on its own (which months a chart shows, however long the history; sums; ties; shares), 288 browser checks on the Insights page (every figure for every month against the database, the comparisons, the chart in both views with hover, click, keyboard and a 22-month history, click-through and Back, budgets on both pages, empty and tiny histories, 320 to 1920px, contrast in both themes), 475 on the slimmer Categories page, and every earlier browser suite re-run on the dev server and on a production build.
+
+Decisions worth knowing:
+- Three cards sit in a row only from 1024px. At 768px with the sidebar open each card is about 140px wide, too narrow for "Rp 15.950.000" in the serif, so they stack there.
+- The chart has no numbers down the side (like the wallet history): the cards, the tooltip and the table carry the amounts.
+- A month with nothing to compare with (the first month, or both empty) says nothing about a comparison, rather than "Rp 0 more".
+- The chart's month window and the month switcher are separate ideas: the switcher can go to any month from the first transaction to this month, and the chart slides its window to keep the chosen month in view.
+
+Gotchas found on the way:
+- A hidden table is not hidden by `sr-only` alone: a table can't be squeezed to one pixel, so on a phone it made the whole page 485px wide. It sits in a hidden box of its own.
+- Recharts 3 draws the month labels in a layer of their own, not inside the axis, and SVG text has no `innerText`: browser tests read the pieces of the label (`tspan`) from `.recharts-xAxis-tick-labels`.
+- Back from Transactions restores an older copy of the page, which doesn't know the month that was put in the address afterwards. The page therefore reads the month from the address (`useSearchParams`) when it opens, not from what the server sent.
+- A button that has just gone dim (the arrow reaching the first month) drops keyboard focus to the top of the page, so the other arrow takes it.
+- The owner was asked whether to keep the budget bars on both pages and the category rows as links on both pages, and answered (1 Oct 2026): yes to both.
+
+### Step 5c: ten more from the list (1 Oct 2026)
+After the Insights page the owner picked ten ideas from the new list (the numbers are the ones on that list): a "See all" link from Home to Insights (1), the biggest expenses of the month (3), the share of income kept as a line (4), budgets on Home (5), comparing two months (6), a year view (7), spending by wallet and by day of the week (8), exporting as CSV (9), undo after deleting a category (10) and a list of what sits in "Other" (12). The owner answered the two questions left open in Step 5b: **keep the budget bars and the clickable category rows on both pages**.
+
+- **Insights now has three views** (a switch at the top): **Month** (everything from Step 5b, plus the new panels below), **Compare** and **Year**. What is chosen is kept in the address (`/insights?view=compare&month=2026-09&with=2026-08`, `?view=year&year=2026`, or just `?month=2026-08`), read from it when the page opens, and changed without adding to the Back button's history.
+- **Savings line** (4). A third view of the chart, "Savings": the share of each month's income that was kept, as a line, with 0% as a baseline. A month with no income has no point; overspending sits below the line with a minus.
+- **Biggest expenses** (3), **Spending by wallet** and **Spending by day of the week** (8): three panels on the Month view. A day is the day written on the transaction, whatever the computer's time zone.
+- **Compare** (6). The month beside another one: the month before (the default), the same month last year, or any month with transactions. Totals, then each spending and income category, with the difference in plain words and never coloured.
+- **Year** (7). A year switcher; four cards (spent, earned, left over and the average month); the twelve months in the chart and in a table ("The year in numbers", a line for each month, the average month and the whole year); and the year's spending and income by category against the year before. Clicking a month, in the chart or the table, opens it in the Month view. Categories in a year link to Transactions with `year=2026` in the address (a new, small thing the Transactions page now understands: a month in the address wins over a year, and a year that isn't four digits is ignored).
+- **Export** (9). An "Export" button saves a month, or the whole year, as a CSV file (date, type, category, wallet, to wallet, note, amount; oldest first; spending negative). It is made in the browser from what is on screen. If Excel puts everything in one column, that is Windows' list separator for Indonesian settings (a semicolon): tell me and the file can use that instead.
+- **Home** (1, 5). The "Spending by category" panel has a "See all" link to Insights. A **Budgets** panel appears under the month and spending panels, but only when at least one category has a budget, with the same bars as on Categories and Insights (one component for all three).
+- **Undo after deleting a category** (10). The "Category deleted" message stays ten seconds and has an Undo button that puts back the category (with its budget and its place in the list) and its transactions. It needed a small backend change (below).
+- **Needs a category** (12). A panel on the Month view that lists what is filed under "Other" (the newest five, from any month), with a "Choose category" menu on each. Choosing files it at once; nothing else about the transaction changes. It is only there while something is in Other. *(It moved to the Categories page the same day: see Step 5d.)*
+
+The owner was asked once they had seen them, and answered (1 Oct 2026): **keep budgets on Home, keep Undo after a delete, keep "Needs a category"**: all three stay. If one is ever wanted out, each can be taken out on its own: the Home budgets panel is one line in `home-content.tsx` (`<HomeBudgets />`); Undo is the `action` on the "Category deleted" message in `categories-view.tsx` (the backend route can stay unused); "Needs a category" is one line in `categories-view.tsx` (`<NeedsCategory />`).
+
+How it works:
+- **Backend** (`backend/src/`): `POST /api/categories/restore` (registered before the `:id` routes) and a new `position` in the reply to `DELETE /api/categories/:id`. The restore request holds the category as it was (its id, name, kind, icon, colour and budget), the `position` number it had and the ids of the transactions that moved to Other. `parseRestoreCategory` in `validate.ts` checks it (an owner's own category that isn't there, never a preset; the name checked like a new category's; a budget only for spending); `restoreCategory` in `store.ts` does it all or nothing, and only if every one of those transactions is still in the "Other" of that kind. The category takes the place number it had, so two deletes can be undone in either order and the list still comes back as it was. The database is not changed (no new column), so nothing is upgraded when the owner's backend restarts. 251 backend tests in all (27 new, in `categories-restore.test.ts`): a whole delete and undo leaves the database exactly as it was, every refusal changes nothing, and four deliberate breakages of the code were each caught.
+- **Frontend:** `components/insights/` gained `month-tab`, `compare-tab`, `year-tab`, `step-switcher` (the one pill behind the month and year switchers), `year-switcher`, `export-menu`, `biggest-expenses`, `wallet-breakdown`, `weekday-breakdown` and `ranked-row` (the line the category and wallet lists share); `insights-view` is now the small coordinator of the three views. New shared pieces: `components/segmented-switch.tsx`, `components/budget-row.tsx` and `components/home/home-budgets.tsx`; `ui/dropdown-menu.tsx` gained a label and radio items. New pure modules: `lib/insights-address.ts` (the address), `lib/export-csv.ts` and `lib/download.ts`, and `lib/insights.ts` grew (savings rate, biggest expenses, wallets, weekdays, what is in Other, years, comparisons).
+- Verified with 69 more checks of the pure functions, 499 browser checks on Insights (every figure of every view against the database, the new chart view with hover and click, every panel for every month, a browser set to Los Angeles time, the choosing and filing of what is in Other, the downloaded files read back line by line, Compare and Year in every combination, the address and the Back button, 320 to 1920px, contrast in both themes), 504 on Categories (including every way Undo can go), a section for Home, and every earlier browser suite re-run on the dev server and on a production build.
+
+Decisions worth knowing:
+- Compare, Year and Month are three views of one page, not three pages, so the sidebar stays short and the month carries across.
+- The "Kept" share is left out (a dash) for a month with no income: the share of nothing means nothing.
+- The year's "average month" divides by the months that have transactions, not by twelve, so a year in progress isn't dragged down by months that haven't happened.
+- "Needs a category" lists "Other" from any month, because the point is to clear it, not to look at one month.
+- Spending by wallet has no links: a wallet's transactions include its income and transfers, so the list behind a link wouldn't add up to the number.
+- Export puts a quote mark in front of a note that starts with =, +, - or @ (a spreadsheet would run it as a formula), and writes a byte order mark first so accents read correctly.
+
+Gotchas found on the way:
+- Undoing two deletes in the order they were made first put the categories back in a different order, because the place was remembered as "item number 7 in the list as it was then". The place is now the category's own position number, which doesn't depend on what else was deleted.
+- A button that is about to go dim takes keyboard focus with it. The other arrow was dim at that very moment too (going from the last year to the first, with only two years) so asking it for focus did nothing. The handover now waits one frame, until the page has redrawn.
+- A chart reports a click using where the mouse last was, so a click with no mouse movement before it (as in a test) picks the previous month. A person's mouse always moves first, and a touch sends a move before the click, so only tests need to hover first.
+- A browser set to another time zone sees a different current month (the app uses the viewer's own clock for "this month"), so a time-zone test checks only the day written on a transaction and uses the usual time zone for the rest.
+- Radix menus: a menu opened from the keyboard already has its first item highlighted, so Enter picks it; one arrow down reaches the second.
+
+### Step 5d: "Needs a category" moves to the Categories page (1 Oct 2026)
+The owner asked to move the "Needs a category" panel from Insights to the Categories page, with nothing left behind on Insights: sorting what is in "Other" is looking after the categories, and Insights is for understanding. How the panel works did not change. It first went to the top of the page; the owner then asked for it under Income categories, because it is not a priority.
+
+- **Where it is.** Under the Income categories card: in the right-hand column from 1280px (it fills the space the shorter Income card leaves) and at the very bottom of the page when the cards are stacked. It is only there while something is filed under Other, so most of the time the page is just the two lists. The rows are in one column with hairlines between them.
+- **Same as before.** The newest five from any month, spending and income together; a "Choose category" menu on each that files it at once, with a message; "3 more in Other" with a link to Transactions; a failed save keeps the row.
+- **Different.** When the last row has been filed, keyboard focus goes to the Add category button (it went to the month arrow on Insights). Deleting a category sends its transactions to Other, so they now show up in this panel at once, and Undo takes them away again. Insights has no trace of it: its Month view is "Spending by category" and "Biggest expenses" on the left, and "Budgets", "Income by category", "Spending by wallet" and "Spending by day of the week" on the right.
+- **Code.** `components/insights/needs-category.tsx` became `components/categories/needs-category.tsx` and takes one prop, `fallbackFocusId` (the button that takes focus when the last row is gone). `categories-view.tsx` shows it; `month-tab.tsx` no longer does. No backend or database change.
+- Verified with the Categories browser suite (563 checks; its new section Q carries over everything that was checked on Insights and adds where the panel sits (under the Income card, in its column from 1280px and at the bottom below that), Tab order, focus, deleting a category and undoing it, 320 to 1920px and contrast in both themes) and the Insights suite (473 checks; it now checks that the panel is on none of its views, even with things in Other), each on the dev server and on a production build, plus the type check, lint and backend tests in the real project. Two deliberate breakages (a wrong focus target with the panel back at the top, and the panel above Income instead of below it) were each caught by the new checks. The older suites (Home, Transactions, Wallets, Goals) never open these two pages and none of their files changed, so they were not re-run.
+
+### Step 5e: five more from the shortlist (2 Oct 2026)
+The owner picked five of the shortlisted ideas: **one budget for the whole month**, **undo after deleting a transaction, a wallet or a goal**, **weekday habits over several months**, **a line of the total balance over time** and **the username setting**. Export from the Transactions page, the printable PDF report and importing a bank's CSV were kept for later, and "spotting repeating payments" wasn't picked, so those four stay on the shortlist.
+
+- **Your name.** The bottom of the sidebar has a small row with the name and "Change name". It opens a box with one field (30 characters at most). Saving changes the greeting on Home and the row at once. On a phone the menu closes first and the box opens over the page.
+- **One budget for the whole month.** The Expense categories card on Categories starts with a "Whole month" row: everything spent that month (in the muted clay), and under it either the same calm bar as a category's budget or, while there is no budget, a quiet "Set a budget for the whole month". Its menu (and that button) opens the budget box, titled "Budget for the whole month", which also removes it. The same bar is the first row of the Budgets panel on Insights and on Home (Home's panel now shows when either kind of budget exists). The name leads to `/transactions?type=expense&month=2026-09`, so Transactions now understands `type` in the address. It is a guide, never a limit, and the same every month.
+- **Undo after a delete.** Deleting a transaction, a wallet or a goal shows an Undo button for ten seconds, like a deleted category. Undo puts back exactly what was there: a transaction with its effect on the wallet balance; a goal with its history, pace, the date it was reached and its place; a wallet with its balance, its place, all its transactions (transfers included, and no other wallet's balance moves), its balances set by hand and the bits of goal history that said money came from it. If something has changed so it no longer fits, nothing is touched and a message says why: "The wallet it was in has been deleted since, so that can't be undone." (and the same for a category, a wallet a transfer went to, a goal's wallet), or "You have another wallet called BCA now, so that can't be undone." The box for deleting a wallet no longer says "This can't be undone."; it says "You can undo it for 10 seconds afterwards." and still asks for the name.
+- **Average spending by day of the week** (Year view). A typical Monday, Tuesday and so on: what was spent on those days over the months of the year that have transactions, divided by how many of those days there were. A month in progress counts only up to today. It sits under "Income by category".
+- **Total balance** (Month and Year views). One calm line of what all the wallets together held at the end of each day, with the total at the end, how it compares with the first day in plain words, and the amount for any day on hover. It follows the eye of the total balance: while that is hidden the figure is dots and the line, the comparison and the table for screen readers are not on the page at all.
+
+How it works:
+- **Backend** (`backend/src/`): `PUT /api/user` (`{ "name": "Dewi" }`), `PUT /api/monthly-budget` (`{ "budget": 5000000 }` or `null`) and `POST /api/undo/:undoId`. `GET /api/data` also sends `monthlyBudget` (missing when there is none) and `balanceAdjustments` (every balance set by hand: the wallet, when, and how much it changed the balance, oldest first); saving a value update or a correction replies with the new one as `adjustment`. The database gained one nullable column, `app_user.monthly_budget`, **added in place when an older database is opened** (`addMissingColumns`), so nothing is lost and nothing else changes. Every delete of a transaction, wallet or goal replies with an `undoId`. What was deleted is kept in memory (the last 50 deletes, forgotten when the app stops) and `POST /api/undo/:undoId` puts it back in one all-or-nothing database transaction (`restoreTransaction`, `restoreWallet` and `restoreGoal` in `store.ts`). A restored transaction keeps its id, so a goal's history that points at it still does, and it keeps its place (its row number) among transactions with exactly the same date and time, as long as that place is still free. Wallets and goals are now listed by position and then by when they were added, so a tie can't shuffle them. 305 backend tests in all (54 new, in `user-and-budget.test.ts`, `balance-adjustments.test.ts` and `undo.test.ts`): among them a database made exactly as the last version left it (a user table with only a name) being upgraded and then reopened, and every kind of undo giving back a database that is exactly as it was, or being refused with nothing touched. Nineteen deliberate breakages of the new backend code were each caught.
+- **Frontend:** `lib/balance-history.ts` (`balanceSeries`, `balanceChangeText`: pure), `weekdayAverages` in `lib/insights.ts` (pure), `lib/month-budget.ts`, `lib/undo.ts`, `lib/user-form.ts`. New components: `sidebar-user`, `name-dialog`, `categories/whole-month-row`, `insights/balance-panel`. `budget-row.tsx` now holds `BudgetRow` and `MonthBudgetRow` over one shared layout; `BudgetDialog` takes a `subject` (a category, or the whole month); `WeekdayBreakdown` takes a title and a period so both views use it. `DataProvider` gained `updateUserName`, `setMonthlyBudget` and `undoDelete`, its three delete functions now return the undo id, and it keeps `balanceAdjustments` in step (adding the one a value update or correction makes, dropping a deleted wallet's, putting them back with Undo). The Transactions page reads `type` from the address.
+- Verified with 30 checks of the pure functions (the balance days and the weekday averages; thirteen deliberate breakages of them were each caught), 152 browser checks on the new features (`followups.mjs`: A the name, B the budget for the whole month, C undo, D the weekday averages, E the balance line, F the contrast of the new text in both themes), the Insights suite brought up to date (473) and the Categories suite (564), and every older suite re-run (eye 24, features 33, tx-flow 59, tx-confirm 8, wallets 127, wallets2 166, goals 150, goals2 91, goals3 143, and the layout measurements from 320 to 1920px), on the dev server and on a production build, plus the type check, lint and the backend tests in the real project. The older suites were changed only where a page changed on purpose: the Insights Month view has a second chart (its tooltip and its table for screen readers are now looked up inside the month chart), a new heading and panel, and a new Tab stop (the eye of the balance panel); the Categories card starts with the Whole month row (one more menu and more Tab stops); and the delete-wallet box has new wording.
+
+Decisions worth knowing:
+- The balance line is not stored anywhere: it is worked out each time from today's balances, backwards through the transactions and the balances set by hand, so it can't disagree with them. That means it is only as accurate as those records; the days before the first recorded change aren't drawn; and a wallet that has been deleted is not in the past either, because its transactions went with it.
+- It stops at today. Something dated after today is already in the wallets' balances, so it is taken off the days before its day, and arrives on its own day.
+- Undo is remembered only while the app runs, and only for the last 50 deletes. Ten seconds is how long the button stays; the app would still accept it a little later if it were pressed.
+- The wallet's typed-name check stays even though Undo exists: it is the guard against deleting the wrong wallet.
+- The weekday average counts only months that have transactions (like the average month), so a quiet gap between two busy months doesn't pull it down.
+- The whole-month budget is one number, not the sum of the category budgets. Nothing compares the two.
+
+Gotchas found on the way:
+- The dress rehearsal on a copy of the real database found what the sample data hid: transactions with exactly the same date and time (the real data has three such groups, holding 8 transactions) are listed in the order they were saved, so an undo that gave a deleted one a new row number put it after the others and swapped them. Five of 57 delete-and-undo round trips on the copy came back in a different order. The delete now remembers each transaction's row number and the undo gives it back when it is free (a wallet's whole set of transactions too), and three new tests cover it. Rehearse every database-touching step against a copy of the real data, not only the sample.
+- A 30-letter name in the widest letters made Home's greeting scroll the page sideways. `break-words` didn't help: only `overflow-wrap: anywhere` (Tailwind's `wrap-anywhere`) is counted when a flex item works out its smallest width.
+- The sidebar's box for the name lives outside the sidebar, because on a phone the sidebar is a sheet that unmounts its content when it closes, and the box would have gone with it.
+- With two charts on one page, a test that looks for "the chart's tooltip" (or "the table for screen readers") finds two. Older suites were scoped to the month chart, and a hover test must scroll the chart into view first or it moves the mouse off the window.
+- A dialog (and the open menu sheet) hides everything behind it from role queries, so a test finds the menu button by its id.
+- Heredocs with quotes in them fail in this shell again; scripts are written as files, and a path starting with "/" given to node in Git Bash is turned into a Windows path (set `MSYS_NO_PATHCONV=1`).
+
+### Step 6: Polish, review and a bit of fun (4 Oct 2026)
+An audit of the whole app, the fixes it found (including the two rough spots parked since Step 3), and a delight layer the owner asked for on top ("make the design more fun and not boring generic"). Frontend only: no backend or database change, nothing to upgrade.
+
+**The audit.** Every page in light and dark at 1024px and at phone width; every dialog, menu, popover and message; keyboard (Tab through every page, the focus ring of every kind of control); the contrast of every piece of text, measured; hover and press feedback control by control; empty pages (everything deleted); long unbroken words everywhere; a phone on its side; a production build. Before the work it scored 17/20 (Good): one look everywhere, no sideways scrolling and no console errors with normal data, every control named, every empty page friendly. What was left was detail.
+
+**Your two known problems**
+- **A long word with no spaces** (a pasted link in a note) ran off the edge on a phone. It was wider than "phone only": the note line under a transaction had no rule for breaking a long word, which pushed Home, Transactions and Insights ("Biggest expenses") wider on narrow windows; a long wallet name did the same in Home's balance-card legend, and names ran out of dialog titles, delete sentences and dropdown lists. `wrap-anywhere` is now on every title, note, name, hint and dialog sentence that can hold your own text (`Label`, `DialogTitle`, `DialogDescription`, `AlertDialogTitle`, `AlertDialogDescription`, `SelectItem` and the transaction row, goal rows and cards, the balance legend and `Field`'s messages). Checked with a note of 100 characters with no spaces, and names of 40 and 30 of the widest letter, on every page at 320, 390, 768 and 1024px and in 15 dialogs and dropdowns: 153 problems before, none after.
+- **Dropdowns on a production build picked by the last letter only.** The cause: Radix writes the typed-so-far search with `(/* @__PURE__ */ __name(function updateSearch(...) {...}, "updateSearch"))(search)`, and the production build's code-shrinking step (Turbopack's minifier) treats that as removable, so the lines that remember the letters are deleted from the built code (found by reading the built chunk: `useTypeaheadSearch` kept only `onSearchChange(searchRef.current + key)`). The same pattern is in Radix's menu typeahead and scroll area. `next.config.ts` now sets `experimental.turbopackMinify: false`, so the production build keeps those lines. Cost: bigger script files for `npm run start` (about 6 MB on disk before compression), nothing on your own computer. `npm run dev` was never affected. On a production build: "Food" picks Food, "Trans" picks Transport and a wallet typed as "Alps" ends on Alps. If a later Radix release no longer uses that pattern, the line can go.
+
+**Keyboard and readability**
+- Two controls showed no focus ring when you Tabbed to them ("Set a budget for the whole month", and the month names in the Year table): `outline-none` and `focus-visible:outline-2` on one element cancel each other in Tailwind v4.
+- A **"Skip to main content"** pill is the first Tab stop on every page (it shows only while it has focus, cream like the active nav item), and `<main>` is its target (`#main-content`).
+- Contrast: the Light/Dark labels in the sidebar's theme switch (4.3 and 4.4, needed 4.5: `--sidebar-muted` is a little lighter in both themes), the small "Rp" in coloured amounts (3.0 to 4.2: 92% strength instead of 70%), the "Delete" button text in dark mode and on hover in both themes (4.2 to 4.4: lighter tints), and the faint "0" in amount boxes (2.1 and 2.8, large text needs 3: 75% instead of 50%). After the changes the contrast check finds nothing on any page or dialog in either theme.
+- Goal names are second-level headings (the page went from h1 straight to h3).
+
+**Consistency**
+- Dropdown boxes were 36px beside 40px date, search and note boxes (`data-[size=default]:h-9` beat `h-10`): all 40px now, with the date button's light hover.
+- Delete dialogs' titles (transaction, goal, category) match the others (serif 22px, `type-title`).
+- "Transfer · BCA → Pluang": the wallet part wraps as one piece, so the arrow never starts a line (a wallet name such as Bank Jago stays together).
+- On a phone the "All wallets" filter fills its row, the date-range calendar sits in the middle of its popover, and "Set a budget for the whole month" wraps in balanced lines.
+
+**Phones**
+- A soft tap flash where a finger lands (the app had switched the browser's off and put nothing in its place).
+- Small controls got a bigger invisible tap area on touch screens (`tap-area`, 8px all round): the month and year arrows, "See all", the Year table's month names, the "Completed" fold, "Set a budget...", the logo. The icon-only Reorder buttons are 40px wide.
+- Dialogs, alert dialogs, popovers and dropdown menus never grow taller than the window: they scroll inside (a phone held sideways could not reach the Add money box, the date calendar or a menu's last items before). That includes Insights' "Compare with" menu and the "Choose category" menu on Categories, which each carried a fixed height of their own that overrode the rule.
+
+**Motion** (small, and only after something you did). The Completed fold fades in as its arrow turns; the donut draws itself once when Home opens; buttons squeeze to 97% while pressed, with the round buttons, links, nav items and wallet cards following; the reorder lists now respect "reduce motion" (`MotionProvider`). Loading skeletons were considered and dropped: a page shows in about a tenth of a second on a production build (0.13 to 0.5s on `npm run dev` the first time), so one would only flash.
+
+**The delight layer** (see DESIGN.md, "The delight layer"). The idea: saving should feel like dropping a coin into a celengan, the clay piggy bank. KAYA is a nod to "kaya", rich, so the fun comes from the name and from Indonesian saving culture rather than stock confetti.
+- **Drawings** (`components/illustrations/`): a celengan on the empty Goals page (a coin drops into its slot, a small squash, then a coin waits above it), a notebook with a pencil on an empty Transactions list, a magnifier when a search finds nothing. In both themes; the terracotta is a real clay (mixing the clay colour with the dark card drifted to olive).
+- **The balance card** (Home and Wallets): a batik kawung engraving fading in from the right and a round coin seal ("KAYA" round the rim, the orange N in the middle), instead of a plain wash. A very faint version of the lattice runs along the bottom of the sidebar and the phone's menu, and the page has a light paper grain.
+- **Coins as the recurring shape**: a milled rim on the round badges that stand for something; the K coin in the logo flips when you point at it; a coin drops into a goal's bar when money is added; a short shower of coins and paper in the palette's colours when a goal is reached (`lib/celebrate.ts`; none under "reduce motion"), with a celengan in the "Goal reached" message ("<name> is fully funded. Nicely saved.").
+- **Numbers**: the thousands dots in big amounts are softer (70%), so 51.337.800 reads in groups; digits that change pop in (balances, a goal's saved amount; the first paint never animates and the text is always the text).
+- **Small touches**: a sun or moon in the date pill by the hour, the eye blinks when you press it and the amount fades back in, the sprout by the sidebar's calm line sways when you point at it.
+- To take a piece out on its own: the balance card's engraving is two lines in `total-balance-card.tsx`; the sidebar batik is the `[data-sidebar="sidebar"]` rule and the grain the `main[data-slot="sidebar-inset"]` rule in `globals.css`; coin rims are the `coin-rim` class; the flip is two classes in `brand-mark.tsx`; the coin drop is the `drops` block in `goal-card.tsx`; the shower is the `coinShower()` call in `goals-view.tsx`; the digits are `roll` on `Money`; the drawings are three components used in two empty states. The style guide has a Drawings section and a Delight section to look at them.
+
+How it works: new `components/illustrations/` (`celengan`, `ledger`, `magnifier`, `seal`), `components/rolling-text.tsx`, `components/motion-provider.tsx`, `components/delight/delight-demo.tsx` and `lib/celebrate.ts`; the delight styles (tokens `--illu-*`, `--kawung-*`, `--grain`, the `kawung` class, the `coin-rim`, `tap-area` and `animate-*` utilities, the keyframes) are in `globals.css`. About 50 files changed in all, none in `backend/`.
+
+Verified with every earlier browser suite, re-run on the dev server and on a production build (eye 24, features 33, tx-flow 59, tx-confirm 8, wallets 127, wallets2 166, goals 150, goals2 91, goals3 143, followups 152, insights 473, categories 564, and the layout measurements from 320 to 1920px), the audit scans run again on the finished code (the contrast of every text on every page, dialog, menu and message in both themes: nothing under the minimum; a name on every control; no tap target under 40px; Tab through every page; hover and press feedback; long words, 0 problems; every empty page; a phone on its side), the design check (nothing found in the 51 changed files), and the type check, lint and backend tests (305) in the real project. On the production build, typing "Food", "Trans" and "Alps" into dropdowns picks Food, Transport and Alps.
+
+The older suites were changed only where a page changed on purpose: goal names are second-level headings now (goals, goals2, goals3), `wrap-anywhere` replaced `break-words` in two lookups, the Eye suite compares the text of the page's HTML rather than its markup (the thousands dots are separate spans), and the Wallets 2 check that nothing sticks out of the balance card skips the seal's lettering. The final landscape scan found two menus that didn't fit a short window ("Compare with" and "Choose category", see Phones); a new check (`menu-short-window.mjs`) failed on the code before the fix and passes after it, in light and dark, on dev and on the production build, and Insights and Categories were re-run after it. Two one-off failures, both explained: Features failed once when the computer went to sleep in the middle of a run (the dev server's reload connection was suspended), and tx-flow failed once on the production build while a design scan was using the processor; both passed when run again (tx-flow three times).
+
+What could still improve (for the next step):
+- Tested in Edge only. A real phone, Safari and Firefox have not been tried: check the touch swipe on transaction rows, the coin shower, the donut sweep and the batik masks there.
+- Round icon buttons are 40px on a phone (above the 24px minimum of WCAG 2.2, under the 44px Apple suggests). Small controls have an invisible 8px extra tap area; the 40px ones could grow.
+- Two small things found and left alone (list items 1 and 2 below): an overdrawn wallet makes Home's share percentages add up to more than 100%, and amounts don't line up across wallet cards in one row when a note wraps.
+- The keyboard still cannot highlight a donut slice from its legend row (parked since Step 3).
+- The production build is made without code shrinking (bigger files). If a later Radix release stops using the pattern that the minifier broke, `experimental.turbopackMinify: false` in `next.config.ts` can go. Check with `typeahead3.mjs`.
+- The sun or moon in the date pill follows the computer's clock, and the sky changes at 5, 11, 17 and 20 o'clock.
+- The scanners in the audit report known false alarms (focus ring contrast on layered rings, 40px buttons, a few phone-width scenes that need touch). They are listed in the test notes, so don't chase them again.
+- Not done on purpose: loading skeletons (pages show in about a tenth of a second) and page fades.
+
+Decisions worth knowing:
+- Fun only where money moves or a goal is reached, never in the way of reading a number: the amounts stay the clearest thing, the engraving is behind the content, and nothing moves on its own except the Home donut, once.
+- No page fades, no skeletons, no bouncing cards, no gradient text, no emoji: the owner's rules and the audit's advice agree.
+- The seal and the lattice are decoration: `aria-hidden`, `data-decorative`, and the contrast check skips them.
+- Press feedback is in two layers: the tap flash for fingers, and a squeeze for the mouse.
+
+Gotchas found on the way:
+- `outline-none` plus `focus-visible:outline-2` on the same element shows no focus ring in Tailwind v4 (it also sets the outline style to none). The ring checks look at the real focus state of every control, not at the class list.
+- A shadcn select's `data-[size=default]:h-9` beats a plain `h-10` passed in `className`: use the same variant.
+- A `max-h-80` passed to a `DropdownMenuContent` replaces the shared `max-h-(--radix-dropdown-menu-content-available-height)` (the later class wins), so the menu stopped fitting a short window. The landscape check found two; `max-h-[min(20rem,var(--radix-dropdown-menu-content-available-height))]` keeps the cap and the window limit.
+- `break-words` doesn't help inside a flex row; `wrap-anywhere` does. Look at where long text can land (a legend, a dialog sentence, a dropdown item), not only at the lists.
+- A `mask-image` on an element clips everything outside its box, tooltips included: the donut's mask exists only inside the animation keyframes.
+- Sonner gives a toast's icon 16px: a bigger one needs `classNames: { icon: "size-10!" }`.
+- Choosing a component by a function call during render trips the React lint rule (the sky glyph is looked up in an object).
+- Setting state during render (conditionally, from a prop that changed) is the way to notice "this value just changed" without a ref or an effect (`RollingText`, the goal card's coin, the eye's blink).
+- A digit that pops in as an `inline-block` made a 12-digit total 5px wider than the same digits in plain text (the browser fits plain text to its neighbours, an inline-block is measured on its own), enough to poke out of the card at 360px: the old wallets suite caught it. The popping digit now moves with `position: relative` and `top`, which keeps it ordinary text.
+- A drawing's lettering (the seal's "KAYA" on a circle) is cropped by the card on purpose, so a test that checks "no text sticks out of the card" has to skip `svg[data-decorative]`.
+- The contrast check had to learn that a drawing's text is a picture (`svg[data-decorative]`), and that a toggle button's name changes when it is pressed.
+- The Windows console can't print a typographic minus (cp1252): `sys.stdout.reconfigure(encoding="utf-8")` in a Python script that prints docs.
+
+### Step 7: nine follow-ups from the Step 6 list (4 Oct 2026)
+The owner picked 1, 2, 4, 5, 6, 7, 8 and 11 from the Step 6 list and asked for 13 (backups) as a manual button at the bottom of the sidebar, not automatic. Items 3 and 15 were in an earlier message but not in the final one, so they were left. Items 2, 4 and 5 were built "and ask me later" (see Next). A short design was shown in chat first and the owner said "yes, pls start building it". One backend route is new (and no database change), so it was built in `.nb-test` copies of both folders on ports 3100 and 4100 with a throwaway database; the owner's own servers (ports 3000 and 4000) were never touched.
+
+- **1. A wallet below zero.** The Total balance card (Home and Wallets) now counts only wallets that hold money in its bar and percentages, so they add up to 100% (a wallet at −Rp 2.684.500 used to push the others past 100%). A wallet below zero is listed on a line of its own under the legend: "Below zero: Bank Jago −Rp 2.684.500", with a small clay alert mark. It follows that wallet's eye and goes with the total's.
+- **2. Amounts lined up.** On Wallets, the cards in a row share their rows (name and note, balance, goals line, value-change lines), so a note that wraps no longer pushes a balance lower; on Home the amount is pinned to the bottom of the card, so a long name that wraps no longer does either.
+- **4. Which balance changed.** The message after adding, editing, deleting or undoing a transaction, and after adding money to a goal from another wallet, ends with "BCA is now Rp 8.642.300." (a transfer names both wallets; an edit that moved a transaction names both; a wallet whose eye is closed reads "BCA's balance is updated." with no number). "Correct balance" and "Update value" already said it.
+- **5. Goal milestones.** "Add money" past a quarter, half or three quarters of a goal gives a message with the celengan ("A quarter of the way", "Halfway there", "Three quarters of the way"): the highest mark passed, never the same one twice, no confetti.
+- **6. Drawings and empty pages.** A friendly "Page not found" (the magnifier, "Go to Home"). Three new drawings: a wallet, a calendar page and a price tag. The Wallets page itself can never be empty (the last wallet can't be deleted) and "Needs a category" hides itself on purpose when nothing is in Other, so the drawings went where those things really look empty: Transactions opened from a wallet or a category with nothing in it says "Nothing in Cash in drawer yet" (wallet drawing, "Add transaction") or "Nothing in Other in September 2026" (price tag, "Show every transaction"), and a month on Insights with nothing in it shows the calendar and "Nothing came in or went out in October yet."
+- **7. The month in one look.** A card at the top of the Month view of Insights with the seal on it: what came in, what went out, what was left over and the biggest treat (the biggest single expense that isn't Bills, Transport, Health or Other).
+- **8. Twelve coins.** A "Months that kept money" panel on the Year view: an orange coin for each month that kept money, a dashed empty ring for every other month. No counter, no scolding.
+- **11. A heads-up before going below zero.** One quiet line under the Amount box ("This takes Bank Jago below zero. You can still save it."). It never blocks the save.
+- **13. Back up now.** A row under the owner's name at the bottom of the sidebar, in the same shape as the name row, with "Last backup: 4 Oct, 15:30" under it. Pressing it copies the database file into `backend/data/backups/`. Manual only; no restore button (the README has the steps).
+
+How it works:
+- **Backend** (`backend/src/`): new `backup.ts` (`makeBackup`, `lastBackup`, `displayFolder`). A copy is made with SQLite's `VACUUM INTO` (a whole, consistent database even while the app is using the file and its write-ahead log; the path goes in as a bound parameter), named `nabungbego-YYYY-MM-DD-HHMMSS.db` in local time, with `-2`, `-3` when two land in the same second, so one never replaces another. `POST /api/backup` replies `{ backup: { name, at }, folder }` ("backend/data/backups" when the data file is in this project, the whole path otherwise) and `GET /api/data` carries `lastBackup` (the newest file in the folder, by when it was written; missing while there is none). New types `BackupInfo` and `BackupResult`. No database change, so nothing to upgrade. 16 new tests (`backup.test.ts`): 321 in all. Four deliberate breakages (newest/oldest, a replaced copy, no copy at all, an in-memory database) were each caught.
+- **Frontend:** `lib/recap.ts` (`monthRecap`, `biggestTreat`, `keptMonths`), `lib/balance-message.ts` (`balanceLine`, `walletIdsOf`), `walletShares`/`overdrawnWallets` in `lib/stats.ts`, `milestonePassed` in `lib/goals.ts`, `walletGoingBelowZero` in `lib/transaction-form.ts`, `emptyScope` in `lib/transaction-filters.ts`, `formatBackupTime` in `lib/format.ts` (all pure). New components: `sidebar-backup`, `insights/month-recap`, `insights/year-coins`, `illustrations/wallet`, `calendar` and `tag`, and `app/not-found.tsx`. `DataProvider` gained `backUp`, and `addTransaction`, `updateTransaction` and `deleteTransaction` now return what the backend sent back (the saved transaction, every wallet as it is now, the undo id) so a message can name the new balances; `useIsBalanceHidden` (in `balance-visibility.tsx`) lets a message and the below-zero line respect a closed eye. The Wallets card is a grid whose rows come from the list (`grid-rows-subgrid`). The style guide's Drawings section shows the three new drawings.
+- Verified with 80 checks of the pure functions (`batch7-unit.mjs`; sixteen deliberate breakages of them were each caught), 195 browser checks (`batch7.mjs`: A overdrawn 24, B alignment 34, C messages 10, D below-zero 19, E milestones 11, F drawings and empty pages 29, G recap 25, H coins 20, I backup 23) on the dev server and on a production build, twelve more deliberate breakages of the screens (each caught), the new states through the audit scanners (52 scenes in light and dark, desktop and phone: contrast, names, tap targets, sideways scroll, console; one real finding, fixed), a rehearsal of the README's restore steps on a throwaway folder, and every older suite re-run on both: eye 24, features 33, tx-flow 59, tx-confirm 8, wallets 127, wallets2 166, goals 150, goals2 91, goals3 143, followups 152, insights 473, categories 564, the layout measurements from 320 to 1920px clean, plus the type check, lint and backend tests. The Insights suite was changed only where the page changed on purpose: the recap card is a new heading and panel (headings and panel order), it clips its own seal like the balance card (the "text cut short" probe skips a decoration), and it pushes the charts below the first screen, so the chart helper now scrolls the chart into view before hovering or clicking (as the notes always said a hover test must).
+
+Decisions worth knowing:
+- **The biggest treat** is the biggest single expense that isn't Bills, Transport, Health or Other: a rule of mine, because the rent is the biggest expense most months and isn't a treat. A category the owner made counts as a treat, and with no treat that fact is left out. A better rule would be a "treat" switch on each category (see the list below).
+- **Hidden balances stay hidden.** A message names a wallet whose eye is closed without its number, and the below-zero line (in the form, and on the balance card) is left out while that wallet's balance is hidden, like the other lines that would give a balance away.
+- **The recap repeats the three cards below it** on purpose: it is the one-look version. It shows for every month with money in it, not only finished months.
+- **Backups are manual and never deleted.** No automatic copy and no pruning (deleting a person's backups by itself is the wrong default); a Restore button isn't built either. The README's restore steps matter: the rehearsal showed that a leftover `nabungbego.db-wal` brings the newer data back on top of a restored copy, so the steps say to delete it (and `-shm`).
+- **Milestones follow the percentage on the card** (24.9% reads, and counts as, 25%), and only fire on "Add money", not when the saved amount is edited.
+- **A below-zero heads-up reads the wallet's balance now**, so a transaction dated in the past or the future isn't treated differently, and an edit that takes no more out than before says nothing.
+
+Gotchas found on the way:
+- A flex row that is stretched taller than its content (the balance row, in the card beside Pluang's with its wrapped button) centres its one line: `content-start` keeps it at the top. And a balance beside a 40px button sits 4.6px lower than one on its own, so every balance line is now 40px tall.
+- `--illu-paper-shade` was mixed in OKLCH with the card colour, which has no hue, and read as pink (the magnifier's lens and now the banknote): it is mixed in sRGB.
+- A `<Money>` figure under 24px fails contrast on its softer thousands dots (3.2 to 3.8 against 4.5): the recap card's phone layout is 24px.
+- `VACUUM INTO ?` takes the file as a bound parameter, and it needs no open transaction (the store's changes are all short synchronous transactions).
+- `app/not-found.tsx` is also what Next uses for an address that matches no page, inside the root layout (sidebar and all); its tab title is "Page not found · KAYA".
+- A background server started from the shell tool stops after 30 minutes unless it is given a longer `timeout`; the suites then fail with "connection refused".
+- Six of the older suites (checks, eye, features, tx-flow, tx-confirm, wallets) hard-code port 3100: to run them on the production build, copy each with `localhost:3100` replaced by `localhost:3200` (the other four read `NB_BASE`).
+- `features.mjs` failed two animation-timing checks once ("a new day grows smoothly", "a deleted row shrinks away": it samples frames) and passed on both of two re-runs, on dev and on production.
+- A sidebar row that opens nothing on a phone still needs the sheet closed first, or the message appears behind it.
+
+## Next
+
+### Your answers, then your next pick
+Waiting for the owner. Three things were built "and ask me later" (the owner's words), so please say what you think:
+1. **Amounts lined up (2).** On Wallets, the balances now share a line across a row, which leaves a little empty space under a shorter note; on Home the amounts sit at the bottom of their cards, so a card with a shorter name has a little more room above its amount. Keep it, or would you rather the cards were as tight as before?
+2. **Which balance changed (4).** Messages now end with "BCA is now Rp 8.642.300." (a transfer names both wallets; a closed eye gives "BCA's balance is updated."). Right amount, shorter, or only for transfers?
+3. **Goal milestones (5).** A message with the celengan at a quarter, half and three quarters, only on "Add money". About right, too many, or should it also fire when the saved amount is edited?
+
+Also worth a look (decisions of mine, not asked): the biggest-treat rule, the empty-page reading for Wallets and Other, the magnifier's lens turning from pink to pale green, and the order of the sidebar's bottom (name, then backup, then the calm line).
+
+Then a pick from the numbered list under "Possible improvements" ("From the Step 7 review"). Picks are built as one batch, with a short design in chat first and a stop for review, as in Steps 3 to 7.
+
+### Reminder: finish the rename to KAYA
+The app's name was changed from NABUNGBEGO to KAYA on 6 Oct 2026 (everything the owner sees, the docs and the code comments). These were left on purpose and the owner asked to be reminded later:
+- **Database file and backups:** still `backend/data/nabungbego.db` and `nabungbego-<date>-<time>.db` (`backend/src/db.ts`, `backend/src/backup.ts`, the README restore steps, their tests). Renaming the file on its own would start the app with an empty database, so do it as a careful step: stop the app, copy the file (and any `-wal`/`-shm`) to the new name, keep the old one aside, and have the backup list still recognise old `nabungbego-` backups.
+- **Internal names:** the project folder (`NABUNGBEGO`), the package names (`nabungbego`, `nabungbego-frontend`, `nabungbego-backend`, and `package-lock.json`), and the test scratch-folder names.
+- **CSV export names:** `nabungbego-2026-09.csv` and `nabungbego-2026.csv` (`frontend/lib/export-csv.ts`, and any tests that check the name).
+
+### Last: make the web dynamic
+The owner's reminder (1 Oct 2026): **make the web dynamic at the end of the project.** It is not defined yet. When the polish pass is done, ask the owner what "dynamic" should mean before building anything.
+
+## Backlog (asked for, not scheduled yet)
+
+Decide with the owner where these slot in. Doing them before Step 6 lets the polish pass cover them.
+
+### Shortlist: the owner's picks for later (1 Oct 2026)
+Chosen from the improvements list, not scheduled. Each is described in the full list below. On 2 Oct 2026 the owner had five of the first batch built (one budget for the whole month, undo after a delete, weekday habits, the balance line and the username setting: see Step 5e). These four are still waiting:
+- Export from the Transactions page, whatever is filtered (small).
+- Spot repeating payments, such as subscriptions, and list them (medium).
+- A printable monthly report (PDF) (medium).
+- Import from a bank's CSV, sorting the lines with what the app has learned (large).
+
+### Username
+Done on 2 Oct 2026 (see Step 5e): the bottom of the sidebar shows the name with "Change name". What was planned and is now built:
+- The Home greeting shows "Good morning, Mario". The name is in the database (table `app_user`, sent as `user` in `GET /api/data`) and starts from `sampleUser` in `backend/src/sample-data.ts`.
+- The route is `PUT /api/user` and the `DataProvider` action is `updateUserName`; the greeting reads the name from the shared data, so it updated by itself.
+
+## Possible improvements (undecided)
+
+Suggestions only. Nothing here is built. Each is marked small, medium or large.
+
+**From the Step 7 review (4 Oct 2026): pick by number**
+
+Numbers start again. Some are left over from the Step 6 list, some are new. Still on the shortlist from before and not repeated here: Export from the Transactions page, spotting repeating payments, the printable PDF report, and importing a bank's CSV.
+
+*Left over from the Step 6 list*
+1. Highlight a donut slice from its legend row with the keyboard, not only by pointing (small).
+2. "Save and add another" in the form, and "Duplicate" on a row (small).
+3. Keyboard shortcuts: N to add, / to search (small).
+4. Undo after editing a transaction, not only after deleting one (small to medium).
+5. Recurring transactions: rent, salary and subscriptions add themselves each month (large).
+6. A settings page with "Start with sample data" and "Start empty" (small).
+7. Set or change a budget right from Insights (small).
+
+*New from this step*
+8. Wallet cards on a tablet: from 768 to 1023px (the sidebar open) the two columns are only about 215px wide, so a note wraps letter by letter ("Salar y and mont hly bills"). One column until 1024px, or a smaller badge and buttons (small). It was like that before this step; testing found it.
+9. Backups on their own as well: one automatic copy a day, keeping the last 14, and a Restore button that does the README's steps for you (small to medium).
+10. Choose which categories count as treats (a switch on a category) instead of "everything except Bills, Transport, Health and Other" (small to medium).
+11. Save the month recap as a picture to keep or share (medium).
+
+*Your reminder*
+12. "Make the web dynamic" (your note from 1 Oct): tell me what you mean (live updates between your phone and computer, more motion, data that refreshes itself?) before anything is built.
+
+**Faster entry**
+- "Save and add another" in the form, for entering several in a row (small).
+- Keyboard shortcuts: N to add, / to search (small).
+- Duplicate a row, to add a similar transaction in two clicks (small).
+- Recurring transactions: rent, salary and subscriptions add themselves each month (large).
+
+**Finding things**
+- Totals for whatever is filtered (income, spending, net) above the list, and a daily total in each date heading (small).
+- Sticky filter bar and date headings while scrolling (small).
+- Search by wallet name and amount too, and highlight the matched text (small).
+- Export the shown list to CSV: the Export on Insights already writes the file for a month or a year, so this is the same for whatever the Transactions page is showing (small).
+- Real paging from the database (the list is trimmed on screen today, but every transaction is still loaded at once), once there are many thousands of rows (medium).
+
+**Safety and trust**
+- Undo after *editing* a transaction (put the old amount, date or category back), and keep deleted things for longer than the ten seconds Undo gives (small to medium).
+- Warn when an amount is unusually large (small). (Going below zero is done: Step 7.)
+- Select several rows to delete or re-categorise them together (medium).
+- Automatic backups on top of the "Back up now" button (Step 7): copy the database file somewhere safe each day, and a Restore button that does the README's steps (small to medium).
+- A password or PIN before the app opens, worth having if you ever use it on a shared network or host it (medium).
+
+**Data**
+- A settings page with "Start with sample data" and "Start empty" (the ten presets from Step 5 are what an empty start would hold) (small).
+- Import from a bank's CSV export, sorting the lines into categories with what the app has learned from the notes (large).
+
+**Wallets**
+- Show the date of the last value update on the card, and let "Update value" work for other wallet types too, such as gold or crypto held in an e-wallet (small).
+- Show each wallet's share of the total on its card (small).
+- Show corrections in the Transactions list as their own kind of row, so a wallet's balance always adds up to what is listed (medium).
+- Keep a deleted wallet, and its transactions, out of sight for 30 days instead of the ten seconds Undo gives (medium).
+- Drag the cards themselves on the page, instead of using the Reorder dialog (medium).
+- Any colour, not just the ten in the palette (small).
+- A history chart spaced by date, and one that separates money you added from market movement (medium).
+
+**Goals**
+- Hide a goal's amounts with the eye, like wallets (small).
+- Quick amounts in the money box: +Rp 100.000, +Rp 500.000, +Rp 1.000.000 (small).
+- Open a goal from its row on Home, and a colour for each goal (small).
+- Let "Take out" also record where the money went: as spending, or as a transfer back to another wallet (medium).
+- When the transfer that Add money made is edited or deleted in Transactions, let the goal follow (medium).
+- When a goal is a little behind, offer "Move the date" in one click, so the plan and the date stay honest (small).
+
+**Categories**
+- Let a preset change its colour and icon (its name and kind would stay fixed) (small).
+- A small dot on Categories in the sidebar while something is waiting in Other, so it is noticed without opening the page (small).
+- Suggestions: offer the top two or three as small chips, learn when the owner changes one, and suggest the wallet too (medium).
+- Choose where a deleted category's transactions go, instead of always "Other", and a way to move a category's transactions to another one without deleting it (medium).
+- Hide (archive) a category instead of deleting it: old transactions keep it, but it leaves the dropdowns (medium).
+- Sub-categories, such as Food > Coffee (large).
+
+**Insights and budgets**
+- Set or change a budget right from Insights (small).
+- Show a quiet note when a category is well above its usual, such as "Food is higher than in your last three months" (medium).
+- Balance line: choose the range (the last 30 days, 3 months, everything), and draw one line for each wallet (medium).
+- Balance line: mark the days a balance was set by hand, so a jump from a correction isn't mistaken for income (small).
+- Weekday habits for one category ("Food is mostly at weekends"), or over a range of months the owner chooses (medium).
+- Compare a range of months with another range, such as the last three with the three before (medium).
+- A small trend line for each category (a few months at a glance) (medium).
+- A quiet note when the budget for the whole month is lower than the category budgets add up to, or the other way round (small).
+- A budget that differs by month, or that carries what was left over into the next month (medium).
+- Save a month as a printable report (PDF) (medium).
+- Spot repeating payments (a subscription that leaves every month) and list them (medium).
+
+**Polish**
+- Receipt photos, tags and splitting one payment across categories (large).
+- Running it away from home: the app and database would need to live on an always-on computer, with a login and backups (large).

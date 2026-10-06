@@ -1,0 +1,500 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * KAYA design tokens.
+ * Raw values live in :root / .dark below; @theme inline maps them to Tailwind
+ * utilities (bg-card, text-positive, bg-cat-moss/15, shadow-sm, ...).
+ * The full rationale and contrast table is in DESIGN.md.
+ */
+@theme inline {
+  /* Type: Inter for UI and data, Source Serif 4 for headings and big numbers */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+  --font-heading: var(--font-source-serif), ui-serif, Georgia, serif;
+
+  /* shadcn semantic colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand surfaces and states */
+  --color-sage: var(--sage);
+  --color-sage-foreground: var(--sage-foreground);
+  --color-sand: var(--sand);
+  --color-sand-foreground: var(--sand-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-track: var(--track);
+  --color-scrim: var(--scrim);
+
+  /* Category + wallet palette (keys match PaletteColor in lib/types.ts) */
+  --color-cat-moss: var(--cat-moss);
+  --color-cat-sage: var(--cat-sage);
+  --color-cat-marigold: var(--cat-marigold);
+  --color-cat-sand: var(--cat-sand);
+  --color-cat-clay: var(--cat-clay);
+  --color-cat-sky: var(--cat-sky);
+  --color-cat-plum: var(--cat-plum);
+  --color-cat-rose: var(--cat-rose);
+  --color-cat-teal: var(--cat-teal);
+  --color-cat-ochre: var(--cat-ochre);
+
+  /* Radius: controls 12.8px (lg), cards 18px (xl), pills use rounded-full */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Elevation: replaces Tailwind's default shadow scale so shadcn picks it up */
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+}
+
+:root {
+  --radius: 0.8rem;
+
+  --background: oklch(0.962 0.016 86.4); /* #F7F2E7 cream */
+  --foreground: oklch(0.253 0.025 159.0); /* #18261E */
+  --card: oklch(0.997 0.004 91.4); /* #FFFEFB */
+  --card-foreground: oklch(0.253 0.025 159.0);
+  --popover: oklch(0.997 0.004 91.4);
+  --popover-foreground: oklch(0.253 0.025 159.0);
+  --primary: oklch(0.331 0.049 156.2); /* #1F3D2B forest */
+  --primary-foreground: oklch(0.962 0.016 86.4);
+  --secondary: oklch(0.920 0.023 87.2); /* #EBE4D4 */
+  --secondary-foreground: oklch(0.331 0.049 156.2);
+  --muted: oklch(0.940 0.019 90.5); /* #F0EBDD */
+  --muted-foreground: oklch(0.511 0.020 153.2); /* #5E6A61 */
+  --accent: oklch(0.950 0.014 120.3); /* #EDF0E6 */
+  --accent-foreground: oklch(0.331 0.049 156.2);
+  --destructive: oklch(0.528 0.147 33.6); /* #B0432C clay */
+  --border: oklch(0.906 0.019 83.1); /* #E6DFD2 */
+  --input: oklch(0.863 0.022 83.3); /* #D9D1C2 */
+  --ring: oklch(0.477 0.086 154.9); /* #2F6B47 */
+
+  --sidebar: oklch(0.331 0.049 156.2); /* #1F3D2B */
+  --sidebar-foreground: oklch(0.888 0.017 137.0); /* #D5DDD2 */
+  --sidebar-muted: oklch(0.775 0.034 152.2); /* #A6BCAB */
+  --sidebar-primary: oklch(0.962 0.016 86.4); /* #F7F2E7 cream pill */
+  --sidebar-primary-foreground: oklch(0.331 0.049 156.2);
+  --sidebar-accent: oklch(0.384 0.054 155.7); /* #2A4C37 hover */
+  --sidebar-accent-foreground: oklch(0.962 0.016 86.4);
+  --sidebar-border: oklch(0.390 0.049 156.4); /* #2E4D3A */
+  --sidebar-ring: oklch(0.708 0.150 53.1); /* #E8833A */
+
+  --sage: oklch(0.934 0.018 131.9); /* #E5ECE0 */
+  --sage-foreground: oklch(0.428 0.066 156.3); /* #2E5A40 */
+  --sand: oklch(0.934 0.023 82.1); /* #F1E8D8 */
+  --sand-foreground: oklch(0.456 0.059 73.9); /* #6B5230 */
+  --highlight: oklch(0.708 0.150 53.1); /* #E8833A orange */
+  --highlight-foreground: oklch(0.224 0.042 57.8); /* #2A1606 */
+  --positive: oklch(0.473 0.088 154.5); /* #2D6A45 */
+  --negative: oklch(0.528 0.147 33.6); /* #B0432C */
+  --track: oklch(0.926 0.017 84.6); /* #ECE6DA */
+  --scrollbar: oklch(0.854 0.022 83.3); /* #D6CEBF */
+  --scrim: oklch(0.24 0.035 157 / 0.4); /* behind dialogs: deep forest, no blur */
+
+  --cat-moss: oklch(0.487 0.067 155.1); /* #3F6B4F */
+  --cat-sage: oklch(0.645 0.070 151.1); /* #6E9A78 */
+  --cat-marigold: oklch(0.667 0.149 53.7); /* #D9772B */
+  --cat-sand: oklch(0.658 0.084 74.7); /* #B08A55 */
+  --cat-clay: oklch(0.563 0.130 36.3); /* #B4553B */
+  --cat-sky: oklch(0.559 0.074 240.7); /* #4A7A9C */
+  --cat-plum: oklch(0.516 0.086 316.0); /* #7B5889 */
+  --cat-rose: oklch(0.605 0.112 2.2); /* #B8637C */
+  --cat-teal: oklch(0.558 0.076 189.4); /* #35827D */
+  --cat-ochre: oklch(0.606 0.109 91.3); /* #9A7F27 */
+
+  --chart-1: var(--cat-moss);
+  --chart-2: var(--cat-marigold);
+  --chart-3: var(--cat-sage);
+  --chart-4: var(--cat-sand);
+  --chart-5: var(--cat-clay);
+
+  /* Shadows are tinted with the forest hue so they read warm, never grey */
+  --elevation-xs: 0 1px 2px rgb(31 61 43 / 0.05);
+  --elevation-sm: 0 1px 2px rgb(31 61 43 / 0.04), 0 2px 10px -2px rgb(31 61 43 / 0.06);
+  --elevation-md: 0 2px 4px -1px rgb(31 61 43 / 0.05), 0 10px 28px -8px rgb(31 61 43 / 0.12);
+  --elevation-lg: 0 4px 8px -2px rgb(31 61 43 / 0.06), 0 18px 44px -10px rgb(31 61 43 / 0.16);
+}
+
+.dark {
+  --background: oklch(0.195 0.016 157.2); /* #0F1712 green-black */
+  --foreground: oklch(0.932 0.019 86.1); /* #EEE8DB cream */
+  --card: oklch(0.239 0.021 156.6); /* #17221B */
+  --card-foreground: oklch(0.932 0.019 86.1);
+  --popover: oklch(0.255 0.021 158.9); /* #1A261F */
+  --popover-foreground: oklch(0.932 0.019 86.1);
+  --primary: oklch(0.832 0.048 147.0); /* #B4D1B6 soft sage */
+  --primary-foreground: oklch(0.222 0.028 158.4); /* #0F1F16 */
+  --secondary: oklch(0.298 0.024 159.5); /* #233129 */
+  --secondary-foreground: oklch(0.932 0.019 86.1);
+  --muted: oklch(0.267 0.021 159.0); /* #1D2922 */
+  --muted-foreground: oklch(0.738 0.020 150.5); /* #A2AEA4 */
+  --accent: oklch(0.294 0.023 162.9); /* #223029 */
+  --accent-foreground: oklch(0.932 0.019 86.1);
+  --destructive: oklch(0.724 0.117 35.0); /* #E58A73 */
+  --border: oklch(0.310 0.023 157.8); /* #27342C */
+  --input: oklch(0.367 0.025 158.6); /* #34433A */
+  --ring: oklch(0.780 0.061 150.1); /* #9CC3A3 */
+
+  --sidebar: oklch(0.285 0.039 161.7); /* #173024 still reads as forest */
+  --sidebar-foreground: oklch(0.866 0.017 145.4); /* #CCD6CC */
+  --sidebar-muted: oklch(0.733 0.034 156.8); /* #98AFA0 */
+  --sidebar-primary: oklch(0.886 0.021 88.7); /* #DFD9CA softened pill */
+  --sidebar-primary-foreground: oklch(0.285 0.039 161.7);
+  --sidebar-accent: oklch(0.342 0.047 157.8); /* #22402F hover */
+  --sidebar-accent-foreground: oklch(0.932 0.019 86.1);
+  --sidebar-border: oklch(0.322 0.036 156.6); /* #24392C */
+  --sidebar-ring: oklch(0.733 0.125 52.5); /* #E6915A */
+
+  --sage: oklch(0.294 0.029 162.2); /* #1F3128 */
+  --sage-foreground: oklch(0.809 0.053 150.2); /* #A9CBAF */
+  --sand: oklch(0.278 0.018 88.8); /* #2C281E */
+  --sand-foreground: oklch(0.826 0.054 81.1); /* #D8C39F */
+  --highlight: oklch(0.733 0.125 52.5); /* #E6915A softened orange */
+  --highlight-foreground: oklch(0.203 0.035 53.2); /* #231207 */
+  --positive: oklch(0.780 0.081 153.2); /* #8FC79F */
+  --negative: oklch(0.724 0.117 35.0); /* #E58A73 */
+  --track: oklch(0.310 0.024 159.6); /* #26342C */
+  --scrollbar: oklch(0.367 0.025 158.6); /* #34433A */
+  --scrim: oklch(0.1 0.015 157 / 0.65);
+
+  --cat-moss: oklch(0.761 0.077 152.7); /* #8CC09A */
+  --cat-sage: oklch(0.805 0.051 149.6); /* #A9C9AE */
+  --cat-marigold: oklch(0.770 0.124 61.5); /* #EDA15C */
+  --cat-sand: oklch(0.799 0.073 80.4); /* #D6B988 */
+  --cat-clay: oklch(0.723 0.112 38.2); /* #E28C71 */
+  --cat-sky: oklch(0.757 0.062 240.3); /* #8DB6D4 */
+  --cat-plum: oklch(0.735 0.069 312.2); /* #B89DC9 */
+  --cat-rose: oklch(0.764 0.088 1.0); /* #E29BAF */
+  --cat-teal: oklch(0.771 0.073 187.9); /* #7CC4BD */
+  --cat-ochre: oklch(0.788 0.107 92.4); /* #D2B865 */
+
+  /* On dark grounds depth comes from the surface step; shadows only anchor */
+  --elevation-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-sm: 0 1px 2px rgb(0 0 0 / 0.25), 0 2px 10px -2px rgb(0 0 0 / 0.35);
+  --elevation-md: 0 2px 4px -1px rgb(0 0 0 / 0.3), 0 10px 28px -8px rgb(0 0 0 / 0.45);
+  --elevation-lg: 0 4px 8px -2px rgb(0 0 0 / 0.35), 0 18px 44px -10px rgb(0 0 0 / 0.55);
+}
+
+/*
+ * Serif type roles. Named type-* (not text-*) so they never collide with
+ * text colors when classes are merged with cn().
+ */
+@utility type-display {
+  font-family: var(--font-heading);
+  font-size: 2.25rem;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+
+  @media (width >= 48rem) {
+    font-size: 2.75rem;
+  }
+}
+
+@utility type-title {
+  font-family: var(--font-heading);
+  font-size: 1.375rem;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+@utility type-amount-hero {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  font-variant-numeric: lining-nums proportional-nums;
+  white-space: nowrap;
+
+  @media (width >= 48rem) {
+    font-size: 4rem;
+  }
+}
+
+@utility type-amount {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-variant-numeric: lining-nums proportional-nums;
+  white-space: nowrap;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+  }
+  html {
+    @apply font-sans;
+    /* A soft flash where a finger lands, so a tap is acknowledged at once (the browser's own is a grey box). */
+    -webkit-tap-highlight-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  a,
+  button,
+  [role="button"],
+  label,
+  summary {
+    touch-action: manipulation;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  input,
+  textarea {
+    caret-color: var(--highlight);
+  }
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    appearance: none;
+    display: none;
+  }
+  ::selection {
+    background-color: color-mix(in oklch, var(--highlight) 30%, transparent);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * The delight layer (Step 6). Saving should feel like dropping a coin into a celengan, the clay piggy bank:
+ * small, tactile, a little cheeky. Coins, a drawn celengan and a hint of batik carry it. Nothing here moves unless you
+ * did something, and every bit of it stops for "reduce motion". Each piece can be deleted on its own.
+ */
+:root {
+  /* The drawings (celengan, notebook, magnifier): forest-ink lines, terracotta from the clay colour, paper from the card. */
+  --illu-ink: oklch(0.3 0.035 158);
+  --illu-slot: oklch(0.22 0.03 158);
+  --illu-body: oklch(0.74 0.1 52);
+  --illu-body-deep: oklch(0.65 0.11 47);
+  --illu-paint: var(--sand);
+  --illu-paper: var(--card);
+  /* Mixed in srgb: the card colour has no hue of its own, and an oklch mix would read the missing hue as red (pink paper). */
+  --illu-paper-shade: color-mix(in srgb, var(--sage) 90%, var(--card));
+  --illu-line: color-mix(in oklch, var(--cat-sage) 60%, var(--card));
+  --illu-coin: var(--highlight);
+  --illu-coin-rim: color-mix(in oklch, var(--highlight) 40%, var(--illu-ink));
+  --illu-spark: var(--cat-ochre);
+  --illu-ground: color-mix(in oklch, var(--sage-foreground) 16%, transparent);
+
+  /* Batik kawung: four petals round a seed, drawn once as a mask so any colour can wear it. */
+  --kawung-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='black' stroke-width='1.1'%3E%3Cellipse cx='18' cy='9' rx='4.6' ry='9'/%3E%3Cellipse cx='18' cy='27' rx='4.6' ry='9'/%3E%3Cellipse cx='9' cy='18' rx='9' ry='4.6'/%3E%3Cellipse cx='27' cy='18' rx='9' ry='4.6'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='1.7' fill='black'/%3E%3C/svg%3E");
+  --kawung-fade: linear-gradient(to left, black 0%, black 16%, transparent 86%);
+  --kawung-tile-cream: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%23dfe8d8' stroke-opacity='.06' stroke-width='1.1'%3E%3Cellipse cx='18' cy='9' rx='4.6' ry='9'/%3E%3Cellipse cx='18' cy='27' rx='4.6' ry='9'/%3E%3Cellipse cx='9' cy='18' rx='9' ry='4.6'/%3E%3Cellipse cx='27' cy='18' rx='9' ry='4.6'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='1.7' fill='%23dfe8d8' fill-opacity='.06'/%3E%3C/svg%3E");
+
+  /* A little grain, like good paper. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .18 0 0 0 0 .12 .9 0 0 0 -.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.36'/%3E%3C/svg%3E");
+}
+
+.dark {
+  --illu-ink: oklch(0.9 0.02 150);
+  --illu-slot: oklch(0.16 0.02 158);
+  --illu-body: oklch(0.67 0.1 50);
+  --illu-body-deep: oklch(0.57 0.1 45);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .91 0 0 0 0 .86 .9 0 0 0 -.45'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.2'/%3E%3C/svg%3E");
+}
+
+main[data-slot="sidebar-inset"] {
+  background-image: var(--grain);
+}
+
+/* The sidebar (and the phone's menu sheet): batik along the bottom, fading to plain forest above the menu. */
+[data-sidebar="sidebar"] {
+  background-image: linear-gradient(to bottom, var(--sidebar) 0%, var(--sidebar) 40%, transparent 100%), var(--kawung-tile-cream);
+  background-size: 100% 100%, 36px 36px;
+  background-position: 0 0, 0 100%;
+  background-repeat: no-repeat, repeat;
+}
+
+/* The batik lattice, in whatever colour the text colour is. It fades out along --kawung-fade. */
+.kawung {
+  background-color: currentColor;
+  -webkit-mask-image: var(--kawung-tile), var(--kawung-fade);
+  mask-image: var(--kawung-tile), var(--kawung-fade);
+  -webkit-mask-size: 36px 36px, 100% 100%;
+  mask-size: 36px 36px, 100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* A milled coin edge: a ring of dots just inside a round badge, in the badge's own colour. */
+@utility coin-rim {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 9999px;
+    border: 1.5px dotted currentColor;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+}
+
+@keyframes sprout-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-9deg); }
+  65% { transform: rotate(7deg); }
+}
+@keyframes coin-flip {
+  from { transform: perspective(260px) rotateY(0deg); }
+  to { transform: perspective(260px) rotateY(360deg); }
+}
+@keyframes eye-blink {
+  0%, 100% { transform: scaleY(1); }
+  45% { transform: scaleY(0.1); }
+}
+/* Moves with `top`, not a transform: a transform needs the digit to be an inline-block, and that stops the browser
+   from fitting it to its neighbours, which made a long amount a few pixels wider while it popped. */
+@keyframes digit-pop {
+  0% { opacity: 0; top: 0.4em; }
+  60% { opacity: 1; }
+  100% { opacity: 1; top: 0; }
+}
+@keyframes coin-drop {
+  0% { opacity: 0; transform: translate(-50%, -2.6rem) rotate(-50deg) scale(0.85); }
+  16% { opacity: 1; }
+  54% { opacity: 1; transform: translate(-50%, 0) rotate(0deg) scale(1); }
+  66% { transform: translate(-50%, -0.45rem); }
+  78% { transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0.15rem) scale(0.6); }
+}
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translate3d(0, -14vh, 0) rotate(0deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--drift, 0), 108vh, 0) rotate(var(--spin, 360deg)); }
+}
+@keyframes illu-coin-in {
+  0% { opacity: 0; transform: translateY(-34px); }
+  22% { opacity: 1; }
+  66% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(18px); }
+}
+@keyframes illu-squash {
+  0%, 62% { transform: scale(1, 1); }
+  74% { transform: scale(1.035, 0.955); }
+  100% { transform: scale(1, 1); }
+}
+@property --sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 360deg;
+}
+@keyframes donut-sweep {
+  from {
+    --sweep: 0deg;
+    -webkit-mask-image: conic-gradient(black var(--sweep), transparent calc(var(--sweep) + 1.5deg));
+    mask-image: conic-gradient(black var(--sweep), transparent calc(var(--sweep) + 1.5deg));
+  }
+  to {
+    --sweep: 360deg;
+    -webkit-mask-image: conic-gradient(black var(--sweep), transparent calc(var(--sweep) + 1.5deg));
+    mask-image: conic-gradient(black var(--sweep), transparent calc(var(--sweep) + 1.5deg));
+  }
+}
+
+@utility animate-sprout-sway { animation: sprout-sway 900ms ease-in-out both; transform-origin: 50% 100%; }
+@utility animate-digit-pop { animation: digit-pop 340ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@utility animate-eye-blink { animation: eye-blink 260ms ease-in-out both; transform-origin: center; }
+@utility animate-coin-flip { animation: coin-flip 750ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@utility animate-coin-drop { animation: coin-drop 820ms cubic-bezier(0.33, 0, 0.67, 1) both; }
+/* The donut draws itself clockwise from 12 o'clock. The mask exists only while it runs, so nothing is clipped afterwards. */
+.donut-sweep { animation: donut-sweep 650ms cubic-bezier(0.16, 1, 0.3, 1) 120ms backwards; }
+.illu-coin { animation: illu-coin-in 1000ms cubic-bezier(0.55, 0, 0.8, 0.6) 250ms both; }
+@keyframes illu-coin-wait {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.illu-body { transform-origin: 50% 90%; transform-box: fill-box; animation: illu-squash 1000ms ease-out 250ms both; }
+
+/* A bigger invisible tap area on touch screens, for small controls. What you see does not change. */
+@utility tap-area {
+  @media (pointer: coarse) {
+    position: relative;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -0.5rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

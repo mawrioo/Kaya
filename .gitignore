@@ -1,0 +1,12 @@
+# dependencies and build output
+node_modules
+.next
+*.tsbuildinfo
+
+# your data: never commit the database
+backend/data/*.db
+backend/data/*.db-*
+backend/data/backups/
+
+# local settings
+.env*
