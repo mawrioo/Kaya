@@ -1,7 +1,7 @@
 import type { SVGProps } from "react";
 
 /**
- * The KAYA mark: four Parang-curved blades around a Kawung centre,
+ * The Kaya mark: four Parang-curved blades around a Kawung centre,
  * with a clay diamond (the celengan) in the middle.
  *
  * - The blades use `currentColor`, so set the colour with a text class
@@ -11,7 +11,7 @@ import type { SVGProps } from "react";
  */
 export function KayaMark({
   simple = false,
-  title = "KAYA",
+  title = "Kaya",
   ...props
 }: SVGProps<SVGSVGElement> & { simple?: boolean; title?: string }) {
   const blade = simple

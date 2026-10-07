@@ -2,7 +2,7 @@
   "name": "nabungbego",
   "version": "0.1.0",
   "private": true,
-  "description": "KAYA, a calm personal finance tracker. frontend/ is what you see, backend/ saves your data.",
+  "description": "Kaya, a calm personal finance tracker. frontend/ is what you see, backend/ saves your data.",
   "workspaces": [
     "frontend",
     "backend"

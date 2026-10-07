@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Saves and loads KAYA's data in a local SQLite file.",
+  "description": "Saves and loads Kaya's data in a local SQLite file.",
   "scripts": {
     "dev": "node --watch --disable-warning=ExperimentalWarning src/server.ts",
     "start": "node --disable-warning=ExperimentalWarning src/server.ts",

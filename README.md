@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/kaya-lockup-on-dark.svg">
-    <img src="frontend/public/brand/kaya-lockup.svg" alt="KAYA" width="280">
+    <img src="frontend/public/brand/kaya-lockup.svg" alt="Kaya" width="260">
   </picture>
 </p>
 

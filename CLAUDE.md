@@ -1,4 +1,4 @@
-# KAYA
+# Kaya
 
 A personal finance tracker for Indonesian Rupiah, one owner, runs locally.
 

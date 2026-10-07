@@ -1,5 +1,5 @@
 /**
- * Domain types for KAYA, and the shapes the backend's API sends.
+ * Domain types for Kaya, and the shapes the backend's API sends.
  *
  * The backend owns these. The frontend imports them as types only (see
  * frontend/lib/types.ts), so the two folders share one description of the data

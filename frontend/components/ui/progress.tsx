@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "cn"
 import { Progress as ProgressPrimitive } from "radix-ui"
 
-// KAYA: thin orange fill on a sand track. Always pair a bar with its
+// Kaya: thin orange fill on a sand track. Always pair a bar with its
 // value in text; the fill alone is below 3:1 on the light track by design.
 function Progress({
   className,

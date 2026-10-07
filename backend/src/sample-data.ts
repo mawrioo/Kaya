@@ -1,5 +1,5 @@
 /**
- * Sample data for KAYA. It fills a brand-new database the first time the
+ * Sample data for Kaya. It fills a brand-new database the first time the
  * backend starts, and again whenever the database is reset (npm run db:reset).
  * Covers 1 Jul – 28 Sep 2026. All amounts are whole rupiah.
  *

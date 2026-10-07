@@ -9,7 +9,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * KAYA design tokens.
+ * Kaya design tokens.
  * Raw values live in :root / .dark below; @theme inline maps them to Tailwind
  * utilities (bg-card, text-positive, bg-cat-moss/15, shadow-sm, ...).
  * The full rationale and contrast table is in DESIGN.md.
@@ -132,7 +132,7 @@
   --sand-foreground: oklch(0.456 0.059 73.9); /* #6B5230 */
   --highlight: oklch(0.708 0.150 53.1); /* #E8833A orange */
   --highlight-foreground: oklch(0.224 0.042 57.8); /* #2A1606 */
-  /* The clay diamond in the middle of the KAYA mark (the celengan). Only the logo uses it. */
+  /* The clay diamond in the middle of the Kaya mark (the celengan). Only the logo uses it. */
   --kaya-accent: oklch(0.606 0.133 43.6); /* #C2643A clay */
   /* The same diamond on a dark ground. The sidebar and the phone's top bar are forest green in both themes, so the mark
      there always wears this one, whatever the theme is. */

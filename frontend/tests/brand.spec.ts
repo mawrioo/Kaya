@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
-// The new KAYA mark in the sidebar and the phone's top bar, the tab icons, and the brand files. Nothing here saves anything.
+// The new Kaya mark in the sidebar and the phone's top bar, the tab icons, and the brand files. Nothing here saves anything.
 const SIMPLE_BLADE = "M54 50C43 36 50 16 69 6C73 25 72 40 63 50Q58.5 53 54 50z"
 const file = (...parts: string[]) => readFileSync(join(process.cwd(), ...parts))
 const brandLink = (page: Page) => page.getByRole("link", { name: "Kaya, home" })
@@ -62,15 +62,15 @@ async function expectTheNewMark(page: Page) {
   expect(facts.bladeColour).toEqual(facts.wordColour)
   expect(Math.min(...facts.bladeColour)).toBeGreaterThan(200)
   expect(near(facts.diamondColour, [224, 122, 69])).toBe(true)
-  // The wordmark is spaced the way the kit says: 0.16em of 17px.
-  expect(parseFloat(facts.letterSpacing)).toBeCloseTo(2.72, 1)
+  // The wordmark is "Kaya" at 20px, spaced 0.04em.
+  expect(parseFloat(facts.letterSpacing)).toBeCloseTo(0.8, 1)
   // And the round K badge is gone.
   expect(facts.text).toBe("Kaya")
   expect(facts.hasCoinRim).toBe(false)
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`the sidebar shows the KAYA mark with the on-dark colours, not the K coin (${theme} mode)`, async ({ page }, testInfo) => {
+  test(`the sidebar shows the Kaya mark with the on-dark colours, not the K coin (${theme} mode)`, async ({ page }, testInfo) => {
     const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
     await page.setViewportSize({ width: 1440, height: 900 })

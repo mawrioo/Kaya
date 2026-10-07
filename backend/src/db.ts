@@ -1,5 +1,5 @@
 /**
- * Opens KAYA's database: one SQLite file on this computer, using the
+ * Opens Kaya's database: one SQLite file on this computer, using the
  * SQLite that comes built into Node, so there is nothing extra to install.
  */
 import { mkdirSync } from "node:fs"

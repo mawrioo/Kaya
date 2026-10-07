@@ -1,4 +1,4 @@
-# KAYA logo kit (concept 06)
+# Kaya logo kit (concept 06)
 
 Four Parang-curved blades turning around a Kawung centre, with a clay diamond (the celengan) in the middle.
 "Four movements, one calm centre."
@@ -12,7 +12,7 @@ Four Parang-curved blades turning around a Kawung centre, with a clay diamond (t
 | Clay | `#C2643A` | The diamond on light backgrounds |
 | Clay light | `#E07A45` | The diamond on dark backgrounds |
 
-Wordmark: "KAYA" in Source Serif 4 SemiBold, letter spacing 0.16em, already turned into outlines (no font needed).
+Wordmark: "Kaya" in Source Serif 4 SemiBold, letter spacing 0.01em, already turned into outlines (no font needed).
 
 ## Files
 
@@ -22,8 +22,8 @@ Wordmark: "KAYA" in Source Serif 4 SemiBold, letter spacing 0.16em, already turn
 | `svg/kaya-mark-on-dark.svg` | The symbol on dark backgrounds (the sidebar) |
 | `svg/kaya-mark-simple.svg` | Below about 48px: no seed holes |
 | `svg/kaya-mark-mono.svg` | One colour, follows `currentColor` |
-| `svg/kaya-lockup.svg` / `-on-dark.svg` | Symbol + KAYA, for the README, portfolio and splash |
-| `svg/kaya-wordmark.svg` / `-on-dark.svg` | KAYA only |
+| `svg/kaya-lockup.svg` / `-on-dark.svg` | Symbol + Kaya, for the README, portfolio and splash |
+| `svg/kaya-wordmark.svg` / `-on-dark.svg` | Kaya only |
 | `svg/kaya-app-icon.svg` | Square app icon, full bleed (iOS rounds the corners) |
 | `svg/favicon.svg` | Rounded square for the browser tab |
 | `png/apple-touch-icon.png` | 180x180 for iPhone "Add to Home Screen" |

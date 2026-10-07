@@ -1,5 +1,5 @@
 ---
-name: KAYA
+name: Kaya
 description: A calm, warm, premium "mindful money" tracker. Cream paper, forest green, one orange accent.
 colors:
   cream: "#F7F2E7"
@@ -78,9 +78,9 @@ typography:
     lineHeight: 1.5
   wordmark:
     fontFamily: "Source Serif 4, Georgia, serif"
-    fontSize: "1.0625rem"
+    fontSize: "1.25rem"
     fontWeight: 600
-    letterSpacing: "0.16em"
+    letterSpacing: "0.04em"
 rounded:
   control: "12.8px"
   card: "18px"
@@ -138,7 +138,7 @@ components:
     height: "6px"
 ---
 
-# Design System: KAYA
+# Design System: Kaya
 
 ## Overview
 
@@ -228,7 +228,7 @@ Charts use `chart-1` to `chart-5` (moss, marigold, sage, sand, clay) or, for cat
 | `text-sm` | Inter 400–500 | 14px | Labels, meta, list secondary lines |
 | `text-xs` | Inter 500 | 12px | Chips only |
 
-The sidebar uses two more Inter steps: `nav` (15px, links) and `small` (13px, the calm line and the theme switch). The wordmark is serif 17px, 600, tracked +0.16em (as the logo kit says).
+The sidebar uses two more Inter steps: `nav` (15px, links) and `small` (13px, the calm line and the theme switch). The wordmark is serif 20px, 600, tracked +0.04em (mixed-case "Kaya"; the kit's 0.16em was made for capitals).
 
 The serif roles are `type-*` utilities, not `text-*`, so `cn()` never mistakes them for text colors.
 
@@ -272,7 +272,7 @@ In dark mode shadows turn black and heavier. They anchor floating layers rather 
 
 Motion is small and only marks change. In the Reorder list the row you drag lifts (a slight scale and a deeper shadow) while the others slide out of its way. New rows and deleted rows ease in and out over 0.26s (an expo-out curve), animating height and opacity, plus a 24px slide to the right on the way out. A day that appears or disappears moves as one piece. Filtering and paging never animate. Swipe snapping uses a stiff spring. A transaction, wallet, goal or category brought back with Undo eases in in the same way. A wallet, goal or category you just added fades in with a small rise over 0.5s (and on a phone the page scrolls to it). The bar of a goal eases to its new length when money is added. Everything respects "reduce motion".
 
-Step 6 added a few more, all answering something you did (nothing moves on its own except the Home donut, once). The **Completed** fold fades in as its arrow turns (0.2s). The **donut** draws itself clockwise from 12 o'clock when Home opens (0.65s, a mask that exists only while it runs, so the tooltip is never clipped). Buttons, round buttons, links, nav items and wallet cards squeeze or settle slightly while pressed. The **eye** blinks when pressed, and the amount (or its dots) fades back in. A digit that changes pops in from below (0.34s). The **KAYA mark** in the sidebar turns once when you point at it (the old K coin's flip, kept on the new mark for now). The **sprout** by the sidebar's calm line sways once when you point at the line. When money is added to a goal, a **coin** falls into the bar and lands where the fill ends (0.8s, in step with the bar). When a goal is **reached**, a short shower of coins and paper pieces in the palette's colours falls once (about 3s, drawn by `lib/celebrate.ts`), with a celengan in the message. Under "reduce motion" the shower isn't made at all, the coin has already gone, the donut is simply there, and the others end at once. The `motion` library's own animations (the reorder lists) follow it too, through one `MotionProvider` in the root layout.
+Step 6 added a few more, all answering something you did (nothing moves on its own except the Home donut, once). The **Completed** fold fades in as its arrow turns (0.2s). The **donut** draws itself clockwise from 12 o'clock when Home opens (0.65s, a mask that exists only while it runs, so the tooltip is never clipped). Buttons, round buttons, links, nav items and wallet cards squeeze or settle slightly while pressed. The **eye** blinks when pressed, and the amount (or its dots) fades back in. A digit that changes pops in from below (0.34s). The **Kaya mark** in the sidebar turns once when you point at it (the old K coin's flip, kept on the new mark for now). The **sprout** by the sidebar's calm line sways once when you point at the line. When money is added to a goal, a **coin** falls into the bar and lands where the fill ends (0.8s, in step with the bar). When a goal is **reached**, a short shower of coins and paper pieces in the palette's colours falls once (about 3s, drawn by `lib/celebrate.ts`), with a celengan in the message. Under "reduce motion" the shower isn't made at all, the coin has already gone, the donut is simply there, and the others end at once. The `motion` library's own animations (the reorder lists) follow it too, through one `MotionProvider` in the root layout.
 
 ## Shapes
 
@@ -296,13 +296,13 @@ White card, 1px hairline, 18px radius, `shadow-sm`. Never nest cards. Lists insi
 
 Items are 44px tall with a cream label and icon on forest. The active page gets a light pill with forest text, plus `aria-current="page"`, and hover is a lighter green. Keyboard focus is a 2px orange ring. At the bottom sit the owner's name with "Change name" (see Name row and name box), "Back up now" (see Backup row), the calm line ("Runs on this computer. Your numbers stay here.") and the Light / Dark / Auto switch. Auto follows the system setting, and the choice persists. Before all of it comes the skip link (see Layout). The bottom of the sidebar, and of the phone's menu sheet, carries a very faint kawung lattice (cream at 6%) that fades out upward before it reaches the menu, so the forest column feels woven rather than flat. The sprout by the calm line sways once when you point at the line.
 
-### Logo (the KAYA mark)
+### Logo (the Kaya mark)
 
-The logo is the **KAYA mark**: four Parang-curved blades turning around a Kawung centre, with a clay diamond in the middle (the celengan). It comes from the logo kit in `kaya-logo/` (its README has the rules), and the app's copies are in `public/brand/`.
+The logo is the **Kaya mark**: four Parang-curved blades turning around a Kawung centre, with a clay diamond in the middle (the celengan). It comes from the logo kit in `kaya-logo/` (its README has the rules), and the app's copies are in `public/brand/`.
 
 - **Colours.** Forest `#1F3D2B` and clay `#C2643A` on light grounds, cream `#F4EEE2` and light clay `#E07A45` on dark ones. The diamond is the only clay in the mark; the blades are never clay. Tokens in `globals.css`: `--kaya-accent` (clay in light mode, light clay in dark mode) and `--kaya-accent-on-dark` (always light clay).
 - **The component** is `components/kaya-mark.tsx`: the blades in `currentColor`, the diamond in `--kaya-accent`, and a `simple` version without the seed holes, which is the one to use under 48px.
-- **In the app.** The brand link at the top of the sidebar, and in the phone's top bar, is the simple mark at 44px in the `sidebar-primary` cream, next to the wordmark. Those grounds are forest green in light and dark mode alike, so the link sets `--kaya-accent` to `--kaya-accent-on-dark` itself. The mark is decorative (the link is named "KAYA, home") and takes no pointer events of its own, and a -4px margin keeps its layout box at 36px, so the header is the height it always was. The wordmark is live text in Source Serif 4 SemiBold, 17px, letter-spaced 0.16em, as the kit says (the kit's SVG files have it as outlines).
+- **In the app.** The brand link at the top of the sidebar, and in the phone's top bar, is the simple mark at 44px in the `sidebar-primary` cream, next to the wordmark. Those grounds are forest green in light and dark mode alike, so the link sets `--kaya-accent` to `--kaya-accent-on-dark` itself. The mark is decorative (the link is named "Kaya, home") and takes no pointer events of its own, and a -4px margin keeps its layout box at 36px, so the header is the height it always was. The wordmark is live text in Source Serif 4 SemiBold, 20px, letter-spaced 0.04em for mixed-case "Kaya" (the kit's SVG files still have capital outlines at 0.16em).
 - **Icons.** `app/icon.svg` is the browser tab icon (a rounded forest square holding the simple cream mark), `app/favicon.ico` carries 16, 32 and 48px frames for old browsers, and `app/apple-icon.png` is the 180px iPhone home-screen icon. `public/brand/` also holds the lockup, wordmark, app icon and PNG files for the README and slides, and `icon-192.png` and `icon-512.png` for a future web app manifest (there isn't one yet).
 - **Rules** (from the kit): clear space of at least a quarter of the mark's width; the simple version under 48px; never recolour the blades in clay, rotate the mark, add a shadow, or put it inside a circle or coin. Coins elsewhere (goals, milestones, the celengan, the Quick add coin) are not the logo.
 - **Pointing at it.** For now the mark still turns once when pointed at, as the K coin did (see Motion). Whether to keep that, turn it a quarter instead, or drop it is the owner's call.
@@ -557,13 +557,13 @@ Step 7 added three more in the same hand (forest-ink lines, terracotta clay, a c
 
 ### The delight layer
 
-One thought runs through it: saving should feel like dropping a coin into a celengan, small, tactile and a little cheeky (KAYA is a nod to "kaya", rich). Coins and the celengan are the recurring shapes, a hint of batik is the texture, and it all lives where money moves or a goal is reached, never in the way of reading a number. Every piece can be taken out on its own.
+One thought runs through it: saving should feel like dropping a coin into a celengan, small, tactile and a little cheeky (Kaya is a nod to "kaya", rich). Coins and the celengan are the recurring shapes, a hint of batik is the texture, and it all lives where money moves or a goal is reached, never in the way of reading a number. Every piece can be taken out on its own.
 
-- **The balance card's engraving.** A `kawung` lattice (four petals round a seed, drawn once as a mask in `--kawung-tile`, so any colour can wear it) at 17% in `sage-foreground`, fading out along `--kawung-fade` from the right edge, and that is all there is now. (A round `Seal` with "KAYA" round the rim and the old K coin in the middle used to sit at its right edge from 768px; the owner had it taken off on 6 Oct 2026 and `seal.tsx` is deleted.)
+- **The balance card's engraving.** A `kawung` lattice (four petals round a seed, drawn once as a mask in `--kawung-tile`, so any colour can wear it) at 17% in `sage-foreground`, fading out along `--kawung-fade` from the right edge, and that is all there is now. (A round `Seal` with "Kaya" round the rim and the old K coin in the middle used to sit at its right edge from 768px; the owner had it taken off on 6 Oct 2026 and `seal.tsx` is deleted.)
 - **The sidebar's batik.** The `[data-sidebar="sidebar"]` rule in `globals.css`: a pre-coloured tile (`--kawung-tile-cream`) under a gradient that is solid forest above the menu. To remove: delete that rule.
 - **Paper grain.** A fine noise (`--grain`, an SVG filter tile at 36% in light mode and 20% in dark) on the page behind the cards. White cards stay clean. To remove: delete the `main[data-slot="sidebar-inset"]` rule.
 - **Coin rims** (`coin-rim`, see Shapes).
-- **The brand mark turns** when you point at the brand (`animate-coin-flip`, one full turn about the vertical axis). This is the K coin's old flip, kept for now on the KAYA mark; the owner will decide whether to keep it, make it a quarter turn, or remove it.
+- **The brand mark turns** when you point at the brand (`animate-coin-flip`, one full turn about the vertical axis). This is the K coin's old flip, kept for now on the Kaya mark; the owner will decide whether to keep it, make it a quarter turn, or remove it.
 - **A coin drops into a goal's bar** when more is saved than before (`GoalCard`), and the saved amount's digits pop.
 - **The coin shower** when a goal is reached (`lib/celebrate.ts`): 46 pieces, one in four an orange coin with a dotted rim, the rest paper bits in the ten category colours (read from the theme's variables), each with its own fall, drift and spin. They remove themselves after 3.6s. The message that goes with it ("Goal reached", "<name> is fully funded. Nicely saved.") carries a small celengan instead of the usual tick.
 - **A sun or moon in the date pill**, by the hour: sunrise from 5, sun from 11, sunset from 17, moon from 20.
