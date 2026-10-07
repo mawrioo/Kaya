@@ -4,7 +4,6 @@ import Link from "next/link"
 
 import { useData } from "@/components/data-provider"
 import { CalendarArt } from "@/components/illustrations/calendar"
-import { Seal } from "@/components/illustrations/seal"
 import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
 import { formatDate, formatMonthName } from "@/lib/format"
@@ -13,9 +12,8 @@ import { describeTransaction } from "@/lib/stats"
 import { cn } from "@/lib/utils"
 
 /**
- * The month in one look, at the top of the Month view: what came in, what went out, what was left and the biggest treat,
- * with the round seal behind it like the one on a banknote. A month with no money in it gets a calendar drawing and a
- * plain sentence instead. `today` is "2026-10-04", from the server, so "yet" is only said for a month that isn't over.
+ * The month in one look, at the top of the Month view: what came in, what went out, what was left and the biggest treat.
+ * A month with no money in it gets a calendar drawing and a plain sentence instead. `today` is "2026-10-04", from the server, so "yet" is only said for a month that isn't over.
  */
 export function MonthRecap({ month, today }: { month: string; today: string }) {
   const { transactions, categories, wallets } = useData()
@@ -53,8 +51,6 @@ export function MonthRecap({ month, today }: { month: string; today: string }) {
       data-slot="month-recap"
       className="relative isolate overflow-hidden rounded-xl border bg-card p-5 shadow-sm md:p-6"
     >
-      {/* The seal: decoration only, behind the words, in the top corner (above the amounts, never under one). */}
-      <Seal className="pointer-events-none absolute -top-5 -right-5 -z-10 hidden size-[6.5rem] text-sage-foreground md:block" />
       <h2 id="month-recap-title" className="type-title wrap-anywhere">
         {name} in one look
       </h2>

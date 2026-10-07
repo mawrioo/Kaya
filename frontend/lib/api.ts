@@ -54,7 +54,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { "content-type": "application/json", ...init?.headers },
     })
   } catch {
-    throw new ApiError("Couldn't reach the backend. Is KAYA running?")
+    throw new ApiError("Couldn't reach the backend. Is Kaya running?")
   }
 
   const payload: unknown = await response.json().catch(() => undefined)

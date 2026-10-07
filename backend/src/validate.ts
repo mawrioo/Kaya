@@ -91,8 +91,15 @@ export function parseNewTransaction(body: unknown, refs: References): NewTransac
 const WALLET_KINDS: WalletKind[] = ["bank", "digital-bank", "e-wallet", "investment", "cash"]
 const MAX_WALLET_NAME_LENGTH = 40
 const MAX_WALLET_NOTE_LENGTH = 80
+export const MAX_WALLET_NICKNAME_LENGTH = 20
 
-type NamedWallet = Pick<Wallet, "id" | "name">
+type NamedWallet = Pick<Wallet, "id" | "name" | "nickname">
+
+/** Capitals and extra spaces don't matter when two names or nicknames are compared. */
+function sameWords(a: string, b: string): boolean {
+  const simple = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase()
+  return simple(a) === simple(b)
+}
 
 function parseWalletName(value: unknown, wallets: NamedWallet[], ownId?: string): string {
   if (typeof value !== "string" || value.trim() === "") throw new ValidationError("Give the wallet a name.")
@@ -102,7 +109,31 @@ function parseWalletName(value: unknown, wallets: NamedWallet[], ownId?: string)
   }
   const clash = wallets.find((wallet) => wallet.id !== ownId && wallet.name.toLowerCase() === name.toLowerCase())
   if (clash) throw new ValidationError(`You already have a wallet called ${clash.name}.`)
+  // Quick add would not know which wallet is meant if a name were also another wallet's nickname.
+  const nicknamed = wallets.find((wallet) => wallet.id !== ownId && wallet.nickname !== undefined && sameWords(wallet.nickname, name))
+  if (nicknamed) throw new ValidationError(`${name} is already the nickname of ${nicknamed.name}. Choose another name.`)
   return name
+}
+
+/**
+ * The nickname for Quick add: nothing at all, null or "" mean "no nickname" and give back undefined. Otherwise it is
+ * short, has a letter in it (so it can't be mistaken for an amount), and isn't another wallet's name or nickname.
+ */
+function parseWalletNickname(value: unknown, wallets: NamedWallet[], ownId?: string): string | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value !== "string") throw new ValidationError("The nickname must be text.")
+  const nickname = value.trim().replace(/\s+/g, " ")
+  if (nickname === "") return undefined
+  if (nickname.length > MAX_WALLET_NICKNAME_LENGTH) {
+    throw new ValidationError(`The nickname can be at most ${MAX_WALLET_NICKNAME_LENGTH} characters.`)
+  }
+  if (!/\p{L}/u.test(nickname)) throw new ValidationError("A nickname needs at least one letter.")
+  const others = wallets.filter((wallet) => wallet.id !== ownId)
+  const named = others.find((wallet) => sameWords(wallet.name, nickname))
+  if (named) throw new ValidationError(`${named.name} is already the name of another wallet.`)
+  const nicknamed = others.find((wallet) => wallet.nickname !== undefined && sameWords(wallet.nickname, nickname))
+  if (nicknamed) throw new ValidationError(`${nickname} is already the nickname of ${nicknamed.name}.`)
+  return nickname
 }
 
 function parseWalletNote(value: unknown): string {
@@ -145,6 +176,7 @@ export function parseNewWallet(body: unknown, wallets: NamedWallet[]): NewWallet
   if (typeof kind !== "string" || !WALLET_KINDS.includes(kind as WalletKind)) {
     throw new ValidationError("Choose what kind of wallet this is.")
   }
+  const nickname = parseWalletNickname(body.nickname, wallets)
   return {
     name,
     kind: kind as WalletKind,
@@ -153,6 +185,7 @@ export function parseNewWallet(body: unknown, wallets: NamedWallet[]): NewWallet
     // Left out (or null) means "use the default".
     ...(body.color === undefined ? {} : { color: parseColor(body.color) }),
     ...(body.icon === undefined || body.icon === null ? {} : { icon: parseIcon(body.icon) }),
+    ...(nickname === undefined ? {} : { nickname }),
   }
 }
 
@@ -162,9 +195,10 @@ export function parseWalletChanges(body: unknown, wallets: NamedWallet[], ownId:
   return {
     name: parseWalletName(body.name, wallets, ownId),
     description: parseWalletNote(body.description),
-    // Left out means "keep it as it is"; a null icon means "back to the default icon".
+    // Left out means "keep it as it is"; a null icon means "back to the default icon", and a null (or empty) nickname takes it away.
     ...(body.color === undefined ? {} : { color: parseColor(body.color) }),
     ...(body.icon === undefined ? {} : { icon: body.icon === null ? null : parseIcon(body.icon) }),
+    ...(body.nickname === undefined ? {} : { nickname: parseWalletNickname(body.nickname, wallets, ownId) ?? null }),
   }
 }
 

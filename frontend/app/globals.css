@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Build/test artifacts are never sources of utility classes, including in isolated app copies. */
+@source not "../.next";
+@source not "../test-results";
+@source not "../playwright-report";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -128,6 +132,11 @@
   --sand-foreground: oklch(0.456 0.059 73.9); /* #6B5230 */
   --highlight: oklch(0.708 0.150 53.1); /* #E8833A orange */
   --highlight-foreground: oklch(0.224 0.042 57.8); /* #2A1606 */
+  /* The clay diamond in the middle of the KAYA mark (the celengan). Only the logo uses it. */
+  --kaya-accent: oklch(0.606 0.133 43.6); /* #C2643A clay */
+  /* The same diamond on a dark ground. The sidebar and the phone's top bar are forest green in both themes, so the mark
+     there always wears this one, whatever the theme is. */
+  --kaya-accent-on-dark: oklch(0.684 0.144 46.5); /* #E07A45 clay light */
   --positive: oklch(0.473 0.088 154.5); /* #2D6A45 */
   --negative: oklch(0.528 0.147 33.6); /* #B0432C */
   --track: oklch(0.926 0.017 84.6); /* #ECE6DA */
@@ -194,6 +203,7 @@
   --sand-foreground: oklch(0.826 0.054 81.1); /* #D8C39F */
   --highlight: oklch(0.733 0.125 52.5); /* #E6915A softened orange */
   --highlight-foreground: oklch(0.203 0.035 53.2); /* #231207 */
+  --kaya-accent: var(--kaya-accent-on-dark); /* #E07A45 clay light */
   --positive: oklch(0.780 0.081 153.2); /* #8FC79F */
   --negative: oklch(0.724 0.117 35.0); /* #E58A73 */
   --track: oklch(0.310 0.024 159.6); /* #26342C */

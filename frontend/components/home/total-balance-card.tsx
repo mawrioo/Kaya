@@ -1,7 +1,6 @@
 import { CircleAlert } from "lucide-react"
 
 import { BalanceToggle, HideableMoney, ShowWhenVisible } from "@/components/balance-visibility"
-import { Seal } from "@/components/illustrations/seal"
 import { TOTAL_BALANCE_ID } from "@/lib/balance-visibility"
 import { formatPercent, formatRupiah } from "@/lib/format"
 import { paletteClasses } from "@/lib/palette"
@@ -25,9 +24,8 @@ export function TotalBalanceCard({ wallets }: { wallets: Wallet[] }) {
       aria-labelledby="total-balance-label"
       className="relative isolate overflow-hidden rounded-xl border bg-linear-to-br from-sage to-card p-6 shadow-sm md:p-8"
     >
-      {/* The engraving: a batik lattice (kawung) fading in from the right, and a coin seal. Decoration only. */}
+      {/* The engraving: a batik lattice (kawung) fading in from the right. Decoration only. */}
       <div aria-hidden className="kawung pointer-events-none absolute inset-y-0 right-0 -z-10 w-2/3 text-sage-foreground opacity-[0.17]" />
-      <Seal className="pointer-events-none absolute top-16 -right-3 -z-10 hidden size-32 text-sage-foreground md:block" />
       <div className="flex items-center justify-between gap-4">
         <h2 id="total-balance-label" className="text-base font-medium text-muted-foreground">
           Total balance

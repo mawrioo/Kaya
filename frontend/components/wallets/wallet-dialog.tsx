@@ -22,6 +22,7 @@ import { walletIconChoices, walletIcons } from "@/lib/icons"
 import type { Wallet } from "@/lib/types"
 import {
   MAX_NAME_LENGTH,
+  MAX_NICKNAME_LENGTH,
   MAX_NOTE_LENGTH,
   emptyWalletForm,
   validateWalletForm,
@@ -113,7 +114,7 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
       <DialogHeader>
         <DialogTitle className="type-title">{editing ? "Edit wallet" : "Add wallet"}</DialogTitle>
         <DialogDescription className="sr-only">
-          {editing ? "Change this wallet's name or note." : "Add a bank account, e-wallet, investment or cash on hand."}
+          {editing ? "Change this wallet's name, nickname or note." :"Add a bank account, e-wallet, investment or cash on hand."}
         </DialogDescription>
       </DialogHeader>
 
@@ -127,6 +128,26 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
           aria-invalid={errors.name ? true : undefined}
           aria-describedby={errors.name ? "wallet-name-error" : undefined}
           onChange={(event) => update("name", event.target.value)}
+          className="h-10 bg-card dark:bg-card"
+        />
+      </Field>
+
+      <Field
+        label="Nickname (optional)"
+        htmlFor="wallet-nickname"
+        error={errors.nickname}
+        hint="A short word Quick add understands, like jago for Bank Jago."
+      >
+        <Input
+          id="wallet-nickname"
+          value={form.nickname}
+          maxLength={MAX_NICKNAME_LENGTH}
+          autoComplete="off"
+          autoCapitalize="none"
+          placeholder="e.g. jago"
+          aria-invalid={errors.nickname ? true : undefined}
+          aria-describedby={errors.nickname ? "wallet-nickname-error" : undefined}
+          onChange={(event) => update("nickname", event.target.value)}
           className="h-10 bg-card dark:bg-card"
         />
       </Field>

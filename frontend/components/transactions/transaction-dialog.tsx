@@ -32,6 +32,7 @@ import {
 import { errorMessage } from "@/lib/api"
 import { formToNewCategory, type CategoryForm } from "@/lib/category-form"
 import { suggestCategory, type CategorySuggestion } from "@/lib/category-suggestion"
+import { prepareQuickExpense } from "@/lib/quick-add"
 import {
   emptyForm,
   formToTransaction,
@@ -52,6 +53,8 @@ interface TransactionDialogProps {
   editing?: Transaction
   /** The wallet to pre-select when adding, so repeat entries are quicker. */
   defaultWalletId: string
+  /** Open with a focused one-line expense box before showing the review form. */
+  quickAdd?: boolean
   /** Saves the transaction. Throws if it couldn't be saved, which keeps the dialog open. */
   onSave: (input: NewTransaction, editing?: Transaction) => Promise<void>
   /** Called as the dialog closes, to put keyboard focus back where it came from. */
@@ -63,6 +66,7 @@ export function TransactionDialog({
   onOpenChange,
   editing,
   defaultWalletId,
+  quickAdd = false,
   onSave,
   onCloseAutoFocus,
 }: TransactionDialogProps) {
@@ -76,6 +80,7 @@ export function TransactionDialog({
         <TransactionFormBody
           editing={editing}
           defaultWalletId={defaultWalletId}
+          quickAdd={quickAdd}
           onCancel={() => onOpenChange(false)}
           onSave={async (input) => {
             await onSave(input, editing)
@@ -99,11 +104,12 @@ const TYPE_OPTIONS: { value: TransactionType; label: string; icon: typeof ArrowU
 interface BodyProps {
   editing?: Transaction
   defaultWalletId: string
+  quickAdd: boolean
   onCancel: () => void
   onSave: (input: NewTransaction) => Promise<void>
 }
 
-function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: BodyProps) {
+function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onSave }: BodyProps) {
   const { wallets, categories, transactions, addCategory } = useData()
   const isHidden = useIsBalanceHidden()
   const [form, setForm] = useState<TransactionForm>(() =>
@@ -111,6 +117,10 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
   )
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
+  const [quickLine, setQuickLine] = useState("")
+  const [quickError, setQuickError] = useState("")
+  const [quickStatus, setQuickStatus] = useState("")
+  const [reviewing, setReviewing] = useState(!quickAdd || !!editing)
   const formRef = useRef<HTMLFormElement>(null)
   // A category suggested from what the note says, and whether the owner has picked one by hand. From then on
   // nothing is suggested, so their choice is never overwritten. Suggestions are only for a new transaction.
@@ -145,6 +155,8 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
   }
 
   function changeType(type: TransactionType) {
+    setQuickError("")
+    setQuickStatus("")
     // A new transaction may already have a note to suggest a category from.
     const found = !editing && type !== "transfer" ? suggestCategory(form.note, type, transactions, categories) : undefined
     setChosenByHand(false)
@@ -186,6 +198,25 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
     update("categoryId", value)
   }
 
+  function fillFromQuickLine() {
+    if (saving) return
+    const result = prepareQuickExpense(quickLine, form, wallets, categories, transactions, chosenByHand)
+    setQuickStatus("")
+    if (!result.ok) {
+      setQuickError(result.error)
+      return
+    }
+    setForm(result.form)
+    setSuggestion(result.suggestion)
+    setErrors({})
+    setQuickError("")
+    setReviewing(true)
+    const wallet = wallets.find((entry) => entry.id === result.form.walletId)
+    setQuickStatus(`Form filled. ${result.walletMatched ? "Wallet" : "Kept wallet"}: ${wallet?.name ?? "choose below"}. ${result.form.categoryId ? "Review the details, then add the transaction." : "Choose a category below, then add the transaction."}`)
+    // Leave the text available to correct; put the keyboard on the filled amount for review.
+    requestAnimationFrame(() => document.getElementById("tx-amount")?.focus())
+  }
+
   /** Saves a category made from inside this form, and picks it for the transaction. */
   async function handleNewCategory(categoryForm: CategoryForm) {
     try {
@@ -202,6 +233,11 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+    if (saving) return
+    if (!reviewing) {
+      fillFromQuickLine()
+      return
+    }
     const found = validateForm(form)
     setErrors(found)
     if (Object.keys(found).length > 0) {
@@ -223,12 +259,53 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
     <>
       <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-5">
         <DialogHeader>
-          <DialogTitle className="type-title">{editing ? "Edit transaction" : "Add transaction"}</DialogTitle>
+          <DialogTitle className="type-title">{editing ? "Edit transaction" : reviewing ? "Add transaction" : "Quick add"}</DialogTitle>
           <DialogDescription className="sr-only">
             Record money coming in, money going out, or a move between your wallets.
           </DialogDescription>
         </DialogHeader>
 
+        {quickAdd && !editing && form.type === "expense" ? (
+          <div className="grid gap-2 rounded-xl border border-border bg-muted/40 p-3 sm:p-4">
+            <Field label="Your expense" htmlFor="tx-quick-add" error={quickError}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="tx-quick-add"
+                  value={quickLine}
+                  maxLength={240}
+                  autoComplete="off"
+                  autoFocus={!reviewing}
+                  placeholder="nasi goreng 25rb BCA"
+                  aria-invalid={quickError ? true : undefined}
+                  aria-describedby={`tx-quick-help${quickError ? " tx-quick-add-error" : ""}`}
+                  disabled={saving}
+                  onChange={(event) => {
+                    setQuickLine(event.target.value)
+                    setQuickError("")
+                    setQuickStatus("")
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return
+                    event.preventDefault()
+                    if (!event.nativeEvent.isComposing && !event.repeat) fillFromQuickLine()
+                  }}
+                  className="h-10 min-w-0 flex-1 bg-card dark:bg-card"
+                />
+                <Button type="button" variant="secondary" size="lg" disabled={saving || !quickLine.trim()} onClick={fillFromQuickLine}>
+                  Fill form
+                </Button>
+              </div>
+            </Field>
+            <p id="tx-quick-help" className="text-sm text-muted-foreground">
+              An expense in one line. Try 25rb, 25k or 1,5jt. Fill, check, then save.
+            </p>
+            <p role="status" aria-live="polite" aria-atomic="true" className={cn("text-sm text-muted-foreground wrap-anywhere", !quickStatus && "sr-only")}>
+              {quickStatus}
+            </p>
+          </div>
+        ) : null}
+
+        {reviewing ? <>
         <fieldset>
           <legend className="sr-only">Type of transaction</legend>
           <div className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1">
@@ -397,6 +474,7 @@ function TransactionFormBody({ editing, defaultWalletId, onCancel, onSave }: Bod
             {saving ? "Saving..." : editing ? "Save changes" : "Add transaction"}
           </Button>
         </DialogFooter>
+        </> : null}
       </form>
 
       {/* Outside the form on purpose: a form inside this dialog's form would also submit this one. */}

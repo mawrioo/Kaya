@@ -7,6 +7,7 @@ import { BalanceVisibilityProvider } from "@/components/balance-visibility"
 import { DataProvider } from "@/components/data-provider"
 import { MobileTopbar } from "@/components/mobile-topbar"
 import { MotionProvider } from "@/components/motion-provider"
+import { QuickAddButton } from "@/components/quick-add-button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
@@ -31,8 +32,8 @@ const sourceSerif = Source_Serif_4({
 
 export const metadata: Metadata = {
   title: {
-    default: "KAYA",
-    template: "%s · KAYA",
+    default: "Kaya",
+    template: "%s · Kaya",
   },
   description: "A calm personal finance tracker that runs on your own computer.",
 }
@@ -70,13 +71,19 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                   <AppSidebar />
                   <SidebarInset id="main-content" tabIndex={-1} className="outline-none">
                     <MobileTopbar />
-                    <div className="mx-auto w-full max-w-[1200px] px-5 pt-8 pb-16 md:px-8 md:pt-10 xl:px-12">
+                    <div className="mx-auto w-full max-w-[1200px] px-5 pt-8 pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-24 xl:px-12">
                       {children}
                     </div>
                   </SidebarInset>
+                  <QuickAddButton />
                 </SidebarProvider>
               </TooltipProvider>
-              <Toaster position="bottom-right" />
+              {/* Messages sit just above the Quick add coin (56px, 24px from the bottom) so they never cover it. */}
+              <Toaster
+                position="bottom-right"
+                offset={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+                mobileOffset={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+              />
             </DataProvider>
           </BalanceVisibilityProvider>
           </MotionProvider>

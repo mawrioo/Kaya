@@ -10,3 +10,8 @@ backend/data/backups/
 
 # local settings
 .env*
+
+# isolated browser checks and their artifacts
+.nb-test/
+frontend/test-results/
+frontend/playwright-report/

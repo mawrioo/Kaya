@@ -5,6 +5,9 @@ import type { NextConfig } from "next"
 const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:4000"
 
 const nextConfig: NextConfig = {
+  // The small "N" badge that `next dev` draws would sit on top of the Quick add coin at the bottom right. It only
+  // exists while developing, and compile and runtime errors still show without it.
+  devIndicators: false,
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }]
   },

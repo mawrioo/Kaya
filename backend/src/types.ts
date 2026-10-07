@@ -95,6 +95,8 @@ export interface Wallet {
   defaultColor: PaletteColor
   /** The icon the owner chose. Missing means the default icon for the wallet's kind. */
   icon?: WalletIconName
+  /** A short word the owner can use for this wallet in Quick add, like "jago" for "Bank Jago". Missing when there isn't one. */
+  nickname?: string
   /**
    * Investment wallets only: how the value moved the last time the owner
    * updated it by hand, and when. Missing until the first update.
@@ -113,18 +115,20 @@ export interface NewWallet {
   startingBalance: Rupiah
   color?: PaletteColor
   icon?: WalletIconName
+  nickname?: string
 }
 
 /**
  * What can be changed on a wallet afterwards. Its kind and balance are not
- * edited here. Leave the colour or icon out to keep it; send `icon: null` to
- * go back to the default icon.
+ * edited here. Leave the colour, icon or nickname out to keep it; send `icon: null` to
+ * go back to the default icon, and `nickname: null` to take the nickname away.
  */
 export interface WalletChanges {
   name: string
   description: string
   color?: PaletteColor
   icon?: WalletIconName | null
+  nickname?: string | null
 }
 
 /**

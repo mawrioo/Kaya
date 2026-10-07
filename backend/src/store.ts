@@ -81,6 +81,7 @@ interface WalletRow {
   color: PaletteColor
   default_color: PaletteColor
   icon: WalletIconName | null
+  nickname: string | null
   last_change: number | null
   last_at: string | null
 }
@@ -135,6 +136,7 @@ interface WalletDbRow {
   color: PaletteColor
   default_color: PaletteColor | null
   icon: WalletIconName | null
+  nickname: string | null
   position: number
 }
 /** A balance set by hand, as the database holds it. */
@@ -274,7 +276,7 @@ export function createStore(db: DatabaseSync) {
   function getWallets(): Wallet[] {
     const rows = db
       .prepare(
-        `SELECT w.id, w.name, w.kind, w.balance, w.description, w.color, w.icon,
+        `SELECT w.id, w.name, w.kind, w.balance, w.description, w.color, w.icon, w.nickname,
                 COALESCE(w.default_color, w.color) AS default_color,
                 (SELECT new_balance - old_balance FROM wallet_value_updates u WHERE u.wallet_id = w.id AND u.kind = 'value' ORDER BY u.id DESC LIMIT 1) AS last_change,
                 (SELECT at FROM wallet_value_updates u WHERE u.wallet_id = w.id AND u.kind = 'value' ORDER BY u.id DESC LIMIT 1) AS last_at
@@ -291,6 +293,7 @@ export function createStore(db: DatabaseSync) {
       color: row.color,
       defaultColor: row.default_color,
       ...(row.icon !== null ? { icon: row.icon } : {}),
+      ...(row.nickname !== null ? { nickname: row.nickname } : {}),
       ...(row.last_at !== null && row.last_change !== null
         ? { lastValueChange: { change: row.last_change, at: row.last_at } }
         : {}),
@@ -536,7 +539,7 @@ export function createStore(db: DatabaseSync) {
       // The app's own pick is remembered as the default, even when the owner chose another colour.
       const defaultColor = nextWalletColor()
       db.prepare(
-        "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       ).run(
         id,
         input.name,
@@ -546,6 +549,7 @@ export function createStore(db: DatabaseSync) {
         input.color ?? defaultColor,
         defaultColor,
         input.icon ?? null,
+        input.nickname ?? null,
         position
       )
       return walletResult(id)
@@ -559,11 +563,13 @@ export function createStore(db: DatabaseSync) {
       if (!wallet) return undefined
       const color = changes.color ?? wallet.color
       const icon = changes.icon === undefined ? (wallet.icon ?? null) : changes.icon
-      db.prepare("UPDATE wallets SET name = ?, description = ?, color = ?, icon = ? WHERE id = ?").run(
+      const nickname = changes.nickname === undefined ? (wallet.nickname ?? null) : changes.nickname
+      db.prepare("UPDATE wallets SET name = ?, description = ?, color = ?, icon = ?, nickname = ? WHERE id = ?").run(
         changes.name,
         changes.description,
         color,
         icon,
+        nickname,
         id
       )
       return walletResult(id)
@@ -645,7 +651,7 @@ export function createStore(db: DatabaseSync) {
         .all(id, id, id) as unknown as (TransactionRow & { place: number })[]
       const saved: DeletedWallet = {
         row: db
-          .prepare("SELECT id, name, kind, balance, description, color, default_color, icon, position FROM wallets WHERE id = ?")
+          .prepare("SELECT id, name, kind, balance, description, color, default_color, icon, nickname, position FROM wallets WHERE id = ?")
           .get(id) as unknown as WalletDbRow,
         transactions: touched.map(toTransaction),
         places: touched.map((row) => row.place),
@@ -692,9 +698,13 @@ export function createStore(db: DatabaseSync) {
       }
     }
 
+    // Its nickname comes back too, unless another wallet has taken that word since: then the wallet is still restored, without it.
+    const wanted = row.nickname?.toLowerCase()
+    const taken = wanted !== undefined && existing.some((wallet) => wallet.name.toLowerCase() === wanted || wallet.nickname?.toLowerCase() === wanted)
+    const nickname = taken ? null : row.nickname
     db.prepare(
-      "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(row.id, row.name, row.kind, row.balance, row.description, row.color, row.default_color, row.icon, row.position)
+      "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(row.id, row.name, row.kind, row.balance, row.description, row.color, row.default_color, row.icon, nickname, row.position)
     // Its own balance is already right, and so are the others', so the transactions go back without moving any balance.
     transactions.forEach((tx, index) => insertTransactionRow(tx, places[index]))
     const insertUpdate = db.prepare(

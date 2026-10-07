@@ -9,6 +9,7 @@ import { DatabaseSync } from "node:sqlite"
 
 import { presetCategories } from "./category-look.ts"
 import { calendarDate } from "./time.ts"
+import { MAX_WALLET_NICKNAME_LENGTH } from "./validate.ts"
 import { WALLET_ICONS } from "./wallet-look.ts"
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -22,6 +23,9 @@ export const DB_PATH = process.env.DB_PATH ?? resolve(here, "../data/nabungbego.
 
 /** The database itself refuses an icon that isn't on the list. Empty means the wallet uses its kind's default icon. */
 const ICON_CHECK = `CHECK (icon IS NULL OR icon IN (${WALLET_ICONS.map((icon) => `'${icon}'`).join(", ")}))`
+
+/** A nickname is either empty or 1 to 20 characters (the backend's checks are stricter and say why). */
+const NICKNAME_CHECK = `CHECK (nickname IS NULL OR length(nickname) BETWEEN 1 AND ${MAX_WALLET_NICKNAME_LENGTH})`
 
 /**
  * The schema. Besides the columns, the CHECK rules let the database itself
@@ -47,6 +51,8 @@ CREATE TABLE IF NOT EXISTS wallets (
   default_color TEXT,
   -- The icon the owner chose. Empty means the default icon for the wallet's kind.
   icon        TEXT ${ICON_CHECK},
+  -- A short word for Quick add ("jago" for "Bank Jago"). Empty means the wallet has none.
+  nickname    TEXT ${NICKNAME_CHECK},
   position    INTEGER NOT NULL
 );
 
@@ -179,6 +185,8 @@ function addMissingColumns(db: DatabaseSync) {
     db.exec("UPDATE wallets SET default_color = color")
   }
   if (!wallets.includes("icon")) db.exec(`ALTER TABLE wallets ADD COLUMN icon TEXT ${ICON_CHECK}`)
+  // Nobody has a nickname yet, so the new column simply starts empty.
+  if (!wallets.includes("nickname")) db.exec(`ALTER TABLE wallets ADD COLUMN nickname TEXT ${NICKNAME_CHECK}`)
   if (!columnsOf(db, "wallet_value_updates").includes("kind")) {
     db.exec("ALTER TABLE wallet_value_updates ADD COLUMN kind TEXT NOT NULL DEFAULT 'value' CHECK (kind IN ('value', 'correction'))")
   }

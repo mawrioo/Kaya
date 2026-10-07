@@ -88,7 +88,7 @@ export default async function StyleguidePage() {
     <>
       <PageHeader
         title="Style guide"
-        description="Every piece of the KAYA theme in one place. Switch Appearance in the sidebar to check dark mode."
+        description="Every piece of the Kaya theme in one place. Switch Appearance in the sidebar to check dark mode."
       />
 
       <Section title="Stat cards" description="Round icon badge, label, serif amount and one helper line.">

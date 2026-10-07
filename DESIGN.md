@@ -80,7 +80,7 @@ typography:
     fontFamily: "Source Serif 4, Georgia, serif"
     fontSize: "1.0625rem"
     fontWeight: 600
-    letterSpacing: "0.08em"
+    letterSpacing: "0.16em"
 rounded:
   control: "12.8px"
   card: "18px"
@@ -162,7 +162,7 @@ Two themes share the same roles. Light mode is a warm cream page (`#F7F2E7`, mad
 | `sidebar-primary` | `#F7F2E7` | `#DFD9CA` | Active nav pill, selected theme option |
 | `sage` / `sage-foreground` | `#E5ECE0` / `#2E5A40` | `#1F3128` / `#A9CBAF` | Round icon badges |
 | `sand` / `sand-foreground` | `#F1E8D8` / `#6B5230` | `#2C281E` / `#D8C39F` | Chips, secondary buttons |
-| `highlight` | `#E8833A` | `#E6915A` | Progress fills, brand badge, sidebar focus ring |
+| `highlight` | `#E8833A` | `#E6915A` | Progress fills, the Quick add coin, sidebar focus ring |
 | `positive` | `#2D6A45` | `#8FC79F` | Helper lines, income |
 | `negative` / `destructive` | `#B0432C` | `#E58A73` | Spending amounts, errors, overspending |
 | `border` | `#E6DFD2` | `#27342C` | Hairlines |
@@ -208,7 +208,7 @@ Charts use `chart-1` to `chart-5` (moss, marigold, sage, sand, clay) or, for cat
 
 ### Named Rules
 
-- **One orange.** Orange marks progress and the brand badge. It is never a button color and never body text.
+- **One orange.** Orange marks progress. It is never body text, and the only button that wears it is the round Quick add coin. The logo's clay (`--kaya-accent`, a redder colour) is a different colour and only ever the small diamond in the middle of the mark.
 - **Money direction.** Income is green with "+", spending is clay with "−", and a transfer between your own wallets is neutral with no sign. Clay is a muted brick, never bright red. Bars that compare income with spending stay neutral (moss and sand).
 
 ## Typography
@@ -228,7 +228,7 @@ Charts use `chart-1` to `chart-5` (moss, marigold, sage, sand, clay) or, for cat
 | `text-sm` | Inter 400–500 | 14px | Labels, meta, list secondary lines |
 | `text-xs` | Inter 500 | 12px | Chips only |
 
-The sidebar uses two more Inter steps: `nav` (15px, links) and `small` (13px, the calm line and the theme switch). The wordmark is serif 17px, 600, tracked +0.08em.
+The sidebar uses two more Inter steps: `nav` (15px, links) and `small` (13px, the calm line and the theme switch). The wordmark is serif 17px, 600, tracked +0.16em (as the logo kit says).
 
 The serif roles are `type-*` utilities, not `text-*`, so `cn()` never mistakes them for text colors.
 
@@ -272,11 +272,11 @@ In dark mode shadows turn black and heavier. They anchor floating layers rather 
 
 Motion is small and only marks change. In the Reorder list the row you drag lifts (a slight scale and a deeper shadow) while the others slide out of its way. New rows and deleted rows ease in and out over 0.26s (an expo-out curve), animating height and opacity, plus a 24px slide to the right on the way out. A day that appears or disappears moves as one piece. Filtering and paging never animate. Swipe snapping uses a stiff spring. A transaction, wallet, goal or category brought back with Undo eases in in the same way. A wallet, goal or category you just added fades in with a small rise over 0.5s (and on a phone the page scrolls to it). The bar of a goal eases to its new length when money is added. Everything respects "reduce motion".
 
-Step 6 added a few more, all answering something you did (nothing moves on its own except the Home donut, once). The **Completed** fold fades in as its arrow turns (0.2s). The **donut** draws itself clockwise from 12 o'clock when Home opens (0.65s, a mask that exists only while it runs, so the tooltip is never clipped). Buttons, round buttons, links, nav items and wallet cards squeeze or settle slightly while pressed. The **eye** blinks when pressed, and the amount (or its dots) fades back in. A digit that changes pops in from below (0.34s). The **K coin** in the brand badge flips once when you point at it. The **sprout** by the sidebar's calm line sways once when you point at the line. When money is added to a goal, a **coin** falls into the bar and lands where the fill ends (0.8s, in step with the bar). When a goal is **reached**, a short shower of coins and paper pieces in the palette's colours falls once (about 3s, drawn by `lib/celebrate.ts`), with a celengan in the message. Under "reduce motion" the shower isn't made at all, the coin has already gone, the donut is simply there, and the others end at once. The `motion` library's own animations (the reorder lists) follow it too, through one `MotionProvider` in the root layout.
+Step 6 added a few more, all answering something you did (nothing moves on its own except the Home donut, once). The **Completed** fold fades in as its arrow turns (0.2s). The **donut** draws itself clockwise from 12 o'clock when Home opens (0.65s, a mask that exists only while it runs, so the tooltip is never clipped). Buttons, round buttons, links, nav items and wallet cards squeeze or settle slightly while pressed. The **eye** blinks when pressed, and the amount (or its dots) fades back in. A digit that changes pops in from below (0.34s). The **KAYA mark** in the sidebar turns once when you point at it (the old K coin's flip, kept on the new mark for now). The **sprout** by the sidebar's calm line sways once when you point at the line. When money is added to a goal, a **coin** falls into the bar and lands where the fill ends (0.8s, in step with the bar). When a goal is **reached**, a short shower of coins and paper pieces in the palette's colours falls once (about 3s, drawn by `lib/celebrate.ts`), with a celengan in the message. Under "reduce motion" the shower isn't made at all, the coin has already gone, the donut is simply there, and the others end at once. The `motion` library's own animations (the reorder lists) follow it too, through one `MotionProvider` in the root layout.
 
 ## Shapes
 
-`--radius` is 12.8px. Controls and nav items use 12.8px, cards 18px, and chips, badges, pills and progress bars are fully round. The round badges that stand for something (wallets, goals, categories on their own page, stat cards, the brand's N) wear a milled coin edge: a ring of dots just inside the rim, in the badge's own colour at 30% (`coin-rim`). Badges in dropdowns and in dense lists stay plain. Icons are lucide line icons at 16–18px, and nothing else stands in for them.
+`--radius` is 12.8px. Controls and nav items use 12.8px, cards 18px, and chips, badges, pills and progress bars are fully round. The round badges that stand for something (wallets, goals, categories on their own page, stat cards) wear a milled coin edge: a ring of dots just inside the rim, in the badge's own colour at 30% (`coin-rim`). Badges in dropdowns and in dense lists stay plain. Icons are lucide line icons at 16–18px, and nothing else stands in for them.
 
 ## Components
 
@@ -295,6 +295,17 @@ White card, 1px hairline, 18px radius, `shadow-sm`. Never nest cards. Lists insi
 ### Navigation
 
 Items are 44px tall with a cream label and icon on forest. The active page gets a light pill with forest text, plus `aria-current="page"`, and hover is a lighter green. Keyboard focus is a 2px orange ring. At the bottom sit the owner's name with "Change name" (see Name row and name box), "Back up now" (see Backup row), the calm line ("Runs on this computer. Your numbers stay here.") and the Light / Dark / Auto switch. Auto follows the system setting, and the choice persists. Before all of it comes the skip link (see Layout). The bottom of the sidebar, and of the phone's menu sheet, carries a very faint kawung lattice (cream at 6%) that fades out upward before it reaches the menu, so the forest column feels woven rather than flat. The sprout by the calm line sways once when you point at the line.
+
+### Logo (the KAYA mark)
+
+The logo is the **KAYA mark**: four Parang-curved blades turning around a Kawung centre, with a clay diamond in the middle (the celengan). It comes from the logo kit in `kaya-logo/` (its README has the rules), and the app's copies are in `public/brand/`.
+
+- **Colours.** Forest `#1F3D2B` and clay `#C2643A` on light grounds, cream `#F4EEE2` and light clay `#E07A45` on dark ones. The diamond is the only clay in the mark; the blades are never clay. Tokens in `globals.css`: `--kaya-accent` (clay in light mode, light clay in dark mode) and `--kaya-accent-on-dark` (always light clay).
+- **The component** is `components/kaya-mark.tsx`: the blades in `currentColor`, the diamond in `--kaya-accent`, and a `simple` version without the seed holes, which is the one to use under 48px.
+- **In the app.** The brand link at the top of the sidebar, and in the phone's top bar, is the simple mark at 44px in the `sidebar-primary` cream, next to the wordmark. Those grounds are forest green in light and dark mode alike, so the link sets `--kaya-accent` to `--kaya-accent-on-dark` itself. The mark is decorative (the link is named "KAYA, home") and takes no pointer events of its own, and a -4px margin keeps its layout box at 36px, so the header is the height it always was. The wordmark is live text in Source Serif 4 SemiBold, 17px, letter-spaced 0.16em, as the kit says (the kit's SVG files have it as outlines).
+- **Icons.** `app/icon.svg` is the browser tab icon (a rounded forest square holding the simple cream mark), `app/favicon.ico` carries 16, 32 and 48px frames for old browsers, and `app/apple-icon.png` is the 180px iPhone home-screen icon. `public/brand/` also holds the lockup, wordmark, app icon and PNG files for the README and slides, and `icon-192.png` and `icon-512.png` for a future web app manifest (there isn't one yet).
+- **Rules** (from the kit): clear space of at least a quarter of the mark's width; the simple version under 48px; never recolour the blades in clay, rotate the mark, add a shadow, or put it inside a circle or coin. Coins elsewhere (goals, milestones, the celengan, the Quick add coin) are not the logo.
+- **Pointing at it.** For now the mark still turns once when pointed at, as the K coin did (see Motion). Whether to keep that, turn it a quarter instead, or drop it is the owner's call.
 
 ### Name row and name box
 
@@ -350,8 +361,8 @@ Long names and notes wrap instead of being cut off, and the Investment chip drop
 
 The same dialog as the transaction form: deep-forest scrim, clay error text under the field, and the cursor jumps to the first problem.
 
-- **Add wallet:** Name, Type (a dropdown with an icon for each kind), an optional Note, an optional Starting balance in the big serif amount box (with a hint that it isn't income), then the Colour and Icon pickers.
-- **Edit wallet:** Name, Note, Colour and Icon.
+- **Add wallet:** Name, an optional Nickname (a plain text box right under the name with the muted hint "A short word Quick add understands, like jago for Bank Jago."; at most 20 characters), Type (a dropdown with an icon for each kind), an optional Note, an optional Starting balance in the big serif amount box (with a hint that it isn't income), then the Colour and Icon pickers.
+- **Edit wallet:** Name, Nickname, Note, Colour and Icon. The nickname is not shown on the wallet cards or anywhere else; only Quick add reads it. Problems with it (too long, no letter, already a wallet's name or nickname) appear under the box in the usual clay text and send the cursor to it.
 - **Colour and icon pickers:** a "Default" pill first, then the choices. Colours are ten 32px round swatches; the chosen one gets a ring and a check mark (so it isn't colour alone). The Default pill carries a dot of the colour it stands for. Icons are twelve 36px rounded tiles, drawn in the currently chosen colour so what you see is what you get; the chosen one is filled and outlined. They are real radio buttons, so arrow keys work, and every choice has a name for screen readers.
 - **Update value / Correct balance:** one dialog with two wordings. A short explanation that it isn't income or spending, a quiet "Current value" (or "Current balance") row that follows the eye (dots while hidden), the amount box, left empty on purpose so pressing Enter by accident saves nothing, and under it the live change line ("+Rp 120.000 from the current value" in green, "−Rp 25.000 from the current balance" in clay, "+Rp 140.070.000 (+908%) ..." when it is a big jump; a percentage appears from 1% up). The line is left out while the balance is hidden.
 - **History:** the wallet's name and "history" as the title, a one-line explanation, then (from two entries on) a 176px line chart of the balance after each update: forest line, small hollow dots, no numbers down the side, a tooltip with the date, balance and change, and dates along the bottom. Under it a list divided by hairlines, newest first: date and "Value update" or "Balance correction" on the left, the new balance in serif and the change in green or clay on the right. It scrolls after about five rows. While the balance is hidden the chart goes and amounts are dots. The chart is hidden from screen readers and has no tab stop, like the donut.
@@ -548,11 +559,11 @@ Step 7 added three more in the same hand (forest-ink lines, terracotta clay, a c
 
 One thought runs through it: saving should feel like dropping a coin into a celengan, small, tactile and a little cheeky (KAYA is a nod to "kaya", rich). Coins and the celengan are the recurring shapes, a hint of batik is the texture, and it all lives where money moves or a goal is reached, never in the way of reading a number. Every piece can be taken out on its own.
 
-- **The balance card's engraving.** A `kawung` lattice (four petals round a seed, drawn once as a mask in `--kawung-tile`, so any colour can wear it) at 17% in `sage-foreground`, fading out along `--kawung-fade` from the right edge, and from 768px a `Seal` (`components/illustrations/seal.tsx`): two fine rings, "KAYA" running round the rim, the orange K coin in the middle. It sits above the share bar, behind the content (`-z-10` in an `isolate` card), at the right edge, partly cropped. To remove: delete those two lines in `total-balance-card.tsx`.
+- **The balance card's engraving.** A `kawung` lattice (four petals round a seed, drawn once as a mask in `--kawung-tile`, so any colour can wear it) at 17% in `sage-foreground`, fading out along `--kawung-fade` from the right edge, and that is all there is now. (A round `Seal` with "KAYA" round the rim and the old K coin in the middle used to sit at its right edge from 768px; the owner had it taken off on 6 Oct 2026 and `seal.tsx` is deleted.)
 - **The sidebar's batik.** The `[data-sidebar="sidebar"]` rule in `globals.css`: a pre-coloured tile (`--kawung-tile-cream`) under a gradient that is solid forest above the menu. To remove: delete that rule.
 - **Paper grain.** A fine noise (`--grain`, an SVG filter tile at 36% in light mode and 20% in dark) on the page behind the cards. White cards stay clean. To remove: delete the `main[data-slot="sidebar-inset"]` rule.
 - **Coin rims** (`coin-rim`, see Shapes).
-- **The K coin flips** when you point at the brand (`animate-coin-flip`, one full turn about the vertical axis).
+- **The brand mark turns** when you point at the brand (`animate-coin-flip`, one full turn about the vertical axis). This is the K coin's old flip, kept for now on the KAYA mark; the owner will decide whether to keep it, make it a quarter turn, or remove it.
 - **A coin drops into a goal's bar** when more is saved than before (`GoalCard`), and the saved amount's digits pop.
 - **The coin shower** when a goal is reached (`lib/celebrate.ts`): 46 pieces, one in four an orange coin with a dotted rim, the rest paper bits in the ten category colours (read from the theme's variables), each with its own fall, drift and spin. They remove themselves after 3.6s. The message that goes with it ("Goal reached", "<name> is fully funded. Nicely saved.") carries a small celengan instead of the usual tick.
 - **A sun or moon in the date pill**, by the hour: sunrise from 5, sun from 11, sunset from 17, moon from 20.
@@ -580,6 +591,20 @@ Swipe a row left to reveal two full-height buttons, 76px each: Edit (primary: fo
 ### Transaction form
 
 A dialog. A segmented Income / Expense / Transfer switch (built from real radio buttons, so arrow keys work) whose selected label is tinted green, red or neutral. Then a large serif amount box that adds dots as you type, dropdowns for category and wallet with tinted icons, a calendar date picker, and an optional note. Errors appear under the field in clay text, and the cursor jumps to the first one. The amount is focused on open. Dates always read "30 Sep 2026", with weeks starting on Monday. Behind every dialog is a deep-forest scrim with no blur.
+
+### Quick add (7 Oct 2026)
+
+A round **coin** stays at the bottom right on every page: 56px across, 24px from the right and from the bottom, with phone safe-area insets respected. It is the app's orange (`highlight`, with `highlight-foreground` for the plus), with a 24px plus drawn at 2.25 stroke and the same dotted milled rim (`coin-rim`) as the round badges. It has no word on it. Its name for screen readers is "Quick add", and pointing at it or Tabbing to it shows the usual dark tooltip to its left: "Quick add" and, muted, "Ctrl+K" ("Cmd+K" on a Mac). Closing the box hands the keyboard back to the coin without opening that tooltip.
+
+At rest it has `shadow-md` (on the button, so it stays put) and on hover `shadow-lg`; pointing at it turns the coin once (`animate-coin-flip`, only the face turns, not the shadow); pressing squeezes it to 94%. It sits below dialogs and the mobile menu (`z-30`). Orange is otherwise never a button colour (see "One orange"); this coin is the one exception, because it is the one action every page shares.
+
+The corner is shared, so three things make room: messages (`Toaster`) are lifted 96px (`6rem`) from the bottom so they sit just above the coin, on a phone too; page content has 7rem of bottom padding on a phone and 6rem from 768px, so the last row scrolls clear of the coin; and the small black "N" badge that `next dev` draws is switched off (`devIndicators: false`). The sidebar keeps no space for it: its bottom padding is the usual 24px.
+
+The coin opens the existing transaction dialog at a small first step, titled **Quick add**: a **Your expense** label, a white input with `nasi goreng 25rb BCA` as the placeholder, a sand **Fill form** button and one muted helper line. The input and button stack on phones. The input receives focus. Enter fills the form without saving. The panel uses a faint muted surface, the shared border and rounded corners; errors use the existing field style.
+
+**Shortcut.** Ctrl+K (Cmd+K on a Mac) opens the same dialog from any page, even from a text box; it is the only shortcut and no plain letter opens it. The coin carries `aria-keyshortcuts` ("Control+K Meta+K"). Closing the box puts the keyboard back where it was (the coin when nothing had it).
+
+After filling, the dialog shows the normal **Add transaction** review fields and focuses the amount. The quick-add line stays available for corrections. A polite status message names the matched or retained wallet and asks the owner to review or choose a category. Manually selected categories are preserved. Only the regular final button saves; closing restores focus to where the keyboard was, which is the coin unless Ctrl+K was pressed from somewhere else. The ordinary Add/Edit form keeps its amount-first layout. Everything uses shared light/dark tokens and keyboard focus styles.
 
 ### Transaction form: suggestions and "Add new category"
 
