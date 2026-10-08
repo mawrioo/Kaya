@@ -1,6 +1,5 @@
 import Link from "next/link"
 
-import { KayaMark } from "@/components/kaya-mark"
 import { cn } from "@/lib/utils"
 
 /**
@@ -19,13 +18,7 @@ export function BrandMark({ className, onNavigate }: { className?: string; onNav
         className
       )}
     >
-      {/* 44px, so the blades fill about the space the 36px coin did. The negative margin keeps its box 36px, so nothing around it moves. */}
-      <KayaMark
-        simple
-        aria-hidden
-        focusable={false}
-        className="pointer-events-none -m-1 size-11 shrink-0 text-sidebar-primary [--kaya-accent:var(--kaya-accent-on-dark)] group-hover/brand:animate-coin-flip group-focus-visible/brand:animate-coin-flip"
-      />
+      {/* The logo mark is switched off for now (owner's try-out, 7 Oct 2026): only the name shows. KayaMark is still in the code. */}
       <span aria-hidden className="font-serif text-[1.25rem] tracking-[0.04em] text-sidebar-primary">
         <span className="font-semibold">Kaya</span>
       </span>

@@ -48,8 +48,7 @@ function WalletCard({ wallet }: { wallet: Wallet }) {
           aria-hidden
         />
       </p>
-      {/* Pinned to the bottom (cards in a row are the same height), so the amounts line up even when a long name wraps. */}
-      <p className="mt-auto pt-1 type-amount">
+      <p className="mt-1 type-amount">
         <HideableMoney id={wallet.id} amount={wallet.balance} />
       </p>
     </div>

@@ -31,27 +31,6 @@ export function goalProgress(goal: Amounts): GoalProgress {
   }
 }
 
-export type GoalMilestone = 25 | 50 | 75
-
-/**
- * The quarter mark that an addition just passed: 25, 50 or 75 when the percentage on the goal's card (the one the
- * owner sees) has reached it and hadn't before. An addition that passes several gives the highest. Never once the goal
- * is reached, because that has a message of its own.
- */
-export function milestonePassed(before: number, after: number, target: number): GoalMilestone | undefined {
-  const goal = (savedAmount: number) => goalProgress({ savedAmount, targetAmount: target })
-  if (goal(after).done) return undefined
-  const [was, now] = [goal(before).percent, goal(after).percent]
-  return ([75, 50, 25] as const).find((mark) => was < mark && now >= mark)
-}
-
-/** What the message says at each quarter mark. */
-export const milestoneTitle: Record<GoalMilestone, string> = {
-  25: "A quarter of the way",
-  50: "Halfway there",
-  75: "Three quarters of the way",
-}
-
 /** The goals still being saved for come first, in the order they were made. Reached goals go to the end. */
 export function sortGoals(goals: Goal[]): Goal[] {
   return [...goals.filter((goal) => !goalProgress(goal).done), ...goals.filter((goal) => goalProgress(goal).done)]

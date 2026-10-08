@@ -46,13 +46,12 @@ export function WalletCard({ wallet, isNew, onEdit, onSetBalance, onHistory, onD
     <li
       id={`wallet-card-${wallet.id}`}
       className={cn(
-        // The card's four parts (name, balance, goals, value change) sit on rows shared with the card beside it, so the balances line up.
-        "row-span-4 grid grid-cols-1 grid-rows-subgrid gap-y-0",
+        "flex",
         isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3"
       )}
     >
-      <div className="group relative row-span-4 grid w-full grid-cols-1 grid-rows-subgrid gap-y-0 rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,translate] duration-200 hover:shadow-md has-[a:active]:translate-y-px has-[a:active]:shadow-xs has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring md:p-6">
-        <div className="row-start-1 flex items-start gap-3.5">
+      <div className="group relative flex w-full flex-col rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,translate] duration-200 hover:shadow-md has-[a:active]:translate-y-px has-[a:active]:shadow-xs has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring md:p-6">
+        <div className="flex items-start gap-3.5">
           <WalletBadge wallet={wallet} size="lg" />
 
           <div className="min-w-0 flex-1 pt-0.5">
@@ -88,10 +87,8 @@ export function WalletCard({ wallet, isNew, onEdit, onSetBalance, onHistory, onD
           </div>
         </div>
 
-        {/* content-start: the row can be taller than its own content (the card beside it has a button that wraps), and the balance must stay at the top of it. */}
-        <div className="row-start-2 mt-6 flex flex-wrap content-start items-center justify-between gap-x-4 gap-y-3">
-          {/* As tall as the "Update value" button beside Pluang's, so every balance sits on the same line. */}
-          <p className="type-amount flex min-h-10 items-center">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <p className="type-amount">
             <HideableMoney id={wallet.id} amount={wallet.balance} />
           </p>
           {isInvestment ? (
@@ -127,7 +124,7 @@ function SetAside({ wallet }: { wallet: Wallet }) {
 
   return (
     <ShowWhenVisible id={wallet.id}>
-      <p className="row-start-3 mt-3 flex items-start gap-1.5 text-sm text-muted-foreground">
+      <p className="mt-3 flex items-start gap-1.5 text-sm text-muted-foreground">
         {overcommitted ? <CircleAlert className="mt-0.5 size-4 shrink-0 text-negative" aria-hidden /> : null}
         <span>
           {overcommitted ? (
@@ -215,7 +212,7 @@ function ValueChange({ wallet, onHistory }: { wallet: Wallet; onHistory: (wallet
   const change = wallet.lastValueChange?.change
 
   return (
-    <div className="row-start-4 mt-3 flex flex-col gap-1 text-sm">
+    <div className="mt-3 flex flex-col gap-1 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         {change === undefined ? (
           <p className="text-muted-foreground">No value update yet.</p>

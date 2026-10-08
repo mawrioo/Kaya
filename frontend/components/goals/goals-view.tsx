@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react"
 import { ArrowUpDown, ChevronRight, Plus } from "lucide-react"
 
-import { useIsBalanceHidden } from "@/components/balance-visibility"
 import { CelenganArt } from "@/components/illustrations/celengan"
 import { coinShower } from "@/lib/celebrate"
 import { toast } from "sonner"
@@ -19,11 +18,10 @@ import type { MoveMoneyInput } from "@/components/goals/move-money-popover"
 import { Button } from "@/components/ui/button"
 import { useReturnFocus } from "@/hooks/use-return-focus"
 import { errorMessage } from "@/lib/api"
-import { balanceLine, walletIdsOf } from "@/lib/balance-message"
 import { toDateInput } from "@/lib/dates"
 import { formatRupiah } from "@/lib/format"
 import { formToGoal, type GoalForm } from "@/lib/goal-form"
-import { goalProgress, milestonePassed, milestoneTitle } from "@/lib/goals"
+import { goalProgress } from "@/lib/goals"
 import type { Goal } from "@/lib/types"
 import { UNDO_FOR } from "@/lib/undo"
 import { cn } from "@/lib/utils"
@@ -73,7 +71,6 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
     card.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" })
   }, [newId])
 
-  const isHidden = useIsBalanceHidden()
   const walletName = (id: string) => wallets.find((wallet) => wallet.id === id)?.name ?? "an unknown wallet"
   // The owner's own order, with the goals they have reached folded away at the end.
   const inProgress = goals.filter((goal) => !goalProgress(goal).done)
@@ -151,9 +148,8 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
         if (goalProgress(saved).done !== wasDone) moveFocusTo(saved.id)
         return
       }
-      const { goal: saved, transaction, wallets: current } = await addToGoal(goal.id, input.amount, input.fromWalletId)
-      // Money moved from another wallet changes two balances, so the message says where each one stands now.
-      const moved = transaction ? ` Moved from ${walletName(input.fromWalletId!)}. ${balanceLine(walletIdsOf(transaction), current, isHidden)}` : ""
+      const { goal: saved, transaction } = await addToGoal(goal.id, input.amount, input.fromWalletId)
+      const moved = transaction ? ` Moved from ${walletName(input.fromWalletId!)}.` : ""
       if (goalProgress(saved).done !== wasDone) moveFocusTo(saved.id)
       if (goalProgress(saved).done) {
         coinShower()
@@ -163,19 +159,9 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
           classNames: { icon: "size-10! mr-1" },
         })
       } else {
-        // Passing a quarter, half or three quarters of the target gets the celengan too (no confetti: that is for reaching it).
-        const milestone = milestonePassed(goal.savedAmount, saved.savedAmount, saved.targetAmount)
-        if (milestone) {
-          toast.success(milestoneTitle[milestone], {
-            description: `Added ${formatRupiah(input.amount)}. ${saved.name} now has ${formatRupiah(saved.savedAmount)} of ${formatRupiah(saved.targetAmount)}.${moved}`,
-            icon: <CelenganArt still className="w-full" />,
-            classNames: { icon: "size-10! mr-1" },
-          })
-        } else {
-          toast.success(`Added ${formatRupiah(input.amount)}`, {
-            description: `${saved.name} now has ${formatRupiah(saved.savedAmount)} of ${formatRupiah(saved.targetAmount)}.${moved}`,
-          })
-        }
+        toast.success(`Added ${formatRupiah(input.amount)}`, {
+          description: `${saved.name} now has ${formatRupiah(saved.savedAmount)} of ${formatRupiah(saved.targetAmount)}.${moved}`,
+        })
       }
     } catch (error) {
       toast.error(input.direction === "take-out" ? "Couldn't take that out" : "Couldn't add that", {

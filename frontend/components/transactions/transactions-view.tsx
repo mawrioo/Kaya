@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { Plus } from "lucide-react"
 
 import { LedgerArt } from "@/components/illustrations/ledger"
@@ -9,7 +9,6 @@ import { TagArt } from "@/components/illustrations/tag"
 import { WalletArt } from "@/components/illustrations/wallet"
 import { toast } from "sonner"
 
-import { useIsBalanceHidden } from "@/components/balance-visibility"
 import { useData } from "@/components/data-provider"
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog"
 import { TransactionDialog } from "@/components/transactions/transaction-dialog"
@@ -18,7 +17,6 @@ import { TransactionList } from "@/components/transactions/transaction-list"
 import { Button } from "@/components/ui/button"
 import { useReturnFocus } from "@/hooks/use-return-focus"
 import { errorMessage } from "@/lib/api"
-import { balanceLine, walletIdsOf } from "@/lib/balance-message"
 import { monthDates, toDateInput, yearDates } from "@/lib/dates"
 import { formatRupiah } from "@/lib/format"
 import { describeTransaction } from "@/lib/stats"
@@ -33,7 +31,7 @@ import {
   type EmptyScope,
   type TransactionFilters,
 } from "@/lib/transaction-filters"
-import type { NewTransaction, Transaction, TransactionType, Wallet } from "@/lib/types"
+import type { NewTransaction, Transaction, TransactionType } from "@/lib/types"
 
 /** How many transactions show at first, and how many more each press of "Load more" adds. */
 const PAGE_SIZE = 30
@@ -63,7 +61,6 @@ export function TransactionsView({
   initialYear?: string
 }) {
   const { wallets, categories, transactions, addTransaction, updateTransaction, deleteTransaction, undoDelete } = useData()
-  const isHidden = useIsBalanceHidden()
 
   // Arriving from a wallet card starts with that wallet's transactions, and from a category with that category's (for a month).
   const [filters, setFilters] = useState<TransactionFilters>(() => ({
@@ -148,32 +145,16 @@ export function TransactionsView({
     return `${amount} · ${categoryName}`
   }
 
-  /**
-   * What a message says about a transaction: the recap, and under it which balance changed ("BCA is now Rp 8.527.300.").
-   * `current` is every wallet as the backend has just saved it, and `alsoWalletIds` names wallets the transaction
-   * used to touch (an edit that moved it somewhere else).
-   */
-  function described(tx: Transaction, current: Wallet[], alsoWalletIds: string[] = []): ReactNode {
-    const line = balanceLine([...walletIdsOf(tx), ...alsoWalletIds], current, isHidden)
-    if (!line) return recap(tx)
-    return (
-      <>
-        <span className="block">{recap(tx)}</span>
-        <span className="block">{line}</span>
-      </>
-    )
-  }
-
   async function handleSave(input: NewTransaction, original?: Transaction) {
     try {
       if (original) {
-        const { transaction: saved, wallets: current } = await updateTransaction(original.id, input)
+        const { transaction: saved } = await updateTransaction(original.id, input)
         setRevealId(saved.id)
-        toast.success("Transaction updated", { description: described(saved, current, walletIdsOf(original)) })
+        toast.success("Transaction updated", { description: recap(saved) })
       } else {
-        const { transaction: saved, wallets: current } = await addTransaction(input)
+        const { transaction: saved } = await addTransaction(input)
         setRevealId(saved.id)
-        toast.success("Transaction added", { description: described(saved, current) })
+        toast.success("Transaction added", { description: recap(saved) })
       }
       setLastWalletId(input.type === "transfer" ? input.fromWalletId : input.walletId)
     } catch (error) {
@@ -194,9 +175,9 @@ export function TransactionsView({
     setLeavingId(deleting.id)
     const gone = deleting
     try {
-      const { undoId, wallets: current } = await deleteTransaction(gone.id)
+      const { undoId } = await deleteTransaction(gone.id)
       toast.success("Transaction deleted", {
-        description: described(gone, current),
+        description: recap(gone),
         // Long enough to notice it and change your mind, and gone after that.
         duration: UNDO_FOR,
         action: { label: "Undo", onClick: () => void undoTransactionDelete(undoId, gone) },
@@ -220,7 +201,7 @@ export function TransactionsView({
       const result = await undoDelete(undoId)
       if (result.kind !== "transaction") return
       setRevealId(result.transaction.id)
-      toast.success("Transaction restored", { description: described(result.transaction, result.wallets) })
+      toast.success("Transaction restored", { description: recap(result.transaction) })
     } catch (error) {
       toast.error("Couldn't undo that", { description: errorMessage(error) })
     }

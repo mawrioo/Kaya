@@ -34,6 +34,19 @@ While the app is running on your laptop, open the **Network** address that `npm 
 
 There is no login, so anyone on the same Wi-Fi who knows the address could open it.
 
+### Put Kaya on your iPhone's home screen
+
+1. On the laptop, run `npm run dev`, and note the **Network** address it prints.
+2. On the iPhone (same Wi-Fi), open that address in **Safari**. It must be Safari: other iPhone browsers can't add apps to the home screen.
+3. Tap the **Share** button, then **Add to Home Screen**, then **Add**.
+
+Kaya now has its own icon and opens full screen, without Safari's address bar. The round orange coin at the bottom right is Quick add, as on the laptop.
+
+Good to know:
+- **It only works while the laptop is on, the app is running, and the phone is on the same Wi-Fi.** The icon is only a shortcut to the laptop; the data stays on the laptop.
+- **The address can change.** Routers hand out addresses and may give the laptop a new one after a restart, and then the icon stops working. To stop that, reserve an address for the laptop in your router's settings (look for "DHCP reservation" or "static lease", using the laptop's MAC address). Then add the icon again once, with the new address.
+- **Away from home** it won't open. A tool such as Tailscale can reach the laptop from anywhere, but it is not set up here.
+
 ## Handy commands
 
 | Command | What it does |

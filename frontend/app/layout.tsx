@@ -25,7 +25,8 @@ const inter = Inter({
 
 // Variable font with the optical-size axis: finer at display sizes, sturdier small.
 const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
+  // The Home greeting rotates through many languages; these also cover Vietnamese, Turkish, Russian and Greek in the title's own font.
+  subsets: ["latin", "latin-ext", "vietnamese", "cyrillic", "greek"],
   axes: ["opsz"],
   variable: "--font-source-serif",
 })
@@ -36,9 +37,13 @@ export const metadata: Metadata = {
     template: "%s · Kaya",
   },
   description: "A calm personal finance tracker that runs on your own computer.",
+  // Added to an iPhone's home screen, it opens full screen like an app. The icon is app/apple-icon.png.
+  appleWebApp: { capable: true, title: "Kaya", statusBarStyle: "default" },
 }
 
 export const viewport: Viewport = {
+  // Lets the page use the whole screen, so the bottom safe-area spacing (the home bar) is measured as it should be.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F2E7" },
     { media: "(prefers-color-scheme: dark)", color: "#0F1712" },

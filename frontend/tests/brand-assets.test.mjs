@@ -114,10 +114,9 @@ test("--kaya-accent is clay in light mode and light clay in dark mode, and the s
   assert.match(css, /\.dark \{[\s\S]*?--kaya-accent: var\(--kaya-accent-on-dark\); \/\* #E07A45/)
 })
 
-test("the brand component uses the simple mark under 48px, with the on-dark diamond, and no K badge", () => {
+test("the brand component shows only the name (the mark is switched off for now), and no K badge", () => {
   const source = text(frontend, "components", "brand-mark.tsx")
-  assert.match(source, /<KayaMark\s+simple/)
-  assert.match(source, /size-11/)
-  assert.ok(source.includes("[--kaya-accent:var(--kaya-accent-on-dark)]"))
+  assert.ok(!source.includes("<KayaMark"), "the logo mark is switched off in the header")
+  assert.match(source, /Kaya<\/span>/)
   assert.ok(!source.includes("coin-rim") && !/>\s*K\s*</.test(source), "the round K badge is gone")
 })
