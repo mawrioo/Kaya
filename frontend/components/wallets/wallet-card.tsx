@@ -7,6 +7,7 @@ import { CircleAlert, Ellipsis, History, Pencil, Scale, Trash2, TrendingDown, Tr
 import { BalanceToggle, HideableMoney, ShowWhenVisible } from "@/components/balance-visibility"
 import { useData } from "@/components/data-provider"
 import { WalletBadge } from "@/components/wallet-badge"
+import { depositoLine } from "@/lib/deposito"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,12 +26,16 @@ export const walletMenuId = (walletId: string) => `wallet-menu-${walletId}`
 
 interface WalletCardProps {
   wallet: Wallet
+  /** Today's calendar date from the server, "2026-10-08", for the months left on a deposito. */
+  today: string
   /** True for a wallet that was just added, so it eases in. */
   isNew?: boolean
   onEdit: (wallet: Wallet) => void
   /** Opens "Update value" for an investment, or "Correct balance" for any other wallet. */
   onSetBalance: (wallet: Wallet) => void
   onHistory: (wallet: Wallet) => void
+  /** Opens the box for moving a matured deposito's money into another wallet. */
+  onSettle: (wallet: Wallet) => void
   onDelete: (wallet: Wallet) => void
 }
 
@@ -39,8 +44,9 @@ interface WalletCardProps {
  * The whole card is a link to that wallet's transactions. The eye, the "more"
  * menu and "Update value" sit above that link so they can be pressed on their own.
  */
-export function WalletCard({ wallet, isNew, onEdit, onSetBalance, onHistory, onDelete }: WalletCardProps) {
+export function WalletCard({ wallet, today, isNew, onEdit, onSetBalance, onHistory, onSettle, onDelete }: WalletCardProps) {
   const isInvestment = wallet.kind === "investment"
+  const isDeposito = wallet.kind === "deposito"
 
   return (
     <li
@@ -63,9 +69,9 @@ export function WalletCard({ wallet, isNew, onEdit, onSetBalance, onHistory, onD
               >
                 {wallet.name}
               </Link>
-              {isInvestment ? (
+              {isInvestment || isDeposito ? (
                 <span className="shrink-0 rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-sand-foreground">
-                  Investment
+                  {isDeposito ? "Deposito" : "Investment"}
                 </span>
               ) : null}
             </h3>
@@ -102,6 +108,7 @@ export function WalletCard({ wallet, isNew, onEdit, onSetBalance, onHistory, onD
         <SetAside wallet={wallet} />
 
         {isInvestment ? <ValueChange wallet={wallet} onHistory={onHistory} /> : null}
+        {isDeposito ? <DepositoDetails wallet={wallet} today={today} onSettle={onSettle} /> : null}
       </div>
     </li>
   )
@@ -182,16 +189,18 @@ function WalletMenu({
           <Pencil aria-hidden />
           Edit details
         </DropdownMenuItem>
-        {wallet.kind === "investment" ? null : (
+        {wallet.kind === "investment" || wallet.kind === "deposito" ? null : (
           <DropdownMenuItem onSelect={choose(() => onSetBalance(wallet))}>
             <Scale aria-hidden />
             Correct balance
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={choose(() => onHistory(wallet))}>
-          <History aria-hidden />
-          History
-        </DropdownMenuItem>
+        {wallet.kind === "deposito" ? null : (
+          <DropdownMenuItem onSelect={choose(() => onHistory(wallet))}>
+            <History aria-hidden />
+            History
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={choose(() => onDelete(wallet))}>
           <Trash2 aria-hidden />
@@ -199,6 +208,40 @@ function WalletMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+/**
+ * What a deposito says about itself under its balance: the rate and the dates, then the money put in and the interest so
+ * far (before tax; left out while the balance is hidden, because together they are the balance), and, once it has
+ * matured and doesn't renew, the button that moves the money. Interest is never income and is never a transaction.
+ */
+function DepositoDetails({ wallet, today, onSettle }: { wallet: Wallet; today: string; onSettle: (wallet: Wallet) => void }) {
+  const { wallets } = useData()
+  const deposito = wallet.deposito
+  if (!deposito) return null
+  const source = deposito.sourceWalletId ? wallets.find((entry) => entry.id === deposito.sourceWalletId) : undefined
+
+  return (
+    <div className="mt-3 flex flex-col gap-1 text-sm" data-slot="deposito-details">
+      <p className="text-muted-foreground">{depositoLine(deposito, today, source?.name)}</p>
+      {deposito.status === "settled" ? null : (
+        <ShowWhenVisible id={wallet.id}>
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">{formatRupiah(deposito.principal)}</span> put in ·{" "}
+            <span className="font-medium text-positive">{formatRupiah(deposito.interest, { sign: "always" })}</span> interest so far, before tax
+          </p>
+        </ShowWhenVisible>
+      )}
+      {deposito.status === "matured" ? (
+        <div className="mt-2">
+          <Button variant="secondary" size="lg" className="relative z-10" onClick={() => onSettle(wallet)}>
+            Move money
+            <span className="sr-only"> from {wallet.name}</span>
+          </Button>
+        </div>
+      ) : null}
+    </div>
   )
 }
 

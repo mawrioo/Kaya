@@ -61,7 +61,43 @@ export interface User {
   name: string
 }
 
-export type WalletKind = "bank" | "digital-bank" | "e-wallet" | "investment" | "cash"
+export type WalletKind = "bank" | "digital-bank" | "e-wallet" | "investment" | "cash" | "deposito"
+
+/** Where a deposito stands: earning, finished and waiting for the money to be moved, or already moved. */
+export type DepositoStatus = "running" | "matured" | "settled"
+
+/** What the owner fills in about a deposito (time deposit). The amount put in is the wallet's starting balance. */
+export interface DepositoInput {
+  /** Yearly rate in percent, at most two decimals: 5 or 5.25. */
+  ratePercent: number
+  /** The day the first term began, "YYYY-MM-DD". */
+  startDate: string
+  /** How many months one term lasts. */
+  tenorMonths: number
+  /** True when the bank renews it by itself at the end of each term. */
+  rollover: boolean
+}
+
+/**
+ * A deposito wallet's details. Its wallet balance is `principal + interest`, worked out on the day it is read
+ * and never saved, and the interest is never income: no transaction is made for it. It is before tax.
+ */
+export interface Deposito extends DepositoInput {
+  /** The money put in. 0 once the deposito has been settled. */
+  principal: Rupiah
+  /** The interest earned so far (before tax). 0 once settled. */
+  interest: Rupiah
+  /** When the term that is running ends ("YYYY-MM-DD"); for a matured one, the day it matured. */
+  endDate: string
+  status: DepositoStatus
+  /** When the money was moved out, an ISO 8601 date-time with offset. Only a settled deposito has it. */
+  settledAt?: string
+  /**
+   * The wallet the money came from, and goes back to when it matures. Missing for a deposito made before this was
+   * recorded, and once that wallet has been deleted.
+   */
+  sourceWalletId?: string
+}
 
 /**
  * The icons a wallet can wear (lucide-react names in kebab-case). The first
@@ -102,6 +138,8 @@ export interface Wallet {
    * updated it by hand, and when. Missing until the first update.
    */
   lastValueChange?: { change: Rupiah; at: string }
+  /** Deposito wallets only (kind "deposito"): the rate, the dates and the interest earned so far. */
+  deposito?: Deposito
 }
 
 /**
@@ -116,6 +154,11 @@ export interface NewWallet {
   color?: PaletteColor
   icon?: WalletIconName
   nickname?: string
+  /**
+   * Required for a deposito (and only for one). The starting balance is then the amount put in, and must be above zero;
+   * it is taken out of `fromWalletId` (a wallet that isn't a deposito) as a transfer. A deposito has no nickname.
+   */
+  deposito?: DepositoInput & { fromWalletId: string }
 }
 
 /**
@@ -129,6 +172,12 @@ export interface WalletChanges {
   color?: PaletteColor
   icon?: WalletIconName | null
   nickname?: string | null
+  /**
+   * A deposito's details and the amount put in. Leave out to keep them; refused for any other wallet, or once it is
+   * settled. The amount can't change once the money came from a wallet. `fromWalletId` is only for an older deposito that
+   * has no source yet: it takes the amount out of that wallet now, as a transfer.
+   */
+  deposito?: DepositoInput & { principal: Rupiah; fromWalletId?: string }
 }
 
 /**
@@ -357,6 +406,13 @@ export interface SaveWalletResult {
   wallet: Wallet
   wallets: Wallet[]
   adjustment?: BalanceAdjustment
+}
+
+/** The reply to moving a matured deposito's money into another wallet: the deposito, every wallet, and the transfer that was recorded. */
+export interface SettleDepositoResult {
+  wallet: Wallet
+  wallets: Wallet[]
+  transaction: Transaction
 }
 
 /**

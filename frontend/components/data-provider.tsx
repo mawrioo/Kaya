@@ -18,6 +18,7 @@ import type {
   NewWallet,
   RestoreCategory,
   SaveTransactionResult,
+  SettleDepositoResult,
   UndoResult,
   User,
   Wallet,
@@ -50,6 +51,11 @@ interface DataStore extends AppData {
   updateWalletValue: (id: string, value: number) => Promise<Wallet>
   /** Sets a wallet that isn't an investment to what its real account shows. Not income or spending. */
   correctWalletBalance: (id: string, value: number) => Promise<Wallet>
+  /**
+   * Moves a matured deposito's money back to the wallet it came from, as one transfer (name a wallet only for a deposito that
+   * doesn't know where its money came from). Returns the deposito and the transfer.
+   */
+  settleDeposito: (id: string, toWalletId?: string) => Promise<SettleDepositoResult>
   /** Deletes a wallet and its transactions. Returns the id that undoes it. */
   deleteWallet: (id: string) => Promise<string>
   /** Saves the wallets in a new order. */
@@ -203,6 +209,16 @@ export function DataProvider({ initial, children }: { initial: AppData; children
         balanceAdjustments: adjustment ? [...current.balanceAdjustments, adjustment] : current.balanceAdjustments,
       }))
       return wallet
+    },
+    settleDeposito: async (id, toWalletId) => {
+      const result = await api.settleDeposito(id, toWalletId)
+      // The transfer it made is a real transaction, so it shows in Transactions at once.
+      setData((current) => ({
+        ...current,
+        wallets: result.wallets,
+        transactions: [...current.transactions, result.transaction],
+      }))
+      return result
     },
     deleteWallet: async (id) => {
       const { wallets, deletedTransactionIds, undoId } = await api.deleteWallet(id)

@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { BalanceVisibilityProvider } from "@/components/balance-visibility"
+import { CompareOptions } from "@/components/compare-options"
 import { DataProvider } from "@/components/data-provider"
 import { MobileTopbar } from "@/components/mobile-topbar"
 import { MotionProvider } from "@/components/motion-provider"
@@ -55,6 +56,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // and so the page arrives with the owner's data already in it.
   const [cookieStore, data] = await Promise.all([cookies(), loadData()])
   const hiddenBalances = parseHiddenBalances(cookieStore.get(HIDDEN_BALANCES_COOKIE)?.value)
+  // The menu's open or collapsed state is kept in this cookie by the sidebar itself; it is open until it has been collapsed.
+  const menuOpen = cookieStore.get("sidebar_state")?.value !== "false"
 
   return (
     <html lang="en" suppressHydrationWarning className={cn(inter.variable, sourceSerif.variable, "antialiased")}>
@@ -71,8 +74,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <BalanceVisibilityProvider initialHidden={hiddenBalances}>
             <DataProvider initial={data}>
               <TooltipProvider delayDuration={400}>
-                {/* Always open on desktop; below md the sidebar is a sheet opened from the top bar */}
-                <SidebarProvider open>
+                {/* On desktop the menu is 224px wide and can fold down to icons with the button beside the name; below md it is a sheet opened from the top bar */}
+                <SidebarProvider defaultOpen={menuOpen} style={{ "--sidebar-width": "14rem" } as React.CSSProperties}>
                   <AppSidebar />
                   <SidebarInset id="main-content" tabIndex={-1} className="outline-none">
                     <MobileTopbar />
@@ -81,13 +84,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                     </div>
                   </SidebarInset>
                   <QuickAddButton />
+                  <CompareOptions />
                 </SidebarProvider>
               </TooltipProvider>
-              {/* Messages sit just above the Quick add coin (56px, 24px from the bottom) so they never cover it. */}
+              {/* Messages come from the top right (the owner's pick, 8 Oct 2026). On a phone they start under the 64px top bar. */}
               <Toaster
-                position="bottom-right"
-                offset={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-                mobileOffset={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+                position="top-right"
+                offset={{ top: "calc(1.5rem + env(safe-area-inset-top))" }}
+                mobileOffset={{ top: "calc(4.5rem + env(safe-area-inset-top))" }}
               />
             </DataProvider>
           </BalanceVisibilityProvider>

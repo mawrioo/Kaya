@@ -33,6 +33,7 @@ import type {
   SaveTransactionResult,
   SaveUserResult,
   SaveWalletResult,
+  SettleDepositoResult,
   UndoResult,
   WalletChanges,
 } from "@/lib/types"
@@ -118,6 +119,13 @@ export const correctWalletBalance = (id: string, value: number) =>
   })
 
 /** Every balance set by hand for a wallet, newest first. */
+/** The money goes back to the wallet it came from. A wallet only needs naming for a deposito that doesn't know where its money came from. */
+export const settleDeposito = (id: string, toWalletId?: string) =>
+  request<SettleDepositoResult>(`/api/wallets/${encodeURIComponent(id)}/settle`, {
+    method: "POST",
+    body: JSON.stringify(toWalletId ? { toWalletId } : {}),
+  })
+
 export const loadWalletHistory = (id: string) =>
   request<BalanceChange[]>(`/api/wallets/${encodeURIComponent(id)}/history`)
 

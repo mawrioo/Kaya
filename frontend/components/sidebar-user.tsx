@@ -32,7 +32,7 @@ export function SidebarUser({ onChangeName, onBackupStart }: { onChangeName: () 
           ref={trigger}
           type="button"
           id={SIDEBAR_USER_ID}
-          className="group -mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-1 text-left outline-none transition-colors duration-150 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent"
+          className="group -mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-1 text-left outline-none transition-colors duration-150 hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:min-h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
         >
           <span
             aria-hidden
@@ -40,7 +40,8 @@ export function SidebarUser({ onChangeName, onBackupStart }: { onChangeName: () 
           >
             {initial}
           </span>
-          <span className="min-w-0 flex-1">
+          {/* When the menu is folded down to icons, only the badge stays; the words stay for screen readers. */}
+          <span className="min-w-0 flex-1 group-data-[collapsible=icon]:sr-only">
             <span className="block text-[0.9375rem] leading-snug font-medium break-words text-sidebar-foreground">{user.name}</span>
             <span className="block text-[0.8125rem] leading-snug text-sidebar-muted transition-colors duration-150 group-hover:text-sidebar-foreground">
               Settings
@@ -48,14 +49,14 @@ export function SidebarUser({ onChangeName, onBackupStart }: { onChangeName: () 
           </span>
           <ChevronUp
             aria-hidden
-            className="size-4 shrink-0 text-sidebar-muted transition-transform duration-200 group-hover:text-sidebar-accent-foreground group-data-[state=open]:rotate-180"
+            className="size-4 shrink-0 text-sidebar-muted transition-transform duration-200 group-hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden group-data-[state=open]:rotate-180"
           />
         </button>
       </PopoverTrigger>
 
       <PopoverContent
         side="top"
-        align="center"
+        align="start"
         sideOffset={8}
         className="w-(--radix-popover-trigger-width) min-w-60 gap-0 border-0 bg-sidebar p-2 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-foreground/20"
       >

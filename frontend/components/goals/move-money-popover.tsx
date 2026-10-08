@@ -133,7 +133,10 @@ function MoveMoneyForm({
   const after = adding ? goal.savedAmount + amount : goal.savedAmount - amount
   const preview = amount > 0 ? goalProgress({ targetAmount: goal.targetAmount, savedAmount: Math.max(0, after) }) : undefined
   const tooMuch = !adding && amount > goal.savedAmount
-  const otherWallets = wallets.filter((wallet) => wallet.id !== goal.walletId)
+  // Money can't be moved into or out of a deposito (its balance follows its rate and dates), so a goal saved in one can only
+  // say "it's already there", and a deposito is never offered as the place the money comes from.
+  const inDeposito = wallets.find((wallet) => wallet.id === goal.walletId)?.kind === "deposito"
+  const otherWallets = inDeposito ? [] : wallets.filter((wallet) => wallet.id !== goal.walletId && wallet.kind !== "deposito")
 
   // Focus stays on the switch, as it does on the transaction form's Income / Expense / Transfer
   // switch, so the arrow keys can move between the two without the keyboard jumping away.

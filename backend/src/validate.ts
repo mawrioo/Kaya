@@ -9,6 +9,7 @@ import type {
   Category,
   CategoryChanges,
   CategoryType,
+  DepositoInput,
   Goal,
   GoalIconName,
   GoalInput,
@@ -88,7 +89,9 @@ export function parseNewTransaction(body: unknown, refs: References): NewTransac
 
 // ---- wallets ---------------------------------------------------------------------------------
 
-const WALLET_KINDS: WalletKind[] = ["bank", "digital-bank", "e-wallet", "investment", "cash"]
+const WALLET_KINDS: WalletKind[] = ["bank", "digital-bank", "e-wallet", "investment", "cash", "deposito"]
+const MAX_DEPOSITO_RATE_PERCENT = 50
+const MAX_DEPOSITO_TENOR_MONTHS = 120
 const MAX_WALLET_NAME_LENGTH = 40
 const MAX_WALLET_NOTE_LENGTH = 80
 export const MAX_WALLET_NICKNAME_LENGTH = 20
@@ -168,6 +171,39 @@ function parseRupiah(value: unknown, what: string): number {
   return value
 }
 
+/** "2026-10-01" must be a real day in a sensible year. */
+function parseDepositoDate(value: unknown): string {
+  const match = typeof value === "string" ? /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(value) : null
+  if (match) {
+    const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+    const date = new Date(Date.UTC(year, month - 1, day))
+    const real = date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    if (real && year >= 2000 && year <= 2100) return match[0]
+  }
+  throw new ValidationError("Choose the day the deposito started.")
+}
+
+/** The rate, start day, tenor and rollover choice of a deposito. The rate is in percent with at most two decimals. */
+export function parseDepositoInput(value: unknown): DepositoInput {
+  if (!isObject(value)) throw new ValidationError("Send the deposito's details as a JSON object.")
+  const { ratePercent, tenorMonths, rollover } = value
+  const hundredths = typeof ratePercent === "number" ? ratePercent * 100 : Number.NaN
+  if (
+    typeof ratePercent !== "number" ||
+    !Number.isFinite(ratePercent) ||
+    ratePercent <= 0 ||
+    ratePercent > MAX_DEPOSITO_RATE_PERCENT ||
+    Math.abs(hundredths - Math.round(hundredths)) > 1e-6
+  ) {
+    throw new ValidationError(`The yearly rate must be above 0% and at most ${MAX_DEPOSITO_RATE_PERCENT}%, with at most two decimals.`)
+  }
+  if (typeof tenorMonths !== "number" || !Number.isInteger(tenorMonths) || tenorMonths < 1 || tenorMonths > MAX_DEPOSITO_TENOR_MONTHS) {
+    throw new ValidationError(`The tenor must be a whole number of months, from 1 to ${MAX_DEPOSITO_TENOR_MONTHS}.`)
+  }
+  if (typeof rollover !== "boolean") throw new ValidationError("Say whether it renews by itself (yes or no).")
+  return { ratePercent, startDate: parseDepositoDate(value.startDate), tenorMonths, rollover }
+}
+
 /** Turns the request body into a NewWallet, or throws a ValidationError saying what is wrong. */
 export function parseNewWallet(body: unknown, wallets: NamedWallet[]): NewWallet {
   if (!isObject(body)) throw new ValidationError("Send the wallet as a JSON object.")
@@ -176,12 +212,19 @@ export function parseNewWallet(body: unknown, wallets: NamedWallet[]): NewWallet
   if (typeof kind !== "string" || !WALLET_KINDS.includes(kind as WalletKind)) {
     throw new ValidationError("Choose what kind of wallet this is.")
   }
-  const nickname = parseWalletNickname(body.nickname, wallets)
+  const isDeposito = kind === "deposito"
+  // A deposito has no nickname: only Quick add reads one, and nothing can be recorded in a deposito.
+  const nickname = isDeposito ? undefined : parseWalletNickname(body.nickname, wallets)
+  if (!isDeposito && body.deposito !== undefined) throw new ValidationError("Only a deposito has a rate and dates.")
+  if (isDeposito && body.deposito === undefined) throw new ValidationError("Fill in the deposito's rate, start day and tenor.")
+  const startingBalance = parseRupiah(body.startingBalance ?? 0, isDeposito ? "The amount put in" : "The starting balance")
+  if (isDeposito && startingBalance === 0) throw new ValidationError("The amount put in must be above zero.")
   return {
     name,
     kind: kind as WalletKind,
     description: parseWalletNote(body.description),
-    startingBalance: parseRupiah(body.startingBalance ?? 0, "The starting balance"),
+    startingBalance,
+    ...(isDeposito ? { deposito: { ...parseDepositoInput(body.deposito), fromWalletId: parseSourceWallet(body.deposito) } } : {}),
     // Left out (or null) means "use the default".
     ...(body.color === undefined ? {} : { color: parseColor(body.color) }),
     ...(body.icon === undefined || body.icon === null ? {} : { icon: parseIcon(body.icon) }),
@@ -199,7 +242,42 @@ export function parseWalletChanges(body: unknown, wallets: NamedWallet[], ownId:
     ...(body.color === undefined ? {} : { color: parseColor(body.color) }),
     ...(body.icon === undefined ? {} : { icon: body.icon === null ? null : parseIcon(body.icon) }),
     ...(body.nickname === undefined ? {} : { nickname: parseWalletNickname(body.nickname, wallets, ownId) ?? null }),
+    ...(body.deposito === undefined ? {} : { deposito: parseDepositoChanges(body.deposito) }),
   }
+}
+
+/** The wallet a new deposito's money comes from. Only the id is read here; the store checks that it exists and holds enough. */
+function parseSourceWallet(deposito: unknown): string {
+  const id = isObject(deposito) ? deposito.fromWalletId : undefined
+  if (typeof id !== "string" || id === "") throw new ValidationError("Choose the wallet the money comes from.")
+  return id
+}
+
+/**
+ * A deposito's details as edited: the same as when adding one, plus the amount put in (above zero). `fromWalletId` is
+ * only sent for an older deposito that has no source yet.
+ */
+function parseDepositoChanges(value: unknown): DepositoInput & { principal: number; fromWalletId?: string } {
+  const details = parseDepositoInput(value)
+  const principal = parseRupiah((value as Record<string, unknown>).principal, "The amount put in")
+  if (principal === 0) throw new ValidationError("The amount put in must be above zero.")
+  const from = (value as Record<string, unknown>).fromWalletId
+  if (from !== undefined && from !== null && (typeof from !== "string" || from === "")) {
+    throw new ValidationError("Choose the wallet the money comes from.")
+  }
+  return { ...details, principal, ...(typeof from === "string" ? { fromWalletId: from } : {}) }
+}
+
+/**
+ * The wallet a matured deposito's money goes to, when one is named. A deposito that came from a wallet always goes back
+ * to it, so nothing needs to be sent for it; the store says if a wallet is needed after all.
+ */
+export function parseSettleDeposito(body: unknown): string | undefined {
+  if (body === undefined || body === null) return undefined
+  if (!isObject(body)) throw new ValidationError("Send the wallet as a JSON object.")
+  if (body.toWalletId === undefined || body.toWalletId === null) return undefined
+  if (typeof body.toWalletId !== "string" || body.toWalletId === "") throw new ValidationError("Choose the wallet the money should go to.")
+  return body.toWalletId
 }
 
 /** The new market value for an investment wallet, or the real balance for any other: whole rupiah, zero or more. */

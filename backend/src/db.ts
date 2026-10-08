@@ -28,6 +28,22 @@ const ICON_CHECK = `CHECK (icon IS NULL OR icon IN (${WALLET_ICONS.map((icon) =>
 const NICKNAME_CHECK = `CHECK (nickname IS NULL OR length(nickname) BETWEEN 1 AND ${MAX_WALLET_NICKNAME_LENGTH})`
 
 /**
+ * A deposito's details live in nullable columns of its wallet. A wallet is a deposito exactly when `deposit_rate_bp` is
+ * set; the store then reports its kind as "deposito". Its stored `kind` is "bank": the CHECK on `kind` above can't be
+ * widened on a database that already exists without rebuilding the whole table, and no data is worth that risk.
+ */
+const DEPOSIT_COLUMNS = `
+  -- Deposito only: yearly rate in basis points (500 = 5%), the day the first term began, months per term,
+  -- 1 when the bank renews it by itself, and when the money was moved out (empty until then).
+  deposit_rate_bp    INTEGER CHECK (deposit_rate_bp IS NULL OR deposit_rate_bp > 0),
+  deposit_start      TEXT,
+  deposit_tenor      INTEGER CHECK (deposit_tenor IS NULL OR deposit_tenor > 0),
+  deposit_rollover   INTEGER CHECK (deposit_rollover IS NULL OR deposit_rollover IN (0, 1)),
+  deposit_settled_at TEXT,
+  -- The wallet the money came from, and goes back to. Empty for a deposito made before this was recorded.
+  deposit_source_wallet_id TEXT REFERENCES wallets (id) ON DELETE SET NULL,`
+
+/**
  * The schema. Besides the columns, the CHECK rules let the database itself
  * refuse bad data: a transfer must name two different wallets, spending and
  * income must name one wallet and one category, and amounts must be above zero.
@@ -52,7 +68,7 @@ CREATE TABLE IF NOT EXISTS wallets (
   -- The icon the owner chose. Empty means the default icon for the wallet's kind.
   icon        TEXT ${ICON_CHECK},
   -- A short word for Quick add ("jago" for "Bank Jago"). Empty means the wallet has none.
-  nickname    TEXT ${NICKNAME_CHECK},
+  nickname    TEXT ${NICKNAME_CHECK},${DEPOSIT_COLUMNS}
   position    INTEGER NOT NULL
 );
 
@@ -187,6 +203,20 @@ function addMissingColumns(db: DatabaseSync) {
   if (!wallets.includes("icon")) db.exec(`ALTER TABLE wallets ADD COLUMN icon TEXT ${ICON_CHECK}`)
   // Nobody has a nickname yet, so the new column simply starts empty.
   if (!wallets.includes("nickname")) db.exec(`ALTER TABLE wallets ADD COLUMN nickname TEXT ${NICKNAME_CHECK}`)
+  // Nobody has a deposito yet, so the new columns simply start empty. Nothing else is touched.
+  const depositColumns: [string, string][] = [
+    ["deposit_rate_bp", "INTEGER CHECK (deposit_rate_bp IS NULL OR deposit_rate_bp > 0)"],
+    ["deposit_start", "TEXT"],
+    ["deposit_tenor", "INTEGER CHECK (deposit_tenor IS NULL OR deposit_tenor > 0)"],
+    ["deposit_rollover", "INTEGER CHECK (deposit_rollover IS NULL OR deposit_rollover IN (0, 1))"],
+    ["deposit_settled_at", "TEXT"],
+    ["deposit_source_wallet_id", "TEXT REFERENCES wallets (id) ON DELETE SET NULL"],
+  ]
+  for (const [name, definition] of depositColumns) {
+    if (!wallets.includes(name)) db.exec(`ALTER TABLE wallets ADD COLUMN ${name} ${definition}`)
+  }
+  // A deposito has no nickname (only Quick add reads one, and nothing can be recorded in a deposito). Any it was given goes.
+  db.exec("UPDATE wallets SET nickname = NULL WHERE deposit_rate_bp IS NOT NULL AND nickname IS NOT NULL")
   if (!columnsOf(db, "wallet_value_updates").includes("kind")) {
     db.exec("ALTER TABLE wallet_value_updates ADD COLUMN kind TEXT NOT NULL DEFAULT 'value' CHECK (kind IN ('value', 'correction'))")
   }

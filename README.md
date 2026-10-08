@@ -86,6 +86,15 @@ On **Wallets**, choose **Edit details** (or **Add wallet**) and fill in **Nickna
 - It is only used by Quick add: it isn't shown on the wallet cards. Empty the box to take it away. A wallet that you delete and then **Undo** comes back with its nickname, unless another wallet has taken that word in the meantime.
 - It is saved in the database, so your phone and your computer share it. The first time the backend starts after this update it adds one empty column (`nickname`) to the wallets table; nothing else in your data changes.
 
+### Deposito (time deposit)
+
+On **Wallets**, **Add wallet**, choose the type **Deposito (time deposit)**. Fill in the wallet the money comes from, the amount, the yearly rate, the tenor in months, the start date, and whether the bank renews it by itself.
+
+- The amount leaves the source wallet as one transfer, so your total doesn't change. A deposito has no nickname, and nothing else can be recorded in it.
+- Its balance is the amount plus the interest earned so far (simple interest by the day, before tax), worked out from the dates and never saved. The interest is not income.
+- When it matures (and doesn't renew), press **Move money** on its card: everything it holds goes back to the wallet it came from, as one transfer. This can't be undone.
+- The first time the backend starts after this update it adds six empty columns to the wallets table; nothing else in your data changes. Press **Back up now** first if you want a copy.
+
 ### Checking quick add
 
 `npm test` includes the pure parser and form-fill checks. For the browser checks, install Chromium once with `npx playwright install chromium`, then run `npm run test:browser -w frontend`. They start their own servers on ports 3100 and 4100, use a fresh in-memory sample database, and copy the frontend into `.nb-test/quick-add-*/frontend`. They refuse to reuse occupied test ports and never use the normal app on ports 3000 and 4000. The test servers stop when the checks finish. Screenshots and failed-test traces go into `frontend/test-results/`; disposable frontend copies stay in `.nb-test/`. Both folders are ignored by Git.

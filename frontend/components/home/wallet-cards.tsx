@@ -28,9 +28,9 @@ function WalletCard({ wallet }: { wallet: Wallet }) {
     <div className="group relative flex w-full flex-col rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,translate] duration-200 hover:shadow-md has-[a:active]:translate-y-px has-[a:active]:shadow-xs has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring">
       <div className="flex items-center gap-3">
         <WalletBadge wallet={wallet} size="md" />
-        {wallet.kind === "investment" ? (
+        {wallet.kind === "investment" || wallet.kind === "deposito" ? (
           <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-sand-foreground">
-            Investment
+            {wallet.kind === "deposito" ? "Deposito" : "Investment"}
           </span>
         ) : null}
         {/* Sits above the card's link so it can be pressed on its own */}

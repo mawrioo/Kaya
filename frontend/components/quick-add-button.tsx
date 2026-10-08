@@ -38,7 +38,9 @@ export function QuickAddButton() {
   const quietTip = useRef(false)
   // The server-drawn button must wait for its click handler to be ready.
   const ready = useSyncExternalStore(subscribe, clientReady, serverReady)
-  const defaultWalletId = wallets.find((wallet) => wallet.id === lastWalletId)?.id ?? wallets[0]?.id ?? ""
+  // Never a deposito: nothing can be recorded in one.
+  const spendable = wallets.filter((wallet) => wallet.kind !== "deposito")
+  const defaultWalletId = spendable.find((wallet) => wallet.id === lastWalletId)?.id ?? spendable[0]?.id ?? ""
 
   // Ctrl+K (Cmd+K) from anywhere.
   useEffect(() => {
@@ -78,12 +80,12 @@ export function QuickAddButton() {
             aria-keyshortcuts="Control+K Meta+K"
             disabled={!ready}
             onClick={() => setOpen(true)}
-            className="group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-12 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] hover:-translate-y-[3px] disabled:cursor-default"
+            className="group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] hover:-translate-y-[3px] disabled:cursor-default"
           >
             {/* Pointing at the coin lifts it a little (on the button, so the shadow lifts with it). */}
             <span
               aria-hidden
-              className="coin-rim grid size-12 place-items-center rounded-full bg-[color-mix(in_oklch,var(--kaya-accent)_92%,var(--muted-foreground))] text-white dark:text-highlight-foreground"
+              className="coin-rim grid size-11 place-items-center rounded-full bg-[color-mix(in_oklch,var(--kaya-accent)_92%,var(--muted-foreground))] text-white dark:text-highlight-foreground"
             >
               <Plus className="size-5" strokeWidth={2.25} />
             </span>

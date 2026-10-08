@@ -80,6 +80,7 @@ export const defaultWalletIconName: Record<WalletKind, WalletIconName> = {
   "e-wallet": "wallet",
   investment: "trending-up",
   cash: "banknote",
+  deposito: "piggy-bank",
 }
 
 /** The default icon for each kind of wallet. */

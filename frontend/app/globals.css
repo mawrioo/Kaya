@@ -358,7 +358,7 @@
   /* Batik kawung: four petals round a seed, drawn once as a mask so any colour can wear it. */
   --kawung-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='black' stroke-width='1.1'%3E%3Cellipse cx='18' cy='9' rx='4.6' ry='9'/%3E%3Cellipse cx='18' cy='27' rx='4.6' ry='9'/%3E%3Cellipse cx='9' cy='18' rx='9' ry='4.6'/%3E%3Cellipse cx='27' cy='18' rx='9' ry='4.6'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='1.7' fill='black'/%3E%3C/svg%3E");
   --kawung-fade: linear-gradient(to left, black 0%, black 16%, transparent 86%);
-  --kawung-tile-cream: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%23dfe8d8' stroke-opacity='.06' stroke-width='1.1'%3E%3Cellipse cx='18' cy='9' rx='4.6' ry='9'/%3E%3Cellipse cx='18' cy='27' rx='4.6' ry='9'/%3E%3Cellipse cx='9' cy='18' rx='9' ry='4.6'/%3E%3Cellipse cx='27' cy='18' rx='9' ry='4.6'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='1.7' fill='%23dfe8d8' fill-opacity='.06'/%3E%3C/svg%3E");
+  --kawung-tile-cream: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cg fill='none' stroke='%23dfe8d8' stroke-opacity='.075' stroke-width='1.1'%3E%3Cellipse cx='18' cy='9' rx='4.6' ry='9'/%3E%3Cellipse cx='18' cy='27' rx='4.6' ry='9'/%3E%3Cellipse cx='9' cy='18' rx='9' ry='4.6'/%3E%3Cellipse cx='27' cy='18' rx='9' ry='4.6'/%3E%3C/g%3E%3Ccircle cx='18' cy='18' r='1.7' fill='%23dfe8d8' fill-opacity='.075'/%3E%3C/svg%3E");
 
   /* A little grain, like good paper. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .18 0 0 0 0 .12 .9 0 0 0 -.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.36'/%3E%3C/svg%3E");
@@ -378,7 +378,7 @@ main[data-slot="sidebar-inset"] {
 
 /* The sidebar (and the phone's menu sheet): batik along the bottom, fading to plain forest above the menu. */
 [data-sidebar="sidebar"] {
-  background-image: linear-gradient(to bottom, var(--sidebar) 0%, var(--sidebar) 40%, transparent 100%), var(--kawung-tile-cream);
+  background-image: linear-gradient(to bottom, var(--sidebar) 0%, var(--sidebar) 46%, transparent 100%), var(--kawung-tile-cream);
   background-size: 100% 100%, 36px 36px;
   background-position: 0 0, 0 100%;
   background-repeat: no-repeat, repeat;
@@ -507,4 +507,18 @@ main[data-slot="sidebar-inset"] {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* TEMPORARY: sidebar colour choices from the "Compare options" panel (data-cmp-* on the root element). Remove with the panel. */
+:root[data-cmp-bg="darker"] {
+  --sidebar: oklch(0.323 0.049 156.2);
+}
+:root[data-cmp-bg="lighter"] {
+  --sidebar: oklch(0.365 0.05 156.2);
+}
+:root.dark[data-cmp-bg="darker"] {
+  --sidebar: oklch(0.277 0.039 161.7);
+}
+:root.dark[data-cmp-bg="lighter"] {
+  --sidebar: oklch(0.315 0.04 161.7);
 }

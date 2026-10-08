@@ -256,7 +256,7 @@ export function TransactionsView({
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={editing}
-        defaultWalletId={lastWalletId ?? wallets[0]?.id ?? ""}
+        defaultWalletId={lastWalletId ?? wallets.find((wallet) => wallet.kind !== "deposito")?.id ?? ""}
         onSave={handleSave}
         onCloseAutoFocus={returnFocus.restore}
       />

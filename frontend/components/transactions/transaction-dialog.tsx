@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleAlert, Plus } from "lucide-react"
 import { toast } from "sonner"
 
@@ -110,7 +110,9 @@ interface BodyProps {
 }
 
 function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onSave }: BodyProps) {
-  const { wallets, categories, transactions, addCategory } = useData()
+  const { wallets: allWallets, categories, transactions, addCategory } = useData()
+  // A deposito's balance follows its rate and dates, so no transaction can be recorded in it.
+  const wallets = useMemo(() => allWallets.filter((wallet) => wallet.kind !== "deposito"), [allWallets])
   const isHidden = useIsBalanceHidden()
   const [form, setForm] = useState<TransactionForm>(() =>
     editing ? transactionToForm(editing) : emptyForm(defaultWalletId, new Date())

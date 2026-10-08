@@ -7,6 +7,7 @@ export const walletKinds: { value: WalletKind; label: string }[] = [
   { value: "e-wallet", label: "E-wallet" },
   { value: "investment", label: "Investment" },
   { value: "cash", label: "Cash" },
+  { value: "deposito", label: "Deposito (time deposit)" },
 ]
 
 /** The colours a wallet can wear, grouped by hue so the row of swatches reads as a spectrum. */

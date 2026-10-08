@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { formatRupiah } from "@/lib/format"
 import { walletDeleteImpact } from "@/lib/stats"
 import type { Wallet } from "@/lib/types"
 
@@ -80,6 +81,7 @@ function DeleteBody({ wallet, onCancel, onConfirm }: { wallet: Wallet; onCancel:
   // When goals are what is in the way, the way out is on the Goals page.
   const canMoveGoals = wallets.length > 1 && goalNames.length > 0
   const impact = walletDeleteImpact(transactions, wallet.id)
+  const sourceName = wallet.deposito?.sourceWalletId ? wallets.find((entry) => entry.id === wallet.deposito?.sourceWalletId)?.name : undefined
   const phrase = deletePhrase(wallet)
   const confirmed = squash(typed) === squash(phrase)
 
@@ -126,6 +128,12 @@ function DeleteBody({ wallet, onCancel, onConfirm }: { wallet: Wallet; onCancel:
 
       <ul className="grid list-disc grid-cols-1 gap-1.5 pl-5 text-sm marker:text-muted-foreground">
         <li>The wallet and its balance leave your total.</li>
+        {wallet.deposito && wallet.deposito.status !== "settled" ? (
+          <li>
+            Its {formatRupiah(wallet.balance)} is not moved back to {sourceName ?? "another wallet"}, so it is gone from your
+            money here. {wallet.deposito.status === "matured" ? "Use Move money first to keep it." : "Wait until it matures and use Move money to keep it."}
+          </li>
+        ) : null}
         <li>
           {impact.transactions === 0
             ? "It has no transactions."

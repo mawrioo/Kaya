@@ -55,6 +55,10 @@ export function TransactionList({
   onDelete,
 }: TransactionListProps) {
   const [openId, setOpenId] = useState<string>()
+  // A transfer that moved a matured deposito's money is a record that can't be changed or deleted.
+  const depositoIds = new Set(wallets.filter((wallet) => wallet.kind === "deposito").map((wallet) => wallet.id))
+  const isLocked = (tx: Transaction) =>
+    tx.type === "transfer" ? depositoIds.has(tx.fromWalletId) || depositoIds.has(tx.toWalletId) : depositoIds.has(tx.walletId)
 
   // A row that was swiped open closes when the owner touches anywhere else.
   useEffect(() => {
@@ -109,6 +113,11 @@ export function TransactionList({
                           transition={TIMING}
                           className="overflow-hidden border-t first:border-t-0"
                         >
+                          {isLocked(tx) ? (
+                            <div className="px-5 py-3.5 md:px-6">
+                              <TransactionRowContent tx={tx} wallets={wallets} categories={categories} showDate={false} />
+                            </div>
+                          ) : (
                           <SwipeRow
                             open={openId === tx.id}
                             onOpenChange={(open) => setOpenId(open ? tx.id : undefined)}
@@ -171,6 +180,7 @@ export function TransactionList({
                               />
                             </div>
                           </SwipeRow>
+                          )}
                         </motion.li>
                       )
                     })}

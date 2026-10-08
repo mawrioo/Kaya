@@ -13,6 +13,7 @@
  *   DELETE /api/wallets/:id            delete a wallet and its transactions
  *   POST   /api/wallets/:id/value      set an investment wallet's current market value
  *   POST   /api/wallets/:id/correction set any other wallet's balance to what the real account shows
+ *   POST   /api/wallets/:id/settle     move a matured deposito's money into another wallet
  *   GET    /api/wallets/:id/history    the balances set by hand for a wallet, newest first
  *   POST   /api/categories             add a category
  *   PUT    /api/categories/order       put the categories in a new order
@@ -96,6 +97,11 @@ export function createApp(store: Store) {
   // Fixes a balance that has drifted from the real account. Not income or spending, so no transaction either.
   app.post("/api/wallets/:id/correction", async (c) => {
     const result = store.correctWalletBalance(c.req.param("id"), await readJson(c.req.raw))
+    return result ? c.json(result) : c.json({ error: "That wallet doesn't exist any more." }, 404)
+  })
+
+  app.post("/api/wallets/:id/settle", async (c) => {
+    const result = store.settleDeposito(c.req.param("id"), await readJson(c.req.raw))
     return result ? c.json(result) : c.json({ error: "That wallet doesn't exist any more." }, 404)
   })
 

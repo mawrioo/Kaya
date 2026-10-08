@@ -9,12 +9,14 @@ import { TotalBalanceCard } from "@/components/home/total-balance-card"
 import { Button } from "@/components/ui/button"
 import { BalanceDialog } from "@/components/wallets/balance-dialog"
 import { DeleteWalletDialog } from "@/components/wallets/delete-wallet-dialog"
+import { SettleDialog } from "@/components/wallets/settle-dialog"
 import { HistoryDialog } from "@/components/wallets/history-dialog"
 import { ReorderDialog } from "@/components/wallets/reorder-dialog"
 import { WalletCard, walletMenuId } from "@/components/wallets/wallet-card"
 import { WalletDialog } from "@/components/wallets/wallet-dialog"
 import { useReturnFocus } from "@/hooks/use-return-focus"
 import { errorMessage } from "@/lib/api"
+import { toDateInput } from "@/lib/dates"
 import { formatRupiah } from "@/lib/format"
 import { walletDeleteImpact } from "@/lib/stats"
 import type { Wallet } from "@/lib/types"
@@ -22,7 +24,7 @@ import { UNDO_FOR } from "@/lib/undo"
 import { formToChanges, formToNewWallet, type WalletForm } from "@/lib/wallet-form"
 
 /** Which dialog is open. Only one ever is. */
-type DialogName = "add" | "edit" | "balance" | "history" | "delete" | "reorder"
+type DialogName = "add" | "edit" | "balance" | "history" | "delete" | "reorder" | "settle"
 
 const ADD_BUTTON_ID = "add-wallet-button"
 
@@ -31,7 +33,9 @@ const ADD_BUTTON_ID = "add-wallet-button"
  * wallet, and the flows for adding, editing, correcting, viewing history,
  * deleting and reordering.
  */
-export function WalletsView() {
+export function WalletsView({ nowIso }: { nowIso: string }) {
+  // "Today" comes from the server, so the months left on a deposito never disagree between the server and the browser.
+  const today = toDateInput(new Date(nowIso))
   const {
     wallets,
     transactions,
@@ -39,6 +43,7 @@ export function WalletsView() {
     updateWallet,
     updateWalletValue,
     correctWalletBalance,
+    settleDeposito,
     deleteWallet,
     undoDelete,
     reorderWallets,
@@ -112,6 +117,17 @@ export function WalletsView() {
     }
   }
 
+  async function handleSettle(wallet: Wallet, toWalletId?: string) {
+    try {
+      const { transaction } = await settleDeposito(wallet.id, toWalletId)
+      const target = wallets.find((entry) => entry.id === (transaction.type === "transfer" ? transaction.toWalletId : ""))
+      toast.success("Money moved", { description: `${formatRupiah(transaction.amount)} from ${wallet.name}${target ? ` to ${target.name}` : ""}` })
+    } catch (error) {
+      toast.error("Couldn't move that", { description: errorMessage(error) })
+      throw error // tells the dialog to stay open
+    }
+  }
+
   async function handleDelete(wallet: Wallet) {
     const { transactions: count } = walletDeleteImpact(transactions, wallet.id)
     try {
@@ -180,10 +196,12 @@ export function WalletsView() {
             <WalletCard
               key={wallet.id}
               wallet={wallet}
+              today={today}
               isNew={wallet.id === newId}
               onEdit={(w) => openDialog("edit", w)}
               onSetBalance={(w) => openDialog("balance", w)}
               onHistory={(w) => openDialog("history", w)}
+              onSettle={(w) => openDialog("settle", w)}
               onDelete={(w) => openDialog("delete", w)}
             />
           ))}
@@ -203,6 +221,13 @@ export function WalletsView() {
         mode={target?.kind === "investment" ? "value" : "correction"}
         wallet={target}
         onSave={handleSaveBalance}
+        onCloseAutoFocus={returnFocus.restore}
+      />
+      <SettleDialog
+        open={open === "settle"}
+        onOpenChange={closeDialog}
+        wallet={target}
+        onConfirm={handleSettle}
         onCloseAutoFocus={returnFocus.restore}
       />
       <HistoryDialog

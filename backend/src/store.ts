@@ -8,6 +8,7 @@ import type { DatabaseSync } from "node:sqlite"
 
 import { lastBackup, makeBackup } from "./backup.ts"
 import { OTHER_CATEGORY_ID } from "./category-look.ts"
+import { depositoState } from "./deposito.ts"
 import { balanceChanges } from "./ledger.ts"
 import {
   sampleCategories,
@@ -42,6 +43,7 @@ import type {
   SaveTransactionResult,
   SaveUserResult,
   SaveWalletResult,
+  SettleDepositoResult,
   Transaction,
   UndoResult,
   User,
@@ -63,6 +65,7 @@ import {
   parseNewTransaction,
   parseNewWallet,
   parseRestoreCategory,
+  parseSettleDeposito,
   parseUserName,
   parseWalletChanges,
   parseWalletOrder,
@@ -82,6 +85,12 @@ interface WalletRow {
   default_color: PaletteColor
   icon: WalletIconName | null
   nickname: string | null
+  deposit_rate_bp: number | null
+  deposit_start: string | null
+  deposit_tenor: number | null
+  deposit_rollover: number | null
+  deposit_settled_at: string | null
+  deposit_source_wallet_id: string | null
   last_change: number | null
   last_at: string | null
 }
@@ -137,6 +146,12 @@ interface WalletDbRow {
   default_color: PaletteColor | null
   icon: WalletIconName | null
   nickname: string | null
+  deposit_rate_bp: number | null
+  deposit_start: string | null
+  deposit_tenor: number | null
+  deposit_rollover: number | null
+  deposit_settled_at: string | null
+  deposit_source_wallet_id: string | null
   position: number
 }
 /** A balance set by hand, as the database holds it. */
@@ -198,7 +213,14 @@ function toTransaction(row: TransactionRow): Transaction {
   return { ...base, type: row.type, walletId: row.wallet_id!, categoryId: row.category_id! }
 }
 
-export function createStore(db: DatabaseSync) {
+/** The columns that make a wallet a deposito, as the database holds them. */
+const DEPOSIT_COLUMNS = "deposit_rate_bp, deposit_start, deposit_tenor, deposit_rollover, deposit_settled_at, deposit_source_wallet_id"
+
+/**
+ * `today` is "YYYY-MM-DD" on the day it is read. A deposito's interest is worked out from it every time wallets are
+ * read, so the tests can hand in a fixed day.
+ */
+export function createStore(db: DatabaseSync, today: () => string = () => calendarDate(new Date())) {
   /** Runs `work` so that it is saved completely, or not at all if anything inside throws. */
   function transact<T>(work: () => T): T {
     db.exec("BEGIN IMMEDIATE")
@@ -277,6 +299,7 @@ export function createStore(db: DatabaseSync) {
     const rows = db
       .prepare(
         `SELECT w.id, w.name, w.kind, w.balance, w.description, w.color, w.icon, w.nickname,
+                w.deposit_rate_bp, w.deposit_start, w.deposit_tenor, w.deposit_rollover, w.deposit_settled_at, w.deposit_source_wallet_id,
                 COALESCE(w.default_color, w.color) AS default_color,
                 (SELECT new_balance - old_balance FROM wallet_value_updates u WHERE u.wallet_id = w.id AND u.kind = 'value' ORDER BY u.id DESC LIMIT 1) AS last_change,
                 (SELECT at FROM wallet_value_updates u WHERE u.wallet_id = w.id AND u.kind = 'value' ORDER BY u.id DESC LIMIT 1) AS last_at
@@ -284,20 +307,63 @@ export function createStore(db: DatabaseSync) {
           ORDER BY w.position, w.rowid`
       )
       .all() as unknown as WalletRow[]
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      kind: row.kind,
-      balance: row.balance,
-      description: row.description,
-      color: row.color,
-      defaultColor: row.default_color,
-      ...(row.icon !== null ? { icon: row.icon } : {}),
-      ...(row.nickname !== null ? { nickname: row.nickname } : {}),
-      ...(row.last_at !== null && row.last_change !== null
-        ? { lastValueChange: { change: row.last_change, at: row.last_at } }
-        : {}),
-    }))
+    const onDay = today()
+    return rows.map((row) => {
+      const deposito = toDeposito(row, onDay)
+      return {
+        id: row.id,
+        name: row.name,
+        // A deposito is stored as a bank wallet with a rate (see db.ts); the app calls it what it is.
+        kind: deposito ? "deposito" : row.kind,
+        // Its balance is what it holds today: the money put in plus the interest earned so far. Never saved.
+        balance: deposito ? row.balance + deposito.interest : row.balance,
+        description: row.description,
+        color: row.color,
+        defaultColor: row.default_color,
+        ...(row.icon !== null ? { icon: row.icon } : {}),
+        // A deposito has no nickname, whatever the database holds.
+        ...(row.nickname !== null && !deposito ? { nickname: row.nickname } : {}),
+        ...(row.last_at !== null && row.last_change !== null
+          ? { lastValueChange: { change: row.last_change, at: row.last_at } }
+          : {}),
+        ...(deposito ? { deposito } : {}),
+      }
+    })
+  }
+
+  /** A deposito wallet's details with the interest worked out for `onDay`, or undefined for any other wallet. */
+  function toDeposito(
+    row: Pick<
+      WalletRow,
+      "balance" | "deposit_rate_bp" | "deposit_start" | "deposit_tenor" | "deposit_rollover" | "deposit_settled_at" | "deposit_source_wallet_id"
+    >,
+    onDay: string
+  ): Wallet["deposito"] {
+    if (row.deposit_rate_bp === null || row.deposit_start === null || row.deposit_tenor === null) return undefined
+    const rollover = row.deposit_rollover === 1
+    const state = depositoState(
+      {
+        principal: row.balance,
+        rateBp: row.deposit_rate_bp,
+        startDate: row.deposit_start,
+        tenorMonths: row.deposit_tenor,
+        rollover,
+        ...(row.deposit_settled_at !== null ? { settledAt: row.deposit_settled_at } : {}),
+      },
+      onDay
+    )
+    return {
+      ratePercent: row.deposit_rate_bp / 100,
+      startDate: row.deposit_start,
+      tenorMonths: row.deposit_tenor,
+      rollover,
+      principal: row.balance,
+      interest: state.interest,
+      endDate: state.endDate,
+      status: state.status,
+      ...(row.deposit_settled_at !== null ? { settledAt: row.deposit_settled_at } : {}),
+      ...(row.deposit_source_wallet_id !== null ? { sourceWalletId: row.deposit_source_wallet_id } : {}),
+    }
   }
 
   function getCategories(): Category[] {
@@ -372,6 +438,15 @@ export function createStore(db: DatabaseSync) {
   /** Moves wallet balances as if `tx` happened (direction 1) or as if it never had (direction -1). */
   function applyToBalances(tx: Transaction, direction: 1 | -1) {
     const update = db.prepare("UPDATE wallets SET balance = balance + ? WHERE id = ?")
+    // A deposito's balance follows its rate and dates, so no transaction may add to it, change it or take it back.
+    const isDeposito = db.prepare("SELECT 1 FROM wallets WHERE id = ? AND deposit_rate_bp IS NOT NULL")
+    for (const { walletId } of balanceChanges(tx)) {
+      if (isDeposito.get(walletId) !== undefined) {
+        throw new ValidationError(
+          "A deposito's balance follows its rate and dates, so transactions can't be added to it, changed or deleted. Edit the deposito instead."
+        )
+      }
+    }
     for (const { walletId, change } of balanceChanges(tx)) {
       if (Number(update.run(direction * change, walletId).changes) !== 1) {
         throw new Error(`Wallet ${walletId} was not found while updating balances.`)
@@ -531,7 +606,38 @@ export function createStore(db: DatabaseSync) {
     return WALLET_COLORS.reduce((best, color) => ((used.get(color) ?? 0) < (used.get(best) ?? 0) ? color : best))
   }
 
-  function createWallet(body: unknown): SaveWalletResult {
+  /**
+   * Puts money into a deposito from another wallet: one transfer from that wallet, written by hand because the ledger
+   * refuses to touch a deposito, taking `amount` out of the wallet and remembering it as where the money goes back to.
+   * The transfer is dated the day the deposito started, or now if that day hasn't come. Call it inside `transact`, after
+   * the deposito already holds the amount.
+   */
+  function fundDeposito(depositoId: string, sourceId: string, amount: number, startDate: string, now: Date) {
+    const wallets = getWallets()
+    const deposito = wallets.find((entry) => entry.id === depositoId)
+    const source = wallets.find((entry) => entry.id === sourceId)
+    if (!deposito) throw new Error(`Wallet ${depositoId} disappeared while saving.`)
+    if (!source) throw new ValidationError("The wallet the money comes from doesn't exist any more.")
+    if (source.kind === "deposito") throw new ValidationError("The money can't come from another deposito. Choose a different wallet.")
+    if (source.balance < amount) {
+      throw new ValidationError(`${source.name} only holds ${rupiah(source.balance)}, so it can't put in ${rupiah(amount)}.`)
+    }
+    const stamp = isoWithOffset(now)
+    const transaction: Transaction = {
+      id: `tx-${randomUUID()}`,
+      type: "transfer",
+      amount,
+      date: startDate <= today() ? `${startDate}T00:00:00${stamp.slice(-6)}` : stamp,
+      description: `Opened deposito ${deposito.name}`.slice(0, 100),
+      fromWalletId: sourceId,
+      toWalletId: depositoId,
+    }
+    insertTransactionRow(transaction)
+    db.prepare("UPDATE wallets SET balance = balance - ? WHERE id = ?").run(amount, sourceId)
+    db.prepare("UPDATE wallets SET deposit_source_wallet_id = ? WHERE id = ?").run(sourceId, depositoId)
+  }
+
+  function createWallet(body: unknown, now: Date = new Date()): SaveWalletResult {
     const input = parseNewWallet(body, getWallets())
     return transact(() => {
       const id = `wallet-${randomUUID()}`
@@ -539,19 +645,27 @@ export function createStore(db: DatabaseSync) {
       // The app's own pick is remembered as the default, even when the owner chose another colour.
       const defaultColor = nextWalletColor()
       db.prepare(
-        "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        `INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, deposit_rate_bp, deposit_start, deposit_tenor, deposit_rollover, position)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         id,
         input.name,
-        input.kind,
+        // A deposito is stored as a bank wallet with a rate (see db.ts).
+        input.kind === "deposito" ? "bank" : input.kind,
         input.startingBalance,
         input.description,
         input.color ?? defaultColor,
         defaultColor,
         input.icon ?? null,
         input.nickname ?? null,
+        input.deposito ? Math.round(input.deposito.ratePercent * 100) : null,
+        input.deposito?.startDate ?? null,
+        input.deposito?.tenorMonths ?? null,
+        input.deposito ? (input.deposito.rollover ? 1 : 0) : null,
         position
       )
+      // A deposito's money comes out of another wallet. Nothing is saved if that can't be done.
+      if (input.deposito) fundDeposito(id, input.deposito.fromWalletId, input.startingBalance, input.deposito.startDate, now)
       return walletResult(id)
     })
   }
@@ -563,7 +677,8 @@ export function createStore(db: DatabaseSync) {
       if (!wallet) return undefined
       const color = changes.color ?? wallet.color
       const icon = changes.icon === undefined ? (wallet.icon ?? null) : changes.icon
-      const nickname = changes.nickname === undefined ? (wallet.nickname ?? null) : changes.nickname
+      // A deposito has no nickname.
+      const nickname = wallet.deposito ? null : changes.nickname === undefined ? (wallet.nickname ?? null) : changes.nickname
       db.prepare("UPDATE wallets SET name = ?, description = ?, color = ?, icon = ?, nickname = ? WHERE id = ?").run(
         changes.name,
         changes.description,
@@ -572,6 +687,36 @@ export function createStore(db: DatabaseSync) {
         nickname,
         id
       )
+      if (changes.deposito) {
+        if (!wallet.deposito) throw new ValidationError("That wallet isn't a deposito.")
+        if (wallet.deposito.status === "settled") {
+          throw new ValidationError("This deposito's money has been moved out, so its details can't be changed. You can still rename it.")
+        }
+        const sourceId = wallet.deposito.sourceWalletId
+        if (sourceId !== undefined) {
+          const sourceName = findWallet(sourceId)?.name ?? "another wallet"
+          if (changes.deposito.principal !== wallet.deposito.principal) {
+            throw new ValidationError(`The amount came out of ${sourceName}, so it can't be changed here. Delete this deposito and add it again with the right amount.`)
+          }
+          if (changes.deposito.fromWalletId !== undefined) {
+            throw new ValidationError(`This deposito already came from ${sourceName}.`)
+          }
+        }
+        db.prepare(
+          "UPDATE wallets SET balance = ?, deposit_rate_bp = ?, deposit_start = ?, deposit_tenor = ?, deposit_rollover = ? WHERE id = ?"
+        ).run(
+          changes.deposito.principal,
+          Math.round(changes.deposito.ratePercent * 100),
+          changes.deposito.startDate,
+          changes.deposito.tenorMonths,
+          changes.deposito.rollover ? 1 : 0,
+          id
+        )
+        // An older deposito that never recorded where its money came from can be given that now.
+        if (changes.deposito.fromWalletId !== undefined) {
+          fundDeposito(id, changes.deposito.fromWalletId, changes.deposito.principal, changes.deposito.startDate, new Date())
+        }
+      }
       return walletResult(id)
     })
   }
@@ -584,6 +729,9 @@ export function createStore(db: DatabaseSync) {
     return transact(() => {
       const wallet = findWallet(id)
       if (!wallet) return undefined
+      if (wallet.kind === "deposito") {
+        throw new ValidationError("A deposito's balance follows its rate and dates. Edit its details instead.")
+      }
       if (kind === "value" && wallet.kind !== "investment") {
         throw new ValidationError("Only investment wallets have a market value to update.")
       }
@@ -625,6 +773,62 @@ export function createStore(db: DatabaseSync) {
   }
 
   /**
+   * Moves the money of a deposito that has matured into another wallet, as one transfer for everything it holds (the
+   * money put in and the interest earned). The deposito then shows 0 and "settled", and nothing it earned is income.
+   * Refused while it is still running (or renews by itself), when it has already been moved, and for a target that is
+   * itself a deposito. All or nothing, and it can't be undone: the transfer can't be changed or deleted either.
+   */
+  function settleDeposito(id: string, body: unknown, now: Date = new Date()): SettleDepositoResult | undefined {
+    const named = parseSettleDeposito(body)
+    return transact(() => {
+      const wallets = getWallets()
+      const wallet = wallets.find((entry) => entry.id === id)
+      if (!wallet) return undefined
+      const deposito = wallet.deposito
+      if (!deposito) throw new ValidationError("That wallet isn't a deposito.")
+      if (deposito.status === "settled") throw new ValidationError("This deposito's money has already been moved.")
+      if (deposito.status === "running") {
+        throw new ValidationError(
+          deposito.rollover
+            ? "This deposito renews by itself, so there is nothing to move."
+            : `This deposito hasn't matured yet. It ends on ${deposito.endDate}.`
+        )
+      }
+      // The money goes back to the wallet it came from. Only an older deposito, or one whose wallet was deleted, needs one chosen.
+      const sourceId = deposito.sourceWalletId
+      const source = sourceId === undefined ? undefined : wallets.find((entry) => entry.id === sourceId)
+      if (source && named !== undefined && named !== source.id) {
+        throw new ValidationError(`The money goes back to ${source.name}, the wallet it came from.`)
+      }
+      const toId = source?.id ?? named
+      if (toId === undefined) throw new ValidationError("Choose the wallet the money should go to.")
+      const target = wallets.find((entry) => entry.id === toId)
+      if (!target) throw new ValidationError("That wallet doesn't exist any more.")
+      if (target.id === id) throw new ValidationError("Choose a different wallet from the deposito itself.")
+      if (target.kind === "deposito") throw new ValidationError("Choose a wallet that is not a deposito.")
+      const amount = wallet.balance
+      const transaction: Transaction = {
+        id: `tx-${randomUUID()}`,
+        type: "transfer",
+        amount,
+        date: isoWithOffset(now),
+        description: `Deposito ${wallet.name} matured`.slice(0, 100),
+        fromWalletId: id,
+        toWalletId: toId,
+      }
+      // Written by hand, not through the ledger, which refuses to touch a deposito: the target gains what the
+      // deposito held, and the deposito is emptied and closed.
+      insertTransactionRow(transaction)
+      db.prepare("UPDATE wallets SET balance = balance + ? WHERE id = ?").run(amount, toId)
+      db.prepare("UPDATE wallets SET balance = 0, deposit_settled_at = ? WHERE id = ?").run(isoWithOffset(now), id)
+      const after = getWallets()
+      const settled = after.find((entry) => entry.id === id)
+      if (!settled) throw new Error(`Wallet ${id} disappeared while settling.`)
+      return { wallet: settled, wallets: after, transaction }
+    })
+  }
+
+  /**
    * Deletes a wallet and every transaction that touches it, including transfers
    * to and from other wallets. Those other wallets keep the balance they have,
    * because their real accounts still hold what they hold. It refuses to delete
@@ -651,7 +855,7 @@ export function createStore(db: DatabaseSync) {
         .all(id, id, id) as unknown as (TransactionRow & { place: number })[]
       const saved: DeletedWallet = {
         row: db
-          .prepare("SELECT id, name, kind, balance, description, color, default_color, icon, nickname, position FROM wallets WHERE id = ?")
+          .prepare(`SELECT id, name, kind, balance, description, color, default_color, icon, nickname, ${DEPOSIT_COLUMNS}, position FROM wallets WHERE id = ?`)
           .get(id) as unknown as WalletDbRow,
         transactions: touched.map(toTransaction),
         places: touched.map((row) => row.place),
@@ -703,8 +907,27 @@ export function createStore(db: DatabaseSync) {
     const taken = wanted !== undefined && existing.some((wallet) => wallet.name.toLowerCase() === wanted || wallet.nickname?.toLowerCase() === wanted)
     const nickname = taken ? null : row.nickname
     db.prepare(
-      "INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(row.id, row.name, row.kind, row.balance, row.description, row.color, row.default_color, row.icon, nickname, row.position)
+      `INSERT INTO wallets (id, name, kind, balance, description, color, default_color, icon, nickname, ${DEPOSIT_COLUMNS}, position)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      row.id,
+      row.name,
+      row.kind,
+      row.balance,
+      row.description,
+      row.color,
+      row.default_color,
+      row.icon,
+      nickname,
+      row.deposit_rate_bp,
+      row.deposit_start,
+      row.deposit_tenor,
+      row.deposit_rollover,
+      row.deposit_settled_at,
+      // Back to the wallet it came from, unless that wallet has been deleted since.
+      row.deposit_source_wallet_id !== null && walletIds.has(row.deposit_source_wallet_id) ? row.deposit_source_wallet_id : null,
+      row.position
+    )
     // Its own balance is already right, and so are the others', so the transactions go back without moving any balance.
     transactions.forEach((tx, index) => insertTransactionRow(tx, places[index]))
     const insertUpdate = db.prepare(
@@ -1195,6 +1418,7 @@ export function createStore(db: DatabaseSync) {
     updateWalletValue,
     correctWalletBalance,
     getWalletHistory,
+    settleDeposito,
     deleteWallet,
     reorderWallets,
     createCategory,
