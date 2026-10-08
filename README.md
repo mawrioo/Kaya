@@ -93,7 +93,7 @@ On **Wallets**, choose **Edit details** (or **Add wallet**) and fill in **Nickna
 ## Your data
 
 - It lives in `backend/data/nabungbego.db`.
-- **Back it up:** press **Back up now** at the bottom of the sidebar. It copies the file into `backend/data/backups/`, named with the date and time (for example `nabungbego-2026-10-04-153012.db`). It only happens when you press it, and old copies are never deleted. To keep them safe from a broken computer, copy that folder to a USB stick or a cloud drive now and then.
+- **Back it up:** press your name at the bottom of the sidebar, then **Back up now** in the menu that opens. It copies the file into `backend/data/backups/`, named with the date and time (for example `nabungbego-2026-10-04-153012.db`). It only happens when you press it, and old copies are never deleted. To keep them safe from a broken computer, copy that folder to a USB stick or a cloud drive now and then.
 - **Go back to a backup:**
   1. Stop the app (Ctrl+C).
   2. In `backend/data`, rename `nabungbego.db` to something like `nabungbego-before-restore.db`, and **delete** `nabungbego.db-wal` and `nabungbego.db-shm` if they are there (a leftover one would bring the newer data back on top of the backup).

@@ -8,6 +8,8 @@ import { SavingsGoals } from "@/components/home/savings-goals"
 import { SpendingByCategory } from "@/components/home/spending-by-category"
 import { TotalBalanceCard } from "@/components/home/total-balance-card"
 import { WalletCards } from "@/components/home/wallet-cards"
+import { MonthlyNote } from "@/components/monthly-note"
+import { toDateInput } from "@/lib/dates"
 import {
   monthKey,
   monthTotals,
@@ -44,6 +46,8 @@ export function HomeContent({ nowIso }: { nowIso: string }) {
           month={month}
         />
       </div>
+
+      <MonthlyNote month={month} today={toDateInput(now)} />
 
       <HomeBudgets categories={categories} transactions={transactions} monthlyBudget={monthlyBudget} month={month} />
 

@@ -3,16 +3,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Sprout } from "lucide-react"
 import { toast } from "sonner"
 
 import { BrandMark } from "@/components/brand-mark"
 import { useData } from "@/components/data-provider"
 import { MENU_BUTTON_ID } from "@/components/mobile-topbar"
 import { NameDialog } from "@/components/name-dialog"
-import { SidebarBackup } from "@/components/sidebar-backup"
 import { SidebarUser } from "@/components/sidebar-user"
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Sidebar,
   SidebarContent,
@@ -57,7 +54,7 @@ export function AppSidebar() {
   return (
     <>
       <Sidebar className="border-sidebar-border">
-        <SidebarHeader className="px-5 pt-7 pb-6">
+        <SidebarHeader className="px-5 pt-6 pb-4">
           <BrandMark onNavigate={closeMobile} />
         </SidebarHeader>
 
@@ -85,22 +82,8 @@ export function AppSidebar() {
           </nav>
         </SidebarContent>
 
-        <SidebarFooter className="gap-5 px-5 pb-6">
-          <div className="flex flex-col gap-1">
-            <SidebarUser onOpen={openNameBox} />
-            <SidebarBackup onStart={closeMobile} />
-          </div>
-          <div className="group/calm flex gap-3 text-[0.8125rem] leading-relaxed text-sidebar-muted">
-            <Sprout className="mt-0.5 size-4 shrink-0 group-hover/calm:animate-sprout-sway" aria-hidden />
-            <p>
-              Runs on this computer.
-              <br />
-              Your numbers stay here.
-            </p>
-          </div>
-          <div className="border-t border-sidebar-border pt-5">
-            <ThemeToggle />
-          </div>
+        <SidebarFooter className="px-5 pb-5">
+          <SidebarUser onChangeName={openNameBox} onBackupStart={closeMobile} />
         </SidebarFooter>
       </Sidebar>
       <NameDialog open={nameOpen} onOpenChange={setNameOpen} onSave={saveName} onCloseAutoFocus={returnFocus.restore} />

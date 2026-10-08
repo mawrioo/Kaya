@@ -12,6 +12,7 @@ import { MonthRecap } from "@/components/insights/month-recap"
 import { WalletBreakdown } from "@/components/insights/wallet-breakdown"
 import { WeekdayBreakdown } from "@/components/insights/weekday-breakdown"
 import { Money } from "@/components/money"
+import { MonthlyNote } from "@/components/monthly-note"
 import { StatCard } from "@/components/stat-card"
 import { compareText } from "@/lib/category-summary"
 import { monthDates } from "@/lib/dates"
@@ -49,6 +50,8 @@ export function MonthTab({
   return (
     <>
       <MonthRecap month={month} today={today} />
+
+      <MonthlyNote month={month} today={today} />
 
       {/* Three across only where each card has room for a long amount: from 1024px, since the sidebar takes 256px of a tablet. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
