@@ -5,7 +5,7 @@
  *
  * It never mentions a wallet or the total balance, so it has nothing the balance eye would need to hide.
  */
-import { formatMonthName, formatPercent, formatRupiah } from "./format.ts"
+import { formatDate, formatMonthName, formatPercent, formatRupiah } from "./format.ts"
 import { monthKey, shiftMonth } from "./stats.ts"
 import type { Category, Goal, Transaction } from "./types"
 
@@ -27,6 +27,8 @@ export interface NoteInput {
   month: string
   /** Today, "2026-09-29". */
   today: string
+  /** The biggest treat of the month (worked out by `biggestTreat`), or undefined when there wasn't one. */
+  treat?: Transaction
 }
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -56,7 +58,7 @@ const moreOrLess = (amount: number, other: number) => (amount > other ? "more" :
  * or went out (the page has its own message for that). A month that is still going is described "so far" and compared with the
  * same days of the month before, never with the whole of it.
  */
-export function monthlyNote({ transactions, categories, goals, monthlyBudget, month, today }: NoteInput): NoteSlide[] {
+export function monthlyNote({ transactions, categories, goals, monthlyBudget, month, today, treat }: NoteInput): NoteSlide[] {
   const ongoing = monthKey(today) === month
   const lastDay = ongoing ? dayOf(today) : Infinity
   const before = shiftMonth(month, -1)
@@ -128,7 +130,11 @@ export function monthlyNote({ transactions, categories, goals, monthlyBudget, mo
   const busiest = expenses.length >= 6 && perDay.filter((amount) => amount === best).length === 1 ? WEEKDAYS[perDay.indexOf(best)] : undefined
   const busy = busiest ? `${busiest} ${ongoing ? "is" : "was"} the day with the most spending.` : undefined
 
-  const notice = [top, moved, days, busy].filter((line): line is string => line !== undefined).slice(0, 3)
+  // The biggest treat always gets a place on this slide, so the other sentences make room for it.
+  const treatLine =
+    treat?.type === "expense" ? `${ongoing ? "Your biggest treat so far is" : "Your biggest treat was"} ${nameOf(categories, treat.categoryId)}, ${formatRupiah(treat.amount)} on ${formatDate(treat.date)}.` : undefined
+  const others = [moved, days, busy].filter((line): line is string => line !== undefined).slice(0, treatLine ? 1 : 2)
+  const notice = [top, treatLine, ...others].filter((line): line is string => line !== undefined)
   if (notice.length > 0) slides.push({ id: "notice", title: "Worth noticing", lines: notice })
 
   // ---- slide 3: progress --------------------------------------------------------------------

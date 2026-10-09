@@ -6,17 +6,15 @@ import { useData } from "@/components/data-provider"
 import { CalendarArt } from "@/components/illustrations/calendar"
 import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
-import { formatDate, formatMonthName } from "@/lib/format"
+import { formatMonthName } from "@/lib/format"
 import { monthRecap } from "@/lib/recap"
-import { describeTransaction } from "@/lib/stats"
-import { cn } from "@/lib/utils"
 
 /**
- * The month in one look, at the top of the Month view: what came in, what went out, what was left and the biggest treat.
+ * The month in one look, at the top of the Month view: what came in, what went out, and what was left. (The biggest treat now lives in the monthly note.)
  * A month with no money in it gets a calendar drawing and a plain sentence instead. `today` is "2026-10-04", from the server, so "yet" is only said for a month that isn't over.
  */
 export function MonthRecap({ month, today }: { month: string; today: string }) {
-  const { transactions, categories, wallets } = useData()
+  const { transactions, categories } = useData()
   const recap = monthRecap(transactions, categories, month)
   const name = formatMonthName(month) + (month.slice(0, 4) === today.slice(0, 4) ? "" : ` ${month.slice(0, 4)}`)
 
@@ -42,7 +40,6 @@ export function MonthRecap({ month, today }: { month: string; today: string }) {
     )
   }
 
-  const treat = recap.treat ? describeTransaction(recap.treat, wallets, categories) : undefined
   const leftTone = recap.left === 0 ? "text-muted-foreground" : recap.left > 0 ? "text-positive" : "text-negative"
 
   return (
@@ -55,8 +52,8 @@ export function MonthRecap({ month, today }: { month: string; today: string }) {
         {name} in one look
       </h2>
 
-      {/* Two across from 380px (figures at 24px on a phone, the size from which the softer thousands dots still pass), so the card stays short; four across from 1280px. */}
-      <dl className={cn("mt-5 grid grid-cols-1 gap-x-4 gap-y-5 min-[380px]:grid-cols-2 sm:gap-x-6", treat ? "xl:grid-cols-4" : "xl:grid-cols-3")}>
+      {/* Two across from 380px (figures at 24px on a phone, the size from which the softer thousands dots still pass), so the card stays short; three across from 1280px. */}
+      <dl className="mt-5 grid grid-cols-1 gap-x-4 gap-y-5 min-[380px]:grid-cols-2 sm:gap-x-6 xl:grid-cols-3">
         <Fact label="Came in">
           <Money amount={recap.came} sign="always" className={recap.came === 0 ? "text-muted-foreground" : "text-positive"} />
         </Fact>
@@ -66,13 +63,6 @@ export function MonthRecap({ month, today }: { month: string; today: string }) {
         <Fact label="Left over">
           <Money amount={recap.left} className={leftTone} />
         </Fact>
-        {recap.treat && treat ? (
-          <Fact label="Biggest treat">
-            <Money amount={-recap.treat.amount} className="text-negative" />
-            <span className="mt-1.5 block font-sans text-sm leading-snug font-medium wrap-anywhere text-foreground">{treat.title}</span>
-            <span className="block font-sans text-sm leading-snug text-muted-foreground">{formatDate(recap.treat.date)}</span>
-          </Fact>
-        ) : null}
       </dl>
     </section>
   )

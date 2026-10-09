@@ -7,6 +7,7 @@ import { useData } from "@/components/data-provider"
 import { Button } from "@/components/ui/button"
 import { formatMonth } from "@/lib/format"
 import { monthlyNote } from "@/lib/monthly-note"
+import { biggestTreat } from "@/lib/recap"
 import { cn } from "@/lib/utils"
 
 /**
@@ -22,7 +23,7 @@ export function MonthlyNote(props: { month: string; today: string; className?: s
 
 function NoteCard({ month, today, className }: { month: string; today: string; className?: string }) {
   const { transactions, categories, goals, monthlyBudget } = useData()
-  const slides = monthlyNote({ transactions, categories, goals, monthlyBudget, month, today })
+  const slides = monthlyNote({ transactions, categories, goals, monthlyBudget, month, today, treat: biggestTreat(transactions, categories, month) })
 
   const track = useRef<HTMLDivElement>(null)
   const [index, setIndex] = useState(0)

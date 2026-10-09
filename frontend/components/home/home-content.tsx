@@ -8,6 +8,7 @@ import { SavingsGoals } from "@/components/home/savings-goals"
 import { SpendingByCategory } from "@/components/home/spending-by-category"
 import { TotalBalanceCard } from "@/components/home/total-balance-card"
 import { WalletCards } from "@/components/home/wallet-cards"
+import { PetCard } from "@/components/mascot/money-pet"
 import { MonthlyNote } from "@/components/monthly-note"
 import { toDateInput } from "@/lib/dates"
 import {
@@ -30,7 +31,12 @@ export function HomeContent({ nowIso }: { nowIso: string }) {
 
   return (
     <div className="mt-8 flex flex-col gap-6 md:mt-10">
-      <TotalBalanceCard wallets={wallets} />
+      {/* TEMPORARY (Compare options, "Own card"): the pet's card beside the total from 1280px, under it below that. While it is
+          hidden, the total takes the whole row as before (a hidden flex item leaves no gap). */}
+      <div className="flex flex-col gap-6 xl:flex-row">
+        <TotalBalanceCard wallets={wallets} className="min-w-0 xl:flex-1" />
+        <PetCard className="pet-spot pet-spot-card xl:w-64 xl:shrink-0" />
+      </div>
       <WalletCards wallets={wallets} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">

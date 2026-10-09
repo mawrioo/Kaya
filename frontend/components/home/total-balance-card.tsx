@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
  * hides the number and the bar together, because the split would give the
  * amount away.
  */
-export function TotalBalanceCard({ wallets }: { wallets: Wallet[] }) {
+export function TotalBalanceCard({ wallets, className }: { wallets: Wallet[]; className?: string }) {
   const total = totalBalance(wallets)
   const shares = walletShares(wallets)
   const overdrawn = overdrawnWallets(wallets)
@@ -22,7 +22,7 @@ export function TotalBalanceCard({ wallets }: { wallets: Wallet[] }) {
   return (
     <section
       aria-labelledby="total-balance-label"
-      className="relative isolate overflow-hidden rounded-xl border bg-linear-to-br from-sage to-card p-6 shadow-sm md:p-8"
+      className={cn("relative isolate overflow-hidden rounded-xl border bg-linear-to-br from-sage to-card p-6 shadow-sm md:p-8", className)}
     >
       {/* The engraving: a batik lattice (kawung) fading in from the right. Decoration only. */}
       <div aria-hidden className="kawung pointer-events-none absolute inset-y-0 right-0 -z-10 w-2/3 text-sage-foreground opacity-[0.17]" />

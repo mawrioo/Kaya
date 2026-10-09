@@ -12,8 +12,6 @@ export interface MonthRecap {
   went: number
   /** What was left: what came in minus what went out. Below zero when more went out. */
   left: number
-  /** The biggest treat of the month. Missing when there wasn't one. */
-  treat?: Transaction
 }
 
 /** The spending presets that aren't treats: you pay them whether you want to or not. */
@@ -36,7 +34,7 @@ export function biggestTreat(transactions: Transaction[], categories: Category[]
 export function monthRecap(transactions: Transaction[], categories: Category[], month: string): MonthRecap | undefined {
   const { income, spending, net } = monthTotals(transactions, month)
   if (income === 0 && spending === 0) return undefined
-  return { came: income, went: spending, left: net, treat: biggestTreat(transactions, categories, month) }
+  return { came: income, went: spending, left: net }
 }
 
 export interface KeptMonth {

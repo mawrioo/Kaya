@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { cookies } from "next/headers"
 import { ArrowDownLeft, PiggyBank, Plus, SlidersHorizontal, Wallet } from "lucide-react"
 
 import { Money } from "@/components/money"
@@ -10,11 +11,13 @@ import { LedgerArt } from "@/components/illustrations/ledger"
 import { MagnifierArt } from "@/components/illustrations/magnifier"
 import { TagArt } from "@/components/illustrations/tag"
 import { WalletArt } from "@/components/illustrations/wallet"
+import { Pet, type PetMood } from "@/components/mascot/pet"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { TransactionRow } from "@/components/transaction-row"
 import { Button } from "@/components/ui/button"
 import { loadData } from "@/lib/api"
+import { SESSION_COOKIE } from "@/lib/lock"
 import { paletteClasses } from "@/lib/palette"
 import { recentTransactions } from "@/lib/stats"
 import { icons } from "@/lib/icons"
@@ -22,6 +25,14 @@ import type { Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Style guide" }
+
+const petMoods: { mood: PetMood; name: string; rule: string }[] = [
+  { mood: "thriving", name: "Thriving", rule: "Kept 20% or more" },
+  { mood: "happy", name: "Happy", rule: "Kept under 20%" },
+  { mood: "okay", name: "Okay", rule: "No income yet, or break-even" },
+  { mood: "wilting", name: "Wilting", rule: "Spent up to 20% more than came in" },
+  { mood: "melted", name: "Melted", rule: "Spent over 20% more than came in" },
+]
 
 const SWATCHES = [
   {
@@ -79,7 +90,9 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 export default async function StyleguidePage() {
-  const { categories, goals, transactions, wallets } = await loadData()
+  // With a PIN set, the backend only answers a device that proves it typed the PIN, so pass this device's cookie along.
+  const session = (await cookies()).get(SESSION_COOKIE)?.value
+  const { categories, goals, transactions, wallets } = await loadData(session ? `${SESSION_COOKIE}=${session}` : undefined)
   const totalBalance = wallets.reduce((sum, wallet) => sum + wallet.balance, 0)
   const saved = goals.reduce((sum, goal) => sum + goal.savedAmount, 0)
   const target = goals.reduce((sum, goal) => sum + goal.targetAmount, 0)
@@ -212,6 +225,23 @@ export default async function StyleguidePage() {
             <figure key={name} className="flex flex-col items-center rounded-xl border bg-card px-4 py-8 shadow-sm">
               {art}
               <figcaption className="mt-4 text-sm text-muted-foreground">{name}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Money pet"
+        description="The pet (step 1). Its state follows this month's saving rate: income minus spending, divided by income. It breathes and blinks on its own, and sits still under reduce motion."
+      >
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {petMoods.map(({ mood, name, rule }) => (
+            <figure key={mood} className="flex flex-col items-center rounded-xl border bg-card px-3 py-6 shadow-sm">
+              <Pet mood={mood} className="w-36" />
+              <figcaption className="mt-3 text-center">
+                <span className="block text-sm font-medium">{name}</span>
+                <span className="block text-xs text-muted-foreground">{rule}</span>
+              </figcaption>
             </figure>
           ))}
         </div>

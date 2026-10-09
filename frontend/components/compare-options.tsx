@@ -23,12 +23,45 @@ const groups = [
       { value: "lighter", label: "Slightly lighter" },
     ],
   },
+  {
+    // The money pet (components/mascot): each spot has the class `pet-spot-<value>`, hidden unless it is the one chosen.
+    key: "pet",
+    title: "Where the pet sits",
+    hint: "Its look follows this month's saving rate. \"Own page\" adds Pet to the menu.",
+    choices: [
+      { value: "none", label: "None (now)" },
+      { value: "card", label: "Own card on Home" },
+      { value: "page", label: "Own page" },
+    ],
+  },
+  {
+    // Which drawing (components/mascot/pet.tsx reads this one).
+    key: "pig",
+    title: "Pig",
+    hint: "Remake: the same pig, turned a little, shaded, calmer, with a sprout that grows or wilts with the month.",
+    choices: [
+      { value: "now", label: "Now" },
+      { value: "remake", label: "Remake" },
+    ],
+  },
+  {
+    // What sits behind the pet on its card and its page (the `.pet-home` element; plain CSS in globals.css).
+    key: "home",
+    title: "Pet's home",
+    hint: "Half batik is the total balance card's; full batik covers the whole card. Both sit on the sage wash.",
+    choices: [
+      { value: "none", label: "No batik" },
+      { value: "half", label: "Half batik" },
+      { value: "full", label: "Full batik" },
+    ],
+  },
 ] as const
 
 type Choices = Record<(typeof groups)[number]["key"], string>
 
+// The name predates the pet row; it is kept so the sidebar colour already chosen in this browser isn't forgotten.
 const STORAGE_KEY = "kaya-compare-sidebar-bg"
-const defaults: Choices = { bg: "now" }
+const defaults: Choices = { bg: "now", pet: "none", pig: "now", home: "none" }
 let current: Choices = defaults
 const listeners = new Set<() => void>()
 
@@ -46,6 +79,11 @@ function set(next: Choices) {
 function subscribe(listener: () => void) {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+/** One choice, for a component that draws differently by it (the pet's look), not only by CSS. */
+export function useCompareChoice(key: keyof Choices): string {
+  return useSyncExternalStore(subscribe, () => current[key], () => defaults[key])
 }
 
 /** Keeps only known values; anything else falls back to today's look. */
@@ -69,7 +107,7 @@ export function CompareOptions() {
     } catch {
       kept = null
     }
-    // An address like ?bg=darker sets them too.
+    // An address like ?bg=darker or ?pet=card sets them too.
     const params = new URLSearchParams(window.location.search)
     set(clean({ ...clean(kept), ...Object.fromEntries(params) }))
   }, [])

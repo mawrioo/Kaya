@@ -1,10 +1,13 @@
-import { ArrowLeftRight, ChartColumn, House, Shapes, Target, Wallet, type LucideIcon } from "lucide-react"
+import { ArrowLeftRight, ChartColumn, House, PawPrint, Shapes, Target, Wallet, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   href: string
   label: string
   icon: LucideIcon
 }
+
+/** The money pet's page. TEMPORARY: its link is hidden unless "Own page" is picked in Compare options. */
+export const PET_HREF = "/pet"
 
 export const mainNav: NavItem[] = [
   { href: "/", label: "Home", icon: House },
@@ -13,6 +16,7 @@ export const mainNav: NavItem[] = [
   { href: "/goals", label: "Goals", icon: Target },
   { href: "/categories", label: "Categories", icon: Shapes },
   { href: "/insights", label: "Insights", icon: ChartColumn },
+  { href: PET_HREF, label: "Pet", icon: PawPrint },
 ]
 
 export function isActivePath(pathname: string, href: string): boolean {

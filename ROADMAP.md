@@ -658,7 +658,40 @@ Gotchas found on the way:
 - `pdftoppm` isn't installed, so a PDF can't be looked at with the Read tool; PyMuPDF installed into a scratch folder (`pip install --target`) renders its pages to images without touching the machine's Python.
 - Two sample-data coincidences caught wrong test expectations rather than bugs: a goal's saved amount equals Pluang's balance (so "no wallet balance on the report" needs to skip it), and the owner's own "Kopi Kenangan" already trains the category suggestion for the bank's longer wording.
 
+### Step 25: the money pet, steps 1 and 2 of 3 (9–10 Oct 2026)
+A cute pig whose look follows **this month's saving rate**, (income − spending) ÷ income, the same income and spending as Home and Insights. The design is in `docs/superpowers/specs/2026-10-09-living-celengan-design.md`. The first drawing was a glazed celengan with a second factor (goals); the owner asked instead for a simple cute pet in the style of their reference pictures, with drastic changes and the saving rate as the only factor.
+
+- **Five states.** Thriving (kept 20% or more: bright pink, happy closed eyes, open smile, sparkles, hops), Happy (kept under 20%: a smile, bounces now and then), Okay (no income yet this month, since the owner is paid weekly, or break-even), Wilting (spent up to 20% more than came in: turning mustard, saggy, ears flopped, worried eyes, leans), Melted (spent over 20% more: an olive puddle with a tear, stink lines, buzzing flies and a bubble).
+- **Signs of life:** it breathes, sways, blinks at random moments and glances about; the healthy ears twitch. This is the one exception to "nothing moves on its own", and all of it stops under "reduce motion".
+- **Where it sits is still being compared.** Compare options has a new row, "Where the pet sits": None (now), Own card on Home (beside the total balance from 1280px, under it below that), Own page (`/pet`, and Pet in the menu). Also settable by a link (`?pet=page`). By the greeting, the goals panel and Goals page, and the sidebar were tried first; the owner took them out on 10 Oct.
+- **The pet's page** (`app/pet/page.tsx`, `components/mascot/pet-view.tsx`): the pet large with its state, the month, and what the next step up takes ("Keep Rp 1.000.000 more and it's thriving.", from `petNextStep`, rounded up so it is always enough); this month's came in, went out and kept; and the five states with "Now" on the current one.
+
+How it works:
+- `lib/mascot.ts` (pure): `petMood` compares in whole rupiah (kept × 5 against income), so a month exactly on a line never lands on the wrong side by rounding; `petStatus` adds a one-word title and one plain sentence with no amounts (it names the drawing for screen readers). Tests: `tests/mascot.test.mjs`.
+- `components/mascot/pet.tsx` (`Pet`) picks one of two drawings, `pet-sticker.tsx` or `pet-remake.tsx`, which share `pet-parts.tsx` (the blink, tear, stink, flies, sparkles); `components/mascot/money-pet.tsx` connects it to the shared data (`usePetStatus`, `MoneyPet`, `PetCard`). The month is read in the browser after the page loads (the server draws an empty space the same size), so the server and the browser never disagree at the turn of a month.
+- Colours are the `--pet-*` tokens in `globals.css` (in the first drawing the flies, stink and shadow take light colours in dark mode; the remake keeps one set for both themes); the movements are the `pet-*` animations in the same file.
+- The old flat celengan (`components/illustrations/celengan.tsx`) is unchanged: the empty Goals page and the "Goal reached" message still use it.
+- `/styleguide` shows the five states, and now passes the device's session cookie to the backend (it broke with "Kaya is locked" once a PIN was set).
+- Checked on my own servers (3200 and 4200, a throwaway database): the card went Okay → Thriving → Happy → Okay → Wilting → Melted as October transactions were added, each spot shows exactly one pet and None shows none, nothing scrolls sideways at 390px, no console errors.
+
+- **How it looks is being compared too** (10 Oct). A version drawn in Kaya's forest ink, more like a real pig, was tried and dropped the same day (the owner found it scary). Now two rows in Compare options:
+  - **Pig:** Now (the first sticker drawing) or Remake (`pet-remake.tsx`): the same pig and colours turned about 20° to the right (the far eye and ear smaller, the snout leaning that way, four legs, a curly tail), lit from the top left with a shaded underside and a soft cast shadow, a thinner outline (2.4 against 3.5), calmer movement (no swaying, smaller breaths, a small hop now and then, slower ears, glances and flies) and the same colours in light and dark mode. A sprout on its head tells the month too: a small orange flower when thriving, two leaves when happy, a small sprout when okay, drooping and yellow when wilting, fallen and brown when melted.
+  - **Pet's home** (behind the card on Home and the top of the Pet page, `.pet-home`): No batik (the plain card), Half batik (the total balance card's sage wash with batik fading in from the right) or Full batik (the sage wash with batik over the whole card, a little fainter).
+  - `Pet` takes a `look` prop, or follows the choice through `useCompareChoice("pig")` from `compare-options.tsx`.
+
+**To delete once the owner has chosen:** the "pet", "pig" and "home" groups in `components/compare-options.tsx` (and `useCompareChoice` once `pet.tsx` no longer needs it), the `.pet-spot-*` and `.pet-home` blocks in the TEMPORARY part of `globals.css`, and the drawing not chosen (`pet-sticker.tsx`, or `pet-remake.tsx` with its `.pet-remake` colours and `pet-calm-*` animations); then `pet.tsx` can simply be the chosen drawing. Not the card: the `PetCard` wrapper in `components/home/home-content.tsx`. Not the page: `app/pet/`, `pet-view.tsx`, the Pet entry in `lib/navigation.ts` (`PET_HREF`) and its class in `components/app-sidebar.tsx`. Keep the chosen ones and drop their `pet-spot`/`pet-home` hooks if the plain version wins.
+
+Gotchas found on the way:
+- Next's dev server only finishes loading the page (hydration) when it is opened as `localhost`, not `127.0.0.1`: with `127.0.0.1` the page's code never starts, so nothing set by the browser (Compare options) happens.
+- A CSS animation's `transform` replaces an SVG element's own `transform` attribute, so an animated part must not carry a transform of its own (the fly's wings flutter on a wrapper).
+
 ## Next
+
+### Waiting for the owner: Step 25, the money pet (10 Oct 2026)
+
+1. In Compare options: which spot ("Where the pet sits": its own card on Home, or its own page), which pig (Now or Remake, and the sprout: keep it?), and which home (no, half or full batik)?
+2. Then step 3, the reactions: its eyes follow the pointer, a wiggle when pointed at or tapped, and perking up when money is added.
+3. Open from step 1: are the five states different enough, the names right, and the 20% lines right?
 
 ### Waiting for the owner: Step 24 (9 Oct 2026)
 
