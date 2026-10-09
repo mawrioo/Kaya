@@ -14,7 +14,7 @@ export function MobileTopbar() {
   const { openMobile, setOpenMobile } = useSidebar()
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between bg-sidebar px-4 text-sidebar-foreground md:hidden">
+    <header className="print-hidden sticky top-0 z-20 flex h-16 items-center justify-between bg-sidebar px-4 text-sidebar-foreground md:hidden">
       <BrandMark />
       <Button
         id={MENU_BUTTON_ID}

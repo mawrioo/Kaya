@@ -79,7 +79,7 @@ export function CompareOptions() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 z-30 flex cursor-pointer items-center gap-2 rounded-full border bg-card px-4 py-2.5 text-sm font-medium shadow-md transition-shadow hover:shadow-lg md:left-[calc(var(--sidebar-width)+1.5rem)]"
+          className="print-hidden fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 z-30 flex cursor-pointer items-center gap-2 rounded-full border bg-card px-4 py-2.5 text-sm font-medium shadow-md transition-shadow hover:shadow-lg md:left-[calc(var(--sidebar-width)+1.5rem)]"
         >
           <SlidersHorizontal className="size-4" aria-hidden />
           Compare options

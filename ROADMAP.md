@@ -607,7 +607,71 @@ The owner's three asks after trying Deposito. (1) **Does a deposito need a nickn
 - **Frontend:** `wallet-form.ts` (`fromWalletId`, the checks, no nickname for a deposito), `wallet-dialog.tsx` (Money comes from, the amount shown but not typed once it has a source), `settle-dialog.tsx` (no chooser when the source is known), `wallet-card.tsx` ("goes back to BCA"), `delete-wallet-dialog.tsx` (the extra bullet), `depositoLine`, and `settleDeposito(id, toWalletId?)`. 4 new frontend tests (128 in all).
 - **Checked:** 385 backend and 128 frontend unit tests, types and lint; **38 checks in Chromium** on a scratch copy (no nickname box, the source choices and refusals, the money leaving BCA and one transfer recorded with the total unchanged, the amount fixed on edit, a matured one from Bank Jago going back to Bank Jago with interest, the delete warning, an older deposito being given a source, the opening transfer locked in Transactions, the transaction form not offering a deposito, no sideways scroll or console errors at 360px); and a **rehearsal on a snapshot of the real data** (58 transactions, 5 wallets including Sea): the upgrade added the column and cleared only Sea's nickname, then Sea was given BCA as its source, a new deposito was opened from Bank Jago, and both were settled back to their wallets with the totals checked. After the copy across, the owner's backend restarted and upgraded the real file the same way (wallets and transactions identical).
 
+### Step 24: six picks and a visual pass (9 Oct 2026)
+
+The owner picked six items from the improvements list and said "do these immediately, don't ask for further confirmation, ask each one for my opinion later", and while they were being built asked for the app to **look better, using the impeccable and ui-ux-pro-max skills**. Both skills' rules were applied to everything new and to the places the new things touch; nothing was redesigned (the app was already polished in Step 6, and DESIGN.md is binding). Built in `.nb-test` copies of both folders, because the PIN adds two tables; the owner's servers were off the whole time. **Not committed.**
+
+1. **Wallet cards on a tablet (item 8).** The Wallets page used to go to two columns at a 768px window, which with the menu open left each card about 215px wide ("Superb / ank"). The columns now follow the cards' own room (a container query): two when the section is at least 704px wide, one below. A 1024px window with the menu open still has two; a 768 to 1023px one has one wide card each; with the menu folded to icons a tablet has the room for two again.
+2. **Save and add another, and Duplicate (item 2).** The Add form and Quick add have a second button, **Save and add another**: it saves, keeps the box open, keeps the kind, wallets and date, and starts the amount, note and category over, with the keyboard on the amount (or back in Quick add's one-line box). **Duplicate** is a third button on every row (and a third swipe action on a phone): it opens the Add form filled in from that row and dated today, saves nothing until Save, and keeps the copied category when the note is changed.
+3. **Totals for whatever is filtered, and a total in each day's heading.** One strip between the filters and the list: how many are showing, and money in, money out and net of **every** matching transaction (not only the ones on screen; it says "Totals cover all 41." while the list is paged), with transfers left out and counted in words. Each day's band says what that day came to. With nothing matching the strip steps aside for the usual message.
+4. **Printable monthly report.** "Report" on Insights (Month and Compare views) opens `/insights/report?month=…`: the month as an A4 sheet. "Print or save as PDF" opens the browser's print window (choose "Save as PDF" there). The sheet is light paper in dark mode too, hides the menu and buttons when printed, repeats table headers across pages, and never shows a wallet balance.
+5. **Import from a bank's CSV.** "Import CSV" on Transactions (and on the empty page): choose the wallet and the file, check how the columns were read, look through every line, import. All or nothing, one Undo for ten seconds. Lines the app already has are flagged and unticked.
+6. **PIN lock (optional).** Set from the account menu; a device types it once and is remembered for 1 day (it was 30 days until the owner chose 1 day, 9 Oct 2026); the backend refuses to send any data to a device that hasn't, so the lock screen is all that is built. Wrong tries make the next one wait (30s, doubling, up to 15 minutes). "Lock Kaya", "PIN settings" (change, turn off). `npm run pin:reset -- --yes` removes a forgotten PIN from this computer.
+
+**The visual pass.** What changed in the look, all inside DESIGN.md's rules (calm, cream, forest green, one orange, serif for figures, fun only where money moves):
+- **A row's buttons are drawn only when pointed at** (or when the keyboard reaches one): with Duplicate there would have been three small icons under every one of thirty amounts. Touch screens swipe, as before. (One class, `row-actions`, brings them back always.)
+- **The list now has a spine**: the totals strip above it and a day total on each band, in muted figures that never scold.
+- **New screens in the system's own language**: the lock screen (forest ground, the sidebar's batik rising from the bottom, the cream card, the dots field), the import box (drop zone, tick list, calm chips), the report (a white sheet with serif figures and hairlines) and the PIN dialogs.
+- **New shared pieces**: `type-figure` (serif 20px, for a figure in the middle of a page), `row-actions`, `print-hidden` (any page prints without the menu and the coin now), `paper` (re-declares the light tokens so a sheet stays light in dark mode), `lock-lattice`, the lock shake, and `NativeSelect` (the browser's own dropdown drawn like the others, for long lists on a phone).
+- **Bigger-picture checks** with screenshots at 320, 390, 820, 1024 and 1440px in both themes; the strip, the toolbar and the wallet cards follow their own width, not the window's, which is what fixed the tablet breakages found on the way.
+
+How it works:
+- **Backend** (`backend/src/`): `auth.ts` (PIN hashing with scrypt and a salt, wrong-try counting and waits, sessions that keep only a hash of each cookie's token; routes `GET /api/auth/status`, `POST /api/auth/unlock`, `POST /api/auth/lock`, `PUT` and `DELETE /api/auth/pin`), a gate in `app.ts` that answers 401 `{ locked: true }` to every other `/api` route except the health check while a PIN is set and the device has no valid cookie, `POST /api/transactions/import` (`store.importTransactions`, `parseTransactionImport`: every row through the ordinary transaction checks, income and spending only, up to 2000 rows, all or nothing), a new undo kind `import` (it takes the imported transactions out again and gives the balances back; any deleted since are skipped), `pinSet` in `GET /api/data`, and `reset-pin.ts`. **Two new tables, `app_lock` and `app_sessions`, are created in place** when an older database is opened (`CREATE TABLE IF NOT EXISTS`); nothing else in the file changes. 428 backend tests (43 new: `auth.test.ts`, `transactions-import.test.ts`).
+- **Frontend** (`frontend/`): `app/layout.tsx` loads the data with the visitor's session cookie and draws `components/lock/lock-screen.tsx` instead of the app when the backend says it is locked (a locked 401 in the browser reloads the page, so a session that runs out lands on the lock screen); `components/lock/` (`pin-field`, `lock-screen`, `pin-dialog`); the account menu's PIN rows; `lib/lock.ts`; `lib/bank-csv.ts` (the reader: `parseCsv`, `guessColumns`, `readRows`, `parseAmount`, `parseDate`, `findDuplicates`, `buildReview`, `toTransactions`); `components/transactions/` (`import-dialog`, `import-row`, `totals-strip`, and changes to the list, row, form, filters bar and swipe row); `lib/transaction-totals.ts`; `components/report/` and `app/insights/report/page.tsx`; `components/native-select.tsx`; and the print rules, `paper` tokens and the new utilities in `app/globals.css`.
+- **Documents**: PRODUCT, DESIGN (the Transactions page, Totals strip, Import, Lock screen, PIN settings, Report, Native select, Account menu, Transaction form, Swipe actions, Motion, Layout), README (PIN lock, Import, Print) and this file.
+
+**Checked.** 428 backend tests; 235 frontend unit tests (107 new: the CSV reader on a BCA-like, a Jago-like, a semicolon, an English, a headerless and a card-statement file, 95 amount and date cases, duplicates, ordering; the totals; the PIN boxes); types and lint clean; **33 checks in Chromium** in five new files (`pin-lock`, `transactions-extras`, `import`, `report`, `wallets-tablet`) on their own in-memory servers: the PIN set, locked, typed wrong and right, a second device with no cookie locked out of the page and the data, the wait faked so there is nothing to sit through, change and turn off; totals against the data, the day totals, hover and keyboard buttons, Duplicate, Save and add another in the form and in Quick add, the toolbar and strip at 320, 390, 820 and 1024px; the import from choosing a file to Undo and the second import flagging everything; the report's figures against the data, as printed (no menu, no buttons) and as a real PDF; the wallet cards at every width from 320 to 1280px. **23 deliberate breakages** of the new logic (the gate removed, any PIN accepted, the wait never growing, an import that doesn't move balances or doesn't give them back, a transfer counted as income, the two PINs not matching...) were each caught by a test. A **rehearsal on a snapshot of the real data** (60 transactions, 7 wallets and 4 goals): the upgrade added only the two empty tables and every old table was identical afterwards, SQLite's integrity check passed, the totals matched SQL sums, a made-from-the-real-data CSV flagged the real transactions as already there, imported three lines, and Undo put every table back exactly; a PIN was set, refused a device with no cookie, let one with it in, and was turned off with the data unchanged.
+- **Older browser tests that fail, before and after this step.** 19 checks in `brand.spec.ts`, `quick-add.spec.ts` and `shortcut.spec.ts` fail on the untouched code too (verified on a copy of it): they still expect the K-mark logo, a 56px Quick add coin, messages in the corner and 24px of space under the sidebar, all changed on purpose in Steps 14 to 21. They want updating to the current design; they are not broken by this step. The rest of those files, and `wallet-nickname.spec.ts`, pass.
+
+Decisions of mine, not asked:
+- A device stays unlocked for **1 day** (the owner's choice; one constant, `SESSION_DAYS` in `backend/src/auth.ts`); the PIN is **4 to 8 digits**; the computer the app runs on asks too (there is no "trust this computer" exception).
+- A PIN is turned on by anyone who can open the app while there is none (as before, there was nothing to stop them reading the data); only the owner at this computer can remove a forgotten one, with `pin:reset`.
+- **Import never makes transfers**, only income and spending, and always changes the wallet's balance as if added by hand (there is no "import without changing the balance"). Dates with no year take the latest year that isn't more than a month ahead; lines are saved at noon on their day; a note is cut to 100 characters at a word.
+- A line counts as "already in Kaya" on the same wallet, day, direction and amount, whatever the description says (a bank's wording never matches the owner's own), and each existing transaction is used up by one line only.
+- **Duplicate dates the copy today**, keeps the wallet(s), note and category, and has no "keep the date" option.
+- **Save and add another clears the category** (the note's suggestion fills it as you type), so a batch never files the second line under the first one's category by accident.
+- The day total is **income minus spending** (not spending only), the strip's figures cover **all time when nothing is filtered**, and none of it is coloured except money in and out.
+- The report is an **A4 print page**, not a generated PDF file: no new library, nothing leaves the computer, the browser's "Save as PDF" makes the file.
+
+Not done / known limits:
+- The CSV reader was built and tested against the common shapes of bank files, not against the owner's real BCA, Jago or Superbank downloads, which I haven't seen: a real (blurred) sample of each would let it be tuned.
+- A bank's file can't tell a transfer between the owner's wallets from a payment, so such lines come in as spending and income and need fixing by hand (or leaving out and adding as a transfer).
+- The PIN has no setting for how long a device is remembered, no biometric unlock and no "forgot it" flow on the lock screen itself (the README says how).
+- The session cookie has no `Secure` flag (the app runs on plain http at home); a PIN typed over a public network could be read, so this is for the home Wi-Fi.
+- No one-click PDF download (see above), and Insights' Year view has no report.
+
+Gotchas found on the way:
+- A container query only applies to an element's **children**: the strip's own classes had to move to a wrapper (`@container` on the wrapper, the `@[50rem]:` classes on the section inside).
+- This repo has many CRLF files (in a Windows working tree, with LF in git): the Edit tool keeps a file's own line endings, but a script that replaces multi-line text must normalise to LF and restore CRLF, or it fails to find the text.
+- In Git Bash an argument that starts with `/` (like `/transactions`) is turned into a Windows path before the program sees it; pass it without the slash or set `MSYS_NO_PATHCONV=1`.
+- Playwright's `page` fixture is a new window for every test, so tests that need a session cookie to carry over must share one context made in `beforeAll`.
+- `pdftoppm` isn't installed, so a PDF can't be looked at with the Read tool; PyMuPDF installed into a scratch folder (`pip install --target`) renders its pages to images without touching the machine's Python.
+- Two sample-data coincidences caught wrong test expectations rather than bugs: a goal's saved amount equals Pluang's balance (so "no wallet balance on the report" needs to skip it), and the owner's own "Kopi Kenangan" already trains the category suggestion for the bank's longer wording.
+
 ## Next
+
+### Waiting for the owner: Step 24 (9 Oct 2026)
+
+The six picks were built without stopping, as asked, and the owner said to ask for an opinion on each afterwards. Please say what you think:
+
+1. **Wallet cards on a tablet.** One wide card per row until a window has room for two good ones (about 1024px with the menu open). Right, or would you rather keep two narrower columns with smaller text?
+2. **Save and add another, and Duplicate.** (a) "Save and add another" keeps the wallet and date but clears the category. Right? (b) "Duplicate" dates the copy today. Or the original's date? (c) A row's three buttons now appear only when you point at the row (or Tab to them). Cleaner, but less obvious: keep it, or always show them?
+3. **Totals.** (a) With no filter the strip adds up everything ever entered. Would you rather it start on "this month"? (b) A day's total is income minus spending. Or spending only?
+4. **Printable report.** Is this the right content and order? Anything missing (a chart, wallet balances at the end of the month, a whole-year report)? "Print or save as PDF" opens the browser's print window: fine, or do you want a one-click PDF download (that needs a new library)?
+5. **Import from a bank's CSV.** Please send one real file each from BCA, Jago and Superbank, with names and numbers blurred, so the reader can be tuned to them. Also: should there be an "import without changing the wallet's balance" option (for months your balance already counts)? Should it try to spot transfers between your own wallets?
+6. **PIN lock.** (a) A device is remembered for 1 day (your choice): still right? (b) 4 to 8 digits fine? (c) Should the computer you sit at also ask, or only other devices (a phone)? (d) Are the look and wording of the lock screen right?
+
+Also still open from before: the Deposito questions and a pick from the numbered list of improvements. The 19 older browser checks that fail (see Step 24) can be brought up to date if you want.
 
 ### Your answers, then your next pick
 **Out of date (8 Oct 2026):** the numbered questions 1 to 14 below were mostly settled by Steps 14, 20 and 21 (cards tight, no "is now" line, no milestone messages, Quick add focus goes to the coin, coin 44px clay, messages at the top, name-only logo, no seal). Only the Deposito questions and the "Possible improvements" picks are still open.
@@ -676,8 +740,8 @@ Decide with the owner where these slot in. Doing them before Step 6 lets the pol
 Chosen from the improvements list, not scheduled. Each is described in the full list below. On 2 Oct 2026 the owner had five of the first batch built (one budget for the whole month, undo after a delete, weekday habits, the balance line and the username setting: see Step 5e). These four are still waiting:
 - Export from the Transactions page, whatever is filtered (small).
 - Spot repeating payments, such as subscriptions, and list them (medium).
-- A printable monthly report (PDF) (medium).
-- Import from a bank's CSV, sorting the lines with what the app has learned (large).
+- A printable monthly report (PDF) (medium). **Built: Step 24 (9 Oct 2026).**
+- Import from a bank's CSV, sorting the lines with what the app has learned (large). **Built: Step 24 (9 Oct 2026).**
 
 ### Username
 Done on 2 Oct 2026 (see Step 5e): the bottom of the sidebar shows the name with "Change name". What was planned and is now built:
@@ -694,7 +758,7 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 
 *Left over from the Step 6 list*
 1. Highlight a donut slice from its legend row with the keyboard, not only by pointing (small).
-2. "Save and add another" in the form, and "Duplicate" on a row (small).
+2. "Save and add another" in the form, and "Duplicate" on a row (small). **Built: Step 24 (9 Oct 2026).**
 3. Keyboard shortcuts: N to add, / to search (small). (Ctrl+K and Q for Quick add are built: Step 9.)
 4. Undo after editing a transaction, not only after deleting one (small to medium).
 5. Recurring transactions: rent, salary and subscriptions add themselves each month (large).
@@ -702,7 +766,7 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 7. Set or change a budget right from Insights (small).
 
 *New from this step*
-8. Wallet cards on a tablet: from 768 to 1023px (the sidebar open) the two columns are only about 215px wide, so a note wraps letter by letter ("Salar y and mont hly bills"). One column until 1024px, or a smaller badge and buttons (small). It was like that before this step; testing found it.
+8. Wallet cards on a tablet: from 768 to 1023px (the sidebar open) the two columns are only about 215px wide, so a note wraps letter by letter ("Salar y and mont hly bills"). One column until 1024px, or a smaller badge and buttons (small). It was like that before this step; testing found it. **Built: Step 24 (9 Oct 2026).**
 9. Backups on their own as well: one automatic copy a day, keeping the last 14, and a Restore button that does the README's steps for you (small to medium).
 10. Choose which categories count as treats (a switch on a category) instead of "everything except Bills, Transport, Health and Other" (small to medium).
 11. Save the month recap as a picture to keep or share (medium).
@@ -711,13 +775,13 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 12. "Make the web dynamic" (your note from 1 Oct): tell me what you mean (live updates between your phone and computer, more motion, data that refreshes itself?) before anything is built.
 
 **Faster entry**
-- "Save and add another" in the form, for entering several in a row (small).
+- "Save and add another" in the form, for entering several in a row (small). **Built: Step 24 (9 Oct 2026).**
 - Keyboard shortcuts: N to add, / to search (small).
-- Duplicate a row, to add a similar transaction in two clicks (small).
+- Duplicate a row, to add a similar transaction in two clicks (small). **Built: Step 24 (9 Oct 2026).**
 - Recurring transactions: rent, salary and subscriptions add themselves each month (large).
 
 **Finding things**
-- Totals for whatever is filtered (income, spending, net) above the list, and a daily total in each date heading (small).
+- Totals for whatever is filtered (income, spending, net) above the list, and a daily total in each date heading (small). **Built: Step 24 (9 Oct 2026).**
 - Sticky filter bar and date headings while scrolling (small).
 - Search by wallet name and amount too, and highlight the matched text (small).
 - Export the shown list to CSV: the Export on Insights already writes the file for a month or a year, so this is the same for whatever the Transactions page is showing (small).
@@ -728,11 +792,11 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 - Warn when an amount is unusually large (small). (Going below zero is done: Step 7.)
 - Select several rows to delete or re-categorise them together (medium).
 - Automatic backups on top of the "Back up now" button (Step 7): copy the database file somewhere safe each day, and a Restore button that does the README's steps (small to medium).
-- A password or PIN before the app opens, worth having if you ever use it on a shared network or host it (medium).
+- A password or PIN before the app opens, worth having if you ever use it on a shared network or host it (medium). **Built: Step 24 (9 Oct 2026).**
 
 **Data**
 - A settings page with "Start with sample data" and "Start empty" (the ten presets from Step 5 are what an empty start would hold) (small).
-- Import from a bank's CSV export, sorting the lines into categories with what the app has learned from the notes (large).
+- Import from a bank's CSV export, sorting the lines into categories with what the app has learned from the notes (large). **Built: Step 24 (9 Oct 2026).**
 
 **Wallets**
 - Show the date of the last value update on the card, and let "Update value" work for other wallet types too, such as gold or crypto held in an e-wallet (small).
@@ -769,7 +833,7 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 - A small trend line for each category (a few months at a glance) (medium).
 - A quiet note when the budget for the whole month is lower than the category budgets add up to, or the other way round (small).
 - A budget that differs by month, or that carries what was left over into the next month (medium).
-- Save a month as a printable report (PDF) (medium).
+- Save a month as a printable report (PDF) (medium). **Built: Step 24 (9 Oct 2026).**
 - Spot repeating payments (a subscription that leaves every month) and list them (medium).
 
 **Polish**

@@ -3,8 +3,8 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { motion, useAnimationControls } from "motion/react"
 
-/** Width of the two buttons behind the row: 76px each. */
-export const ACTIONS_WIDTH = 152
+/** Width of each button behind the row. */
+export const ACTION_WIDTH = 76
 const SNAP = { type: "spring", stiffness: 520, damping: 42 } as const
 
 function subscribeToPointer(onChange: () => void) {
@@ -27,6 +27,8 @@ interface SwipeRowProps {
   onOpenChange: (open: boolean) => void
   /** The buttons revealed behind the row. Shown on touch screens only. */
   actions: React.ReactNode
+  /** How many buttons `actions` holds: the row slides open by that many button widths. */
+  actionCount?: number
   children: React.ReactNode
 }
 
@@ -36,13 +38,14 @@ interface SwipeRowProps {
  * sooner and it springs back. With a mouse there is nothing to swipe: the
  * row's own small buttons are used instead.
  */
-export function SwipeRow({ open, onOpenChange, actions, children }: SwipeRowProps) {
+export function SwipeRow({ open, onOpenChange, actions, actionCount = 2, children }: SwipeRowProps) {
   const touch = useTouchScreen()
   const controls = useAnimationControls()
+  const actionsWidth = actionCount * ACTION_WIDTH
 
   useEffect(() => {
-    void controls.start({ x: open ? -ACTIONS_WIDTH : 0, transition: SNAP })
-  }, [open, controls])
+    void controls.start({ x: open ? -actionsWidth : 0, transition: SNAP })
+  }, [open, controls, actionsWidth])
 
   return (
     <div className="relative">
@@ -50,7 +53,7 @@ export function SwipeRow({ open, onOpenChange, actions, children }: SwipeRowProp
           (only for keyboard focus, so returning focus after a tap doesn't reopen it). */}
       <div
         className="absolute inset-y-0 right-0 hidden pointer-coarse:flex"
-        style={{ width: ACTIONS_WIDTH }}
+        style={{ width: actionsWidth }}
         onFocus={(event) => {
           if (event.target.matches(":focus-visible")) onOpenChange(true)
         }}
@@ -62,16 +65,16 @@ export function SwipeRow({ open, onOpenChange, actions, children }: SwipeRowProp
         animate={controls}
         drag={touch ? "x" : false}
         dragDirectionLock
-        dragConstraints={{ left: -ACTIONS_WIDTH, right: 0 }}
+        dragConstraints={{ left: -actionsWidth, right: 0 }}
         dragElastic={{ left: 0.12, right: 0 }}
         dragMomentum={false}
         onDragEnd={(_, info) => {
-          const startedAt = open ? -ACTIONS_WIDTH : 0
+          const startedAt = open ? -actionsWidth : 0
           const endedAt = startedAt + info.offset.x
           const shouldOpen =
-            info.velocity.x < -600 ? true : info.velocity.x > 600 ? false : endedAt < -ACTIONS_WIDTH * 0.45
+            info.velocity.x < -600 ? true : info.velocity.x > 600 ? false : endedAt < -actionsWidth * 0.45
           if (shouldOpen === open) {
-            void controls.start({ x: shouldOpen ? -ACTIONS_WIDTH : 0, transition: SNAP })
+            void controls.start({ x: shouldOpen ? -actionsWidth : 0, transition: SNAP })
           } else {
             onOpenChange(shouldOpen)
           }

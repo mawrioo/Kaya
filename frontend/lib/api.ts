@@ -10,6 +10,7 @@
 import type {
   AddToGoalResult,
   AppData,
+  AuthResult,
   BackupResult,
   BalanceChange,
   CategoryChanges,
@@ -19,6 +20,7 @@ import type {
   DeleteWalletResult,
   GoalInput,
   GoalMovement,
+  ImportTransactionsResult,
   NewCategory,
   NewTransaction,
   NewWallet,
@@ -40,8 +42,16 @@ import type {
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:4000"
 
-/** Something went wrong talking to the backend. The message is written for the owner to read. */
-export class ApiError extends Error {}
+/**
+ * Something went wrong talking to the backend. The message is written for the owner to read. When the backend said to
+ * wait (too many wrong PINs), `retryAfterSeconds` says how long.
+ */
+export class ApiError extends Error {
+  retryAfterSeconds?: number
+}
+
+/** Kaya has a PIN and this device hasn't typed it (or its session has run out). */
+export class LockedError extends ApiError {}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // On the server we need the backend's full address; in the browser a relative path is enough.
@@ -60,16 +70,45 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const payload: unknown = await response.json().catch(() => undefined)
   if (!response.ok) {
-    const message =
-      typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
-        ? payload.error
-        : `The backend answered with an error (${response.status}).`
-    throw new ApiError(message)
+    const fields = typeof payload === "object" && payload !== null ? (payload as { error?: unknown; locked?: unknown; retryAfterSeconds?: unknown }) : {}
+    const message = typeof fields.error === "string" ? fields.error : `The backend answered with an error (${response.status}).`
+
+    if (response.status === 401 && fields.locked === true) {
+      // The PIN lock closed while the page was open (or this is a first visit). Opening the page again shows the lock screen.
+      if (typeof window !== "undefined") {
+        window.location.reload()
+        return new Promise<never>(() => {})
+      }
+      throw new LockedError(message)
+    }
+    const error = new ApiError(message)
+    if (typeof fields.retryAfterSeconds === "number") error.retryAfterSeconds = fields.retryAfterSeconds
+    throw error
   }
   return payload as T
 }
 
-export const loadData = () => request<AppData>("/api/data")
+/**
+ * Everything the app draws itself from. On the server, hand in the visitor's session cookie ("kaya_session=...") so a
+ * PIN-locked backend knows this page was asked for by a device that has typed the PIN; without it, the backend refuses and
+ * a LockedError is thrown.
+ */
+export const loadData = (sessionCookie?: string) =>
+  request<AppData>("/api/data", sessionCookie ? { headers: { cookie: sessionCookie } } : undefined)
+
+/** Types the PIN on this device. A wrong one throws an ApiError that says how many tries are left, or how long to wait. */
+export const unlock = (pin: string) => request<AuthResult>("/api/auth/unlock", { method: "POST", body: JSON.stringify({ pin }) })
+
+/** Forgets this device, so it has to type the PIN again. */
+export const lockNow = () => request<AuthResult>("/api/auth/lock", { method: "POST" })
+
+/** Turns the PIN on, or (with the current one) changes it. */
+export const setPin = (pin: string, currentPin?: string) =>
+  request<AuthResult>("/api/auth/pin", { method: "PUT", body: JSON.stringify({ pin, ...(currentPin ? { currentPin } : {}) }) })
+
+/** Turns the PIN off. Needs the current one. */
+export const removePin = (currentPin: string) =>
+  request<AuthResult>("/api/auth/pin", { method: "DELETE", body: JSON.stringify({ currentPin }) })
 
 /** Changes the name the greeting on Home uses. */
 export const updateUser = (name: string) =>
@@ -88,6 +127,10 @@ export const undoDelete = (undoId: string) =>
 
 export const createTransaction = (input: NewTransaction) =>
   request<SaveTransactionResult>("/api/transactions", { method: "POST", body: JSON.stringify(input) })
+
+/** Saves many income and spending transactions read from a bank's file, all or nothing. The result's id undoes it. */
+export const importTransactions = (transactions: NewTransaction[]) =>
+  request<ImportTransactionsResult>("/api/transactions/import", { method: "POST", body: JSON.stringify({ transactions }) })
 
 export const updateTransaction = (id: string, input: NewTransaction) =>
   request<SaveTransactionResult>(`/api/transactions/${encodeURIComponent(id)}`, {

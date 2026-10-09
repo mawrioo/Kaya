@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Upload } from "lucide-react"
 
 import { LedgerArt } from "@/components/illustrations/ledger"
 import { MagnifierArt } from "@/components/illustrations/magnifier"
@@ -11,15 +11,18 @@ import { toast } from "sonner"
 
 import { useData } from "@/components/data-provider"
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog"
+import { ImportDialog } from "@/components/transactions/import-dialog"
 import { TransactionDialog } from "@/components/transactions/transaction-dialog"
 import { TransactionFiltersBar } from "@/components/transactions/transaction-filters-bar"
 import { TransactionList } from "@/components/transactions/transaction-list"
+import { TotalsStrip } from "@/components/transactions/totals-strip"
 import { Button } from "@/components/ui/button"
 import { useReturnFocus } from "@/hooks/use-return-focus"
 import { errorMessage } from "@/lib/api"
 import { monthDates, toDateInput, yearDates } from "@/lib/dates"
 import { formatRupiah } from "@/lib/format"
 import { describeTransaction } from "@/lib/stats"
+import { totalsOf } from "@/lib/transaction-totals"
 import { UNDO_FOR } from "@/lib/undo"
 import {
   NO_FILTERS,
@@ -60,7 +63,7 @@ export function TransactionsView({
   /** Or of a whole year, "2026" (from the Year view on Insights). A month wins if both are given. */
   initialYear?: string
 }) {
-  const { wallets, categories, transactions, addTransaction, updateTransaction, deleteTransaction, undoDelete } = useData()
+  const { wallets, categories, transactions, addTransaction, updateTransaction, deleteTransaction, importTransactions, undoDelete } = useData()
 
   // Arriving from a wallet card starts with that wallet's transactions, and from a category with that category's (for a month).
   const [filters, setFilters] = useState<TransactionFilters>(() => ({
@@ -72,6 +75,9 @@ export function TransactionsView({
   }))
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction>()
+  // The transaction a new one is being copied from ("Duplicate").
+  const [duplicating, setDuplicating] = useState<Transaction>()
+  const [importOpen, setImportOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState<Transaction>()
   const [lastWalletId, setLastWalletId] = useState<string>()
@@ -100,6 +106,13 @@ export function TransactionsView({
   const filtered = hasActiveFilters(filters)
   const total = transactions.length
 
+  // What every matching transaction adds up to (not only the ones showing), with a note saying so when the list is paged.
+  const totals = totalsOf(matching)
+  const notes = [
+    ...(shownCount < matching.length ? [`Totals cover all ${matching.length}.`] : []),
+    ...(totals.transfers > 0 ? [`${totals.transfers} ${totals.transfers === 1 ? "transfer isn't" : "transfers aren't"} counted.`] : []),
+  ]
+
   const summary = filtered
     ? shownCount < matching.length
       ? `Showing ${shownCount} of ${matching.length} matching transactions`
@@ -118,12 +131,52 @@ export function TransactionsView({
   function openAdd() {
     returnFocus.remember()
     setEditing(undefined)
+    setDuplicating(undefined)
     setFormOpen(true)
   }
 
   function openEdit(tx: Transaction) {
     returnFocus.remember()
     setEditing(tx)
+    setDuplicating(undefined)
+    setFormOpen(true)
+  }
+
+  function openImport() {
+    returnFocus.remember()
+    setImportOpen(true)
+  }
+
+  /** Saves what was read from a bank's file. The message has an Undo that takes the whole import out again. */
+  async function handleImport(inputs: NewTransaction[], walletName: string) {
+    try {
+      const { transactions: saved, undoId } = await importTransactions(inputs)
+      const count = saved.length
+      toast.success(`Imported ${count} ${count === 1 ? "transaction" : "transactions"}`, {
+        description: `Into ${walletName}.`,
+        duration: UNDO_FOR,
+        action: { label: "Undo", onClick: () => void undoImport(undoId) },
+      })
+    } catch (error) {
+      toast.error("Couldn't import that", { description: errorMessage(error) })
+      throw error // tells the box to stay open
+    }
+  }
+
+  async function undoImport(undoId: string) {
+    try {
+      await undoDelete(undoId)
+      toast.success("Import undone", { description: "Those transactions are gone again, and the balances are back." })
+    } catch (error) {
+      toast.error("Couldn't undo that", { description: errorMessage(error) })
+    }
+  }
+
+  /** "Duplicate": the add form, filled in from this transaction and dated today. Nothing is saved until the owner saves it. */
+  function openDuplicate(tx: Transaction) {
+    returnFocus.remember()
+    setEditing(undefined)
+    setDuplicating(tx)
     setFormOpen(true)
   }
 
@@ -214,14 +267,19 @@ export function TransactionsView({
         onChange={updateFilters}
         onClear={() => updateFilters(NO_FILTERS)}
         onAdd={openAdd}
+        onImport={openImport}
         wallets={wallets}
         categories={categories}
         today={toDateInput(new Date(nowIso))}
       />
 
-      <p aria-live="polite" className="-mb-2 text-sm text-muted-foreground">
-        {summary}
-      </p>
+      {matching.length > 0 ? (
+        <TotalsStrip summary={summary} totals={totals} notes={notes} />
+      ) : (
+        <p aria-live="polite" className="-mb-2 text-sm text-muted-foreground">
+          {summary}
+        </p>
+      )}
 
       {groups.length > 0 ? (
         <TransactionList
@@ -232,6 +290,7 @@ export function TransactionsView({
           freshIds={freshIds}
           leavingId={leavingId}
           onEdit={openEdit}
+          onDuplicate={openDuplicate}
           onDelete={openDelete}
         />
       ) : (
@@ -240,6 +299,7 @@ export function TransactionsView({
           scope={emptyScope(filters, wallets, categories)}
           onClear={() => updateFilters(NO_FILTERS)}
           onAdd={openAdd}
+          onImport={openImport}
         />
       )}
 
@@ -256,8 +316,17 @@ export function TransactionsView({
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={editing}
+        duplicateOf={duplicating}
         defaultWalletId={lastWalletId ?? wallets.find((wallet) => wallet.kind !== "deposito")?.id ?? ""}
         onSave={handleSave}
+        onCloseAutoFocus={returnFocus.restore}
+      />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        defaultWalletId={lastWalletId ?? wallets.find((wallet) => wallet.kind !== "deposito")?.id ?? ""}
+        today={toDateInput(new Date(nowIso))}
+        onImport={handleImport}
         onCloseAutoFocus={returnFocus.restore}
       />
       <DeleteTransactionDialog
@@ -282,11 +351,13 @@ function EmptyState({
   scope,
   onClear,
   onAdd,
+  onImport,
 }: {
   hasAny: boolean
   scope?: EmptyScope
   onClear: () => void
   onAdd: () => void
+  onImport: () => void
 }) {
   if (hasAny && scope) {
     const isWallet = scope.kind === "wallet"
@@ -331,10 +402,16 @@ function EmptyState({
             Clear filters
           </Button>
         ) : (
-          <Button size="lg" onClick={onAdd}>
-            <Plus aria-hidden />
-            Add transaction
-          </Button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button size="lg" onClick={onAdd}>
+              <Plus aria-hidden />
+              Add transaction
+            </Button>
+            <Button variant="outline" size="lg" onClick={onImport}>
+              <Upload aria-hidden />
+              Import a bank&apos;s CSV
+            </Button>
+          </div>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ChevronUp, Pencil, Sprout } from "lucide-react"
+import { ChevronUp, KeyRound, Lock, Pencil, Sprout } from "lucide-react"
 
 import { useData } from "@/components/data-provider"
 import { SidebarBackup } from "@/components/sidebar-backup"
@@ -18,8 +18,17 @@ export const SIDEBAR_USER_ID = "sidebar-user-button"
  * instead of being cut off. `onChangeName` opens the box for the name (the menu has closed by then), and `onBackupStart`
  * lets a phone's menu close before the backup message appears.
  */
-export function SidebarUser({ onChangeName, onBackupStart }: { onChangeName: () => void; onBackupStart?: () => void }) {
-  const { user } = useData()
+export function SidebarUser({
+  onChangeName,
+  onBackupStart,
+  onPinSettings,
+}: {
+  onChangeName: () => void
+  onBackupStart?: () => void
+  /** Opens the box for the PIN (set one, change it, or turn it off). The menu has closed by then. */
+  onPinSettings: () => void
+}) {
+  const { user, pinSet, lockNow } = useData()
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   // The first letter (a whole character, so an emoji isn't cut in half).
@@ -87,6 +96,50 @@ export function SidebarUser({ onChangeName, onBackupStart }: { onChangeName: () 
             onBackupStart?.()
           }}
         />
+
+        {/* With a PIN set there are two rows: lock right now, and the settings. Without one, a single row to set it. */}
+        {pinSet ? (
+          <button
+            type="button"
+            id="sidebar-lock-button"
+            className={MENU_ROW}
+            onClick={() => {
+              setOpen(false)
+              void lockNow()
+            }}
+          >
+            <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-foreground/15 text-sidebar-accent-foreground">
+              <Lock className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[0.9375rem] leading-snug font-medium text-sidebar-foreground">Lock Kaya</span>
+              <span className="block text-[0.8125rem] leading-snug text-sidebar-muted transition-colors duration-150 group-hover:text-sidebar-foreground">
+                Ask for the PIN again
+              </span>
+            </span>
+          </button>
+        ) : null}
+        <button
+          type="button"
+          id="sidebar-pin-button"
+          className={MENU_ROW}
+          onClick={() => {
+            // Focus goes back to this row when the box closes, so it is remembered before the menu goes.
+            trigger.current?.focus({ preventScroll: true })
+            setOpen(false)
+            onPinSettings()
+          }}
+        >
+          <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-foreground/15 text-sidebar-accent-foreground">
+            <KeyRound className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[0.9375rem] leading-snug font-medium text-sidebar-foreground">{pinSet ? "PIN settings" : "Set a PIN"}</span>
+            <span className="block text-[0.8125rem] leading-snug text-sidebar-muted transition-colors duration-150 group-hover:text-sidebar-foreground">
+              {pinSet ? "Change it or turn it off" : "Ask for it before Kaya opens"}
+            </span>
+          </span>
+        </button>
 
         <div className="mt-2 border-t border-sidebar-border px-1 pt-3">
           <p className="mb-2 px-1 text-[0.8125rem] font-medium text-sidebar-muted">Appearance</p>

@@ -6,6 +6,7 @@
 import { randomUUID } from "node:crypto"
 import type { DatabaseSync } from "node:sqlite"
 
+import { createAuth } from "./auth.ts"
 import { lastBackup, makeBackup } from "./backup.ts"
 import { OTHER_CATEGORY_ID } from "./category-look.ts"
 import { depositoState } from "./deposito.ts"
@@ -32,6 +33,7 @@ import type {
   Goal,
   GoalMovement,
   GoalMovementKind,
+  ImportTransactionsResult,
   PaletteColor,
   ReorderCategoriesResult,
   ReorderGoalsResult,
@@ -66,6 +68,7 @@ import {
   parseNewWallet,
   parseRestoreCategory,
   parseSettleDeposito,
+  parseTransactionImport,
   parseUserName,
   parseWalletChanges,
   parseWalletOrder,
@@ -221,6 +224,9 @@ const DEPOSIT_COLUMNS = "deposit_rate_bp, deposit_start, deposit_tenor, deposit_
  * read, so the tests can hand in a fixed day.
  */
 export function createStore(db: DatabaseSync, today: () => string = () => calendarDate(new Date())) {
+  /** The PIN that can lock the app, and the devices that have typed it (see auth.ts). */
+  const auth = createAuth(db)
+
   /** Runs `work` so that it is saved completely, or not at all if anything inside throws. */
   function transact<T>(work: () => T): T {
     db.exec("BEGIN IMMEDIATE")
@@ -415,6 +421,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       transactions: getTransactions(),
       balanceAdjustments: getBalanceAdjustments(),
       ...(backup ? { lastBackup: backup } : {}),
+      pinSet: auth.isPinSet(),
     }
   }
 
@@ -499,6 +506,35 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       insertTransaction(transaction)
       return { transaction, wallets: getWallets() }
     })
+  }
+
+  /**
+   * Saves many transactions at once, read from a bank's file, into the wallets they name. Each moves its wallet's balance
+   * exactly as one added by hand would, and the whole lot is saved or none of it is. They are written in the order given,
+   * which is the order they are listed in when they share a day. The returned id undoes the import.
+   */
+  function importTransactions(body: unknown): ImportTransactionsResult {
+    const inputs = parseTransactionImport(body, references())
+    const saved = transact(() => {
+      const transactions: Transaction[] = inputs.map((input) => ({ ...input, id: `tx-${randomUUID()}` }))
+      for (const transaction of transactions) insertTransaction(transaction)
+      return { transactions, wallets: getWallets() }
+    })
+    const ids = saved.transactions.map((transaction) => transaction.id)
+    return { ...saved, undoId: rememberUndo(() => removeImported(ids)) }
+  }
+
+  /** Undoes an import: takes those transactions out again and gives the wallets their balances back. Any already deleted are skipped. */
+  function removeImported(ids: string[]): UndoResult {
+    const removed: string[] = []
+    for (const id of ids) {
+      const before = findTransaction(id)
+      if (!before) continue
+      db.prepare("DELETE FROM transactions WHERE id = ?").run(id)
+      applyToBalances(before, -1)
+      removed.push(id)
+    }
+    return { kind: "import", wallets: getWallets(), removedTransactionIds: removed }
   }
 
   function updateTransaction(id: string, body: unknown): SaveTransactionResult | undefined {
@@ -1407,10 +1443,12 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
   }
 
   return {
+    auth,
     getData,
     updateUser,
     setMonthlyBudget,
     createTransaction,
+    importTransactions,
     updateTransaction,
     deleteTransaction,
     createWallet,

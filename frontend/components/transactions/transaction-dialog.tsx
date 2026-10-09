@@ -32,7 +32,9 @@ import {
 import { errorMessage } from "@/lib/api"
 import { formToNewCategory, type CategoryForm } from "@/lib/category-form"
 import { suggestCategory, type CategorySuggestion } from "@/lib/category-suggestion"
+import { toDateInput } from "@/lib/dates"
 import { prepareQuickExpense } from "@/lib/quick-add"
+import { describeTransaction } from "@/lib/stats"
 import {
   emptyForm,
   formToTransaction,
@@ -51,6 +53,8 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void
   /** The transaction being edited. Leave out to add a new one. */
   editing?: Transaction
+  /** A transaction to start a new one from: everything is copied, and the date is today. It is saved as a new transaction. */
+  duplicateOf?: Transaction
   /** The wallet to pre-select when adding, so repeat entries are quicker. */
   defaultWalletId: string
   /** Open with a focused one-line expense box before showing the review form. */
@@ -65,6 +69,7 @@ export function TransactionDialog({
   open,
   onOpenChange,
   editing,
+  duplicateOf,
   defaultWalletId,
   quickAdd = false,
   onSave,
@@ -79,12 +84,14 @@ export function TransactionDialog({
         {/* The form is mounted only while the dialog is open, so it starts fresh every time. */}
         <TransactionFormBody
           editing={editing}
+          duplicateOf={duplicateOf}
           defaultWalletId={defaultWalletId}
           quickAdd={quickAdd}
           onCancel={() => onOpenChange(false)}
-          onSave={async (input) => {
+          onSave={async (input, another) => {
             await onSave(input, editing)
-            onOpenChange(false)
+            // "Save and add another" keeps the box open for the next one.
+            if (!another) onOpenChange(false)
           }}
         />
       </DialogContent>
@@ -103,19 +110,25 @@ const TYPE_OPTIONS: { value: TransactionType; label: string; icon: typeof ArrowU
 
 interface BodyProps {
   editing?: Transaction
+  duplicateOf?: Transaction
   defaultWalletId: string
   quickAdd: boolean
   onCancel: () => void
-  onSave: (input: NewTransaction) => Promise<void>
+  /** Saves it. `another` is true for "Save and add another": the box then stays open. */
+  onSave: (input: NewTransaction, another: boolean) => Promise<void>
 }
 
-function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onSave }: BodyProps) {
+function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, onCancel, onSave }: BodyProps) {
   const { wallets: allWallets, categories, transactions, addCategory } = useData()
   // A deposito's balance follows its rate and dates, so no transaction can be recorded in it.
   const wallets = useMemo(() => allWallets.filter((wallet) => wallet.kind !== "deposito"), [allWallets])
   const isHidden = useIsBalanceHidden()
   const [form, setForm] = useState<TransactionForm>(() =>
-    editing ? transactionToForm(editing) : emptyForm(defaultWalletId, new Date())
+    editing
+      ? transactionToForm(editing)
+      : duplicateOf
+        ? { ...transactionToForm(duplicateOf), date: toDateInput(new Date()) }
+        : emptyForm(defaultWalletId, new Date())
   )
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
@@ -127,7 +140,10 @@ function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onS
   // A category suggested from what the note says, and whether the owner has picked one by hand. From then on
   // nothing is suggested, so their choice is never overwritten. Suggestions are only for a new transaction.
   const [suggestion, setSuggestion] = useState<CategorySuggestion>()
-  const [chosenByHand, setChosenByHand] = useState(false)
+  // A copy keeps the category it was copied with, so a note that is changed never swaps it for a suggestion.
+  const [chosenByHand, setChosenByHand] = useState(!!duplicateOf)
+  // What to tell a screen reader after "Save and add another", which keeps the box open.
+  const [savedStatus, setSavedStatus] = useState("")
   // The small dialog for adding a category without leaving this form.
   const [addingCategory, setAddingCategory] = useState(false)
   // True from choosing "Add new category" until the list has closed, so the list doesn't hand focus back to its own
@@ -240,6 +256,12 @@ function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onS
       fillFromQuickLine()
       return
     }
+    await save(false)
+  }
+
+  /** Checks the form and saves it. With `another`, the box stays open and starts over for the next one. */
+  async function save(another: boolean) {
+    if (saving) return
     const found = validateForm(form)
     setErrors(found)
     if (Object.keys(found).length > 0) {
@@ -249,7 +271,8 @@ function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onS
     }
     setSaving(true)
     try {
-      await onSave(formToTransaction(form, new Date(), editing))
+      await onSave(formToTransaction(form, new Date(), editing), another)
+      if (another) startNext()
     } catch {
       // The page has already explained what went wrong. Stay open so nothing typed is lost.
     } finally {
@@ -257,14 +280,52 @@ function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onS
     }
   }
 
+  /**
+   * After "Save and add another": the kind, the wallets and the date stay (entries tend to come in batches from one day and
+   * one wallet), and the amount, the note and the category start over. The keyboard goes to the amount, or, in Quick add,
+   * back to the one-line box.
+   */
+  function startNext() {
+    // Quick add is for expenses, so it starts over as one even if this one was changed to income or a transfer.
+    setForm((current) => ({
+      ...current,
+      ...(quickAdd ? { type: "expense" as const, toWalletId: "" } : {}),
+      amount: "",
+      note: "",
+      categoryId: "",
+    }))
+    setSuggestion(undefined)
+    setChosenByHand(false)
+    setErrors({})
+    setSavedStatus("Saved. The form is ready for the next one.")
+    if (quickAdd) {
+      setQuickLine("")
+      setQuickError("")
+      setQuickStatus("Saved. Type the next one.")
+      setReviewing(false)
+      requestAnimationFrame(() => document.getElementById("tx-quick-add")?.focus())
+    } else {
+      requestAnimationFrame(() => document.getElementById("tx-amount")?.focus())
+    }
+  }
+
   return (
     <>
       <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-5">
         <DialogHeader>
-          <DialogTitle className="type-title">{editing ? "Edit transaction" : reviewing ? "Add transaction" : "Quick add"}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Record money coming in, money going out, or a move between your wallets.
-          </DialogDescription>
+          <DialogTitle className="type-title">
+            {editing ? "Edit transaction" : duplicateOf ? "Duplicate transaction" : reviewing ? "Add transaction" : "Quick add"}
+          </DialogTitle>
+          {duplicateOf && !editing ? (
+            <DialogDescription>
+              A copy of &ldquo;{describeTransaction(duplicateOf, allWallets, categories).title}&rdquo;, dated today. Change what you
+              like, then save it.
+            </DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">
+              Record money coming in, money going out, or a move between your wallets.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {quickAdd && !editing && form.type === "expense" ? (
@@ -468,10 +529,19 @@ function TransactionFormBody({ editing, defaultWalletId, quickAdd, onCancel, onS
           </Field>
         </div>
 
+        <p role="status" className="sr-only">
+          {savedStatus}
+        </p>
+
         <DialogFooter className="mt-1">
           <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
             Cancel
           </Button>
+          {editing ? null : (
+            <Button type="button" variant="secondary" size="lg" disabled={saving} onClick={() => void save(true)}>
+              Save and add another
+            </Button>
+          )}
           <Button type="submit" size="lg" disabled={saving}>
             {saving ? "Saving..." : editing ? "Save changes" : "Add transaction"}
           </Button>

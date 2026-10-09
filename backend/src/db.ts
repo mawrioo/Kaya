@@ -150,6 +150,24 @@ CREATE TABLE IF NOT EXISTS wallet_value_updates (
   kind        TEXT NOT NULL DEFAULT 'value' CHECK (kind IN ('value', 'correction'))
 );
 
+-- The PIN that locks Kaya (see auth.ts). No row means no PIN. The PIN itself is never kept, only a salted hash of it, and
+-- wrong tries are counted so that too many of them make the next try wait. Times are milliseconds since 1970.
+CREATE TABLE IF NOT EXISTS app_lock (
+  id          INTEGER PRIMARY KEY CHECK (id = 1),
+  pin_hash    TEXT NOT NULL,
+  pin_salt    TEXT NOT NULL,
+  wrong_tries INTEGER NOT NULL DEFAULT 0,
+  wait_until  INTEGER,
+  changed_at  TEXT NOT NULL
+);
+
+-- Each device that has typed the PIN. The cookie's token is never kept, only its hash.
+CREATE TABLE IF NOT EXISTS app_sessions (
+  token_hash TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS transactions_by_date ON transactions (date);
 `
 

@@ -172,7 +172,8 @@ export function WalletsView({ nowIso }: { nowIso: string }) {
     <div className="mt-8 flex flex-col gap-8 md:mt-10">
       <TotalBalanceCard wallets={wallets} />
 
-      <section aria-labelledby="wallets-heading" className="flex flex-col gap-4">
+      {/* The columns follow the room the cards really have (a container query), not the window: with the menu open a 768px tablet leaves them about 480px. */}
+      <section aria-labelledby="wallets-heading" className="@container flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <h2 id="wallets-heading" className="type-title">
             Your wallets
@@ -191,7 +192,7 @@ export function WalletsView({ nowIso }: { nowIso: string }) {
           </div>
         </div>
 
-        <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-4 @[44rem]:grid-cols-2">
           {wallets.map((wallet) => (
             <WalletCard
               key={wallet.id}

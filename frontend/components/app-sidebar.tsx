@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { BrandMark } from "@/components/brand-mark"
 import { useData } from "@/components/data-provider"
 import { MENU_BUTTON_ID } from "@/components/mobile-topbar"
+import { PinDialog } from "@/components/lock/pin-dialog"
 import { NameDialog } from "@/components/name-dialog"
 import { SidebarUser } from "@/components/sidebar-user"
 import {
@@ -32,6 +33,7 @@ export function AppSidebar() {
   const closeMobile = () => setOpenMobile(false)
   const { updateUserName } = useData()
   const [nameOpen, setNameOpen] = useState(false)
+  const [pinOpen, setPinOpen] = useState(false)
   // Where keyboard focus goes when the box for the name closes.
   const returnFocus = useReturnFocus()
 
@@ -41,6 +43,14 @@ export function AppSidebar() {
     if (isMobile) returnFocus.redirect(document.getElementById(MENU_BUTTON_ID))
     closeMobile()
     setNameOpen(true)
+  }
+
+  /** Opens the box for the PIN the same way: a phone's menu closes first, and focus goes back to where it came from. */
+  function openPinBox() {
+    returnFocus.remember()
+    if (isMobile) returnFocus.redirect(document.getElementById(MENU_BUTTON_ID))
+    closeMobile()
+    setPinOpen(true)
   }
 
   async function saveName(name: string) {
@@ -98,10 +108,11 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="px-4 pb-4 group-data-[collapsible=icon]:px-2">
-          <SidebarUser onChangeName={openNameBox} onBackupStart={closeMobile} />
+          <SidebarUser onChangeName={openNameBox} onBackupStart={closeMobile} onPinSettings={openPinBox} />
         </SidebarFooter>
       </Sidebar>
       <NameDialog open={nameOpen} onOpenChange={setNameOpen} onSave={saveName} onCloseAutoFocus={returnFocus.restore} />
+      <PinDialog open={pinOpen} onOpenChange={setPinOpen} onCloseAutoFocus={returnFocus.restore} />
     </>
   )
 }

@@ -13,6 +13,7 @@ import type {
   DeleteTransactionResult,
   Goal,
   GoalInput,
+  ImportTransactionsResult,
   NewCategory,
   NewTransaction,
   NewWallet,
@@ -40,6 +41,14 @@ interface DataStore extends AppData {
   undoDelete: (undoId: string) => Promise<UndoResult>
   /** Copies the data file into the backups folder. Changes nothing in the data. */
   backUp: () => Promise<BackupResult>
+  /** Turns the PIN on, or (with the current one) changes it. This device stays unlocked; every other one has to type it. */
+  setPin: (pin: string, currentPin?: string) => Promise<void>
+  /** Turns the PIN off. Needs the current one. */
+  removePin: (currentPin: string) => Promise<void>
+  /** Forgets this device, so the PIN is asked for again. The page opens again, on the lock screen. */
+  lockNow: () => Promise<void>
+  /** Saves many income and spending transactions read from a bank's file, all or nothing. Returns them, and the id that undoes it. */
+  importTransactions: (transactions: NewTransaction[]) => Promise<ImportTransactionsResult>
   /** Adds a transaction. Returns it, with every wallet as it is now. */
   addTransaction: (input: NewTransaction) => Promise<SaveTransactionResult>
   updateTransaction: (id: string, input: NewTransaction) => Promise<SaveTransactionResult>
@@ -135,6 +144,11 @@ export function DataProvider({ initial, children }: { initial: AppData; children
       const result = await api.undoDelete(undoId)
       setData((current) => {
         if (result.kind === "goal") return { ...current, goals: result.goals }
+        if (result.kind === "import") {
+          // An import that is undone takes its transactions out again.
+          const gone = new Set(result.removedTransactionIds)
+          return { ...current, wallets: result.wallets, transactions: current.transactions.filter((tx) => !gone.has(tx.id)) }
+        }
         if (result.kind === "transaction") {
           const others = current.transactions.filter((tx) => tx.id !== result.transaction.id)
           return { ...current, wallets: result.wallets, transactions: [...others, result.transaction] }
@@ -151,6 +165,24 @@ export function DataProvider({ initial, children }: { initial: AppData; children
           ],
         }
       })
+      return result
+    },
+    setPin: async (pin, currentPin) => {
+      await api.setPin(pin, currentPin)
+      setData((current) => ({ ...current, pinSet: true }))
+    },
+    removePin: async (currentPin) => {
+      await api.removePin(currentPin)
+      setData((current) => ({ ...current, pinSet: false }))
+    },
+    lockNow: async () => {
+      await api.lockNow()
+      // The page opens again, and with no cookie it opens on the lock screen.
+      window.location.reload()
+    },
+    importTransactions: async (transactions) => {
+      const result = await api.importTransactions(transactions)
+      setData((current) => ({ ...current, wallets: result.wallets, transactions: [...current.transactions, ...result.transactions] }))
       return result
     },
     backUp: async () => {

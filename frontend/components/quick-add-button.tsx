@@ -80,7 +80,7 @@ export function QuickAddButton() {
             aria-keyshortcuts="Control+K Meta+K"
             disabled={!ready}
             onClick={() => setOpen(true)}
-            className="group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] hover:-translate-y-[3px] disabled:cursor-default"
+            className="print-hidden group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] hover:-translate-y-[3px] disabled:cursor-default"
           >
             {/* Pointing at the coin lifts it a little (on the button, so the shadow lifts with it). */}
             <span

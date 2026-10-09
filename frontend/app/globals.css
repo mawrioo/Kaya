@@ -94,6 +94,8 @@
   --shadow-lg: var(--elevation-lg);
 }
 
+/* A sheet of paper (the printable report) wears the light colours even in dark mode, so what is on screen is what prints. */
+.paper,
 :root {
   --radius: 0.8rem;
 
@@ -278,6 +280,17 @@
   white-space: nowrap;
 }
 
+/* A figure in the middle of the page: bigger than a row's amount, smaller than a stat card's. Totals strips and report figures. */
+@utility type-figure {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-variant-numeric: lining-nums proportional-nums;
+  white-space: nowrap;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -395,6 +408,50 @@ main[data-slot="sidebar-inset"] {
   mask-composite: intersect;
 }
 
+/* The printed page: A4, with its own margins (the sheet inside has none), plain white. */
+@page {
+  size: A4;
+  margin: 14mm 14mm 16mm;
+}
+
+/* Anything marked print-hidden is left off the paper when a page is printed: the menu, the Quick add coin, messages. */
+@media print {
+  .print-hidden,
+  [data-slot="sidebar"],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  main[data-slot="sidebar-inset"] {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* The lock screen's batik: the sidebar's cream lattice, fading out upward from the bottom edge. */
+.lock-lattice {
+  background-image: var(--kawung-tile-cream);
+  background-size: 36px 36px;
+  background-position: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, black 0%, black 24%, transparent 88%);
+  mask-image: linear-gradient(to top, black 0%, black 24%, transparent 88%);
+}
+
+/* A wrong PIN: the dots shake once, side to side. Stops for "reduce motion" like everything else. */
+@keyframes lock-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+}
+@utility animate-lock-shake { animation: lock-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
 /* A milled coin edge: a ring of dots just inside a round badge, in the badge's own colour. */
 @utility coin-rim {
   position: relative;
@@ -484,6 +541,21 @@ main[data-slot="sidebar-inset"] {
   to { opacity: 1; transform: translateY(0); }
 }
 .illu-body { transform-origin: 50% 90%; transform-box: fill-box; animation: illu-squash 1000ms ease-out 250ms both; }
+
+/*
+ * A row's own buttons (Edit, Duplicate, Delete) appear when a mouse points at the row, or when one of them has the keyboard,
+ * so a long list isn't a long list of icons. On a touch screen they aren't drawn at all: the row is swiped instead.
+ */
+@utility row-actions {
+  @media (hover: hover) {
+    opacity: 0;
+    transition: opacity 150ms ease;
+    &:focus-within,
+    &:is(:where(.group\/row):hover *) {
+      opacity: 1;
+    }
+  }
+}
 
 /* A bigger invisible tap area on touch screens, for small controls. What you see does not change. */
 @utility tap-area {

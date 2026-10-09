@@ -87,6 +87,32 @@ export function parseNewTransaction(body: unknown, refs: References): NewTransac
   return { type, amount, date, description: note, walletId, categoryId }
 }
 
+/** The most transactions one import may bring in. A bank's statement for a few years fits many times over. */
+export const MAX_IMPORT_ROWS = 2000
+
+/**
+ * Checks a list of transactions read from a bank's file. Each one goes through the same checks as one typed by hand,
+ * and a problem names the row ("Row 7: ..."). A transfer can't be told from a payment in a bank's file, so only income and
+ * spending are accepted. Nothing is saved unless every row passes.
+ */
+export function parseTransactionImport(body: unknown, refs: References): Exclude<NewTransaction, { type: "transfer" }>[] {
+  if (!isObject(body) || !Array.isArray(body.transactions)) throw new ValidationError("Send the transactions as a list.")
+  const rows: unknown[] = body.transactions
+  if (rows.length === 0) throw new ValidationError("There is nothing to import.")
+  if (rows.length > MAX_IMPORT_ROWS) throw new ValidationError(`Import at most ${MAX_IMPORT_ROWS} transactions at a time.`)
+
+  return rows.map((row, index) => {
+    try {
+      const transaction = parseNewTransaction(row, refs)
+      if (transaction.type === "transfer") throw new ValidationError("An import can only hold income and spending, not transfers.")
+      return transaction
+    } catch (error) {
+      if (error instanceof ValidationError) throw new ValidationError(`Row ${index + 1}: ${error.message}`)
+      throw error
+    }
+  })
+}
+
 // ---- wallets ---------------------------------------------------------------------------------
 
 const WALLET_KINDS: WalletKind[] = ["bank", "digital-bank", "e-wallet", "investment", "cash", "deposito"]

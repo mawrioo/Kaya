@@ -365,6 +365,19 @@ export interface AppData {
   balanceAdjustments: BalanceAdjustment[]
   /** The newest copy made with "Back up now". Missing when there is none yet. */
   lastBackup?: BackupInfo
+  /** True when Kaya asks for a PIN before it opens. (When it does and this device hasn't typed it, none of this data is sent.) */
+  pinSet: boolean
+}
+
+/** Whether Kaya has a PIN, and whether the device asking has typed it (or there is no PIN, so nothing to type). */
+export interface AuthStatus {
+  pinSet: boolean
+  unlocked: boolean
+}
+
+/** The reply to turning the PIN on, changing it, or typing it. */
+export interface AuthResult {
+  pinSet: boolean
 }
 
 /** A copy of the data file, made when the owner pressed "Back up now". */
@@ -419,6 +432,12 @@ export interface SettleDepositoResult {
  * The reply to deleting a transaction: every wallet with its new balance, and an id that undoes the delete
  * (see UndoResult). The same goes for deleting a wallet or a goal.
  */
+/** The reply to importing transactions from a bank's file: what was saved, every wallet as it is now, and the id that undoes it. */
+export interface ImportTransactionsResult {
+  transactions: Transaction[]
+  wallets: Wallet[]
+  undoId: string
+}
 export interface DeleteTransactionResult {
   wallets: Wallet[]
   undoId: string
@@ -464,6 +483,8 @@ export interface DeleteGoalResult {
  */
 export type UndoResult =
   | { kind: "transaction"; transaction: Transaction; wallets: Wallet[] }
+  /** Undoing an import takes its transactions out again (any that were deleted since are simply not there). */
+  | { kind: "import"; wallets: Wallet[]; removedTransactionIds: string[] }
   | { kind: "goal"; goal: Goal; goals: Goal[] }
   | {
       kind: "wallet"

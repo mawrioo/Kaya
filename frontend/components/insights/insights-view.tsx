@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { Printer } from "lucide-react"
 
 import { useData } from "@/components/data-provider"
 import { CompareTab } from "@/components/insights/compare-tab"
@@ -11,6 +13,7 @@ import { MonthTab } from "@/components/insights/month-tab"
 import { YearSwitcher } from "@/components/insights/year-switcher"
 import { YearTab } from "@/components/insights/year-tab"
 import { SegmentedSwitch } from "@/components/segmented-switch"
+import { Button } from "@/components/ui/button"
 import { toDateInput } from "@/lib/dates"
 import { yearOf } from "@/lib/insights"
 import { buildQuery, parseAddress, type CompareWith, type InsightsView as View } from "@/lib/insights-address"
@@ -72,7 +75,18 @@ export function InsightsView({ nowIso }: { nowIso: string }) {
             )}
           </div>
         </div>
-        <ExportMenu month={view === "year" ? undefined : month} year={view === "year" ? year : yearOf(month)} />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* A month laid out as a sheet of paper, to print or keep as a PDF. There isn't one for a whole year. */}
+          {view === "year" ? null : (
+            <Button asChild variant="outline" size="lg">
+              <Link href={`/insights/report?month=${month}`}>
+                <Printer aria-hidden />
+                Report
+              </Link>
+            </Button>
+          )}
+          <ExportMenu month={view === "year" ? undefined : month} year={view === "year" ? year : yearOf(month)} />
+        </div>
       </div>
 
       {view === "month" ? <MonthTab month={month} bounds={bounds} today={toDateInput(now)} onChooseMonth={(next) => choose({ month: next })} /> : null}

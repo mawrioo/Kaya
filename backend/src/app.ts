@@ -5,6 +5,7 @@
  *   PUT    /api/user                change the owner's name
  *   PUT    /api/monthly-budget      set the budget for the whole month, or take it away
  *   POST   /api/transactions        add a transaction
+ *   POST   /api/transactions/import add many transactions read from a bank's file, all or nothing
  *   PUT    /api/transactions/:id    change a transaction
  *   DELETE /api/transactions/:id    delete a transaction
  *   POST   /api/wallets                add a wallet
@@ -29,14 +30,23 @@
  *   DELETE /api/goals/:id              delete a goal and its history
  *   POST   /api/undo/:undoId           put back a transaction, wallet or goal that was just deleted
  *   POST   /api/backup                 copy the data file into the backups folder ("Back up now")
+ *   GET    /api/auth/status            whether Kaya has a PIN, and whether this device has typed it
+ *   POST   /api/auth/unlock            type the PIN on this device
+ *   POST   /api/auth/lock              forget this device, so it has to type the PIN again
+ *   PUT    /api/auth/pin               turn the PIN on, or change it
+ *   DELETE /api/auth/pin               turn the PIN off
+ *
+ * With a PIN set, every route above except the health check and /api/auth/* answers 401 until the device has typed it.
  *
  * Saving or deleting a transaction or wallet also returns every wallet with its new balance.
  * Saving or deleting a category returns every category.
  * Saving or deleting a goal returns every goal, and adding money from another wallet also
  * returns the wallets and the transfer that was recorded.
  */
-import { Hono } from "hono"
+import { Hono, type Context } from "hono"
+import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 
+import { AuthError, SESSION_COOKIE } from "./auth.ts"
 import type { Store } from "./store.ts"
 import { ValidationError } from "./validate.ts"
 
@@ -51,7 +61,48 @@ async function readJson(request: Request): Promise<unknown> {
 export function createApp(store: Store) {
   const app = new Hono()
 
+  const auth = store.auth
+
   app.get("/api/health", (c) => c.json({ ok: true }))
+
+  /** Hands a device its cookie after it has typed the PIN. HttpOnly, so no script on the page can read it. */
+  function giveSession(c: Context, session: { token: string; maxAgeSeconds: number }) {
+    setCookie(c, SESSION_COOKIE, session.token, { httpOnly: true, sameSite: "Lax", path: "/", maxAge: session.maxAgeSeconds })
+  }
+
+  // With a PIN set, nothing is answered until this device has typed it. The health check and the PIN routes are the exceptions.
+  app.use("/api/*", async (c, next) => {
+    const path = c.req.path
+    if (path === "/api/health" || path.startsWith("/api/auth/")) return next()
+    if (!auth.isAllowed(getCookie(c, SESSION_COOKIE))) {
+      return c.json({ error: "Kaya is locked. Enter your PIN to open it.", locked: true }, 401)
+    }
+    return next()
+  })
+
+  app.get("/api/auth/status", (c) => c.json(auth.status(getCookie(c, SESSION_COOKIE))))
+
+  app.post("/api/auth/unlock", async (c) => {
+    giveSession(c, auth.unlock(await readJson(c.req.raw)))
+    return c.json({ pinSet: true })
+  })
+
+  app.post("/api/auth/lock", (c) => {
+    auth.lock(getCookie(c, SESSION_COOKIE))
+    deleteCookie(c, SESSION_COOKIE, { path: "/" })
+    return c.json({ pinSet: auth.isPinSet() })
+  })
+
+  app.put("/api/auth/pin", async (c) => {
+    giveSession(c, auth.setPin(await readJson(c.req.raw)))
+    return c.json({ pinSet: true })
+  })
+
+  app.delete("/api/auth/pin", async (c) => {
+    auth.removePin(await readJson(c.req.raw))
+    deleteCookie(c, SESSION_COOKIE, { path: "/" })
+    return c.json({ pinSet: false })
+  })
 
   app.get("/api/data", (c) => c.json(store.getData()))
 
@@ -64,6 +115,9 @@ export function createApp(store: Store) {
     const result = store.createTransaction(await readJson(c.req.raw))
     return c.json(result, 201)
   })
+
+  // Registered before the ":id" routes so "import" isn't mistaken for a transaction id.
+  app.post("/api/transactions/import", async (c) => c.json(store.importTransactions(await readJson(c.req.raw)), 201))
 
   app.put("/api/transactions/:id", async (c) => {
     const result = store.updateTransaction(c.req.param("id"), await readJson(c.req.raw))
@@ -178,6 +232,11 @@ export function createApp(store: Store) {
 
   app.onError((error, c) => {
     if (error instanceof ValidationError) return c.json({ error: error.message }, 400)
+    if (error instanceof AuthError) {
+      if (error.retryAfterSeconds !== undefined) c.header("Retry-After", String(error.retryAfterSeconds))
+      const retry = error.retryAfterSeconds !== undefined ? { retryAfterSeconds: error.retryAfterSeconds } : {}
+      return c.json({ error: error.message, ...retry }, error.status)
+    }
     console.error(error)
     return c.json({ error: "Something went wrong while saving. Nothing was changed." }, 500)
   })

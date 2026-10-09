@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef } from "react"
-import { Plus, Search, X } from "lucide-react"
+import { Plus, Search, Upload, X } from "lucide-react"
 
 import { DateRangePicker } from "@/components/date-picker"
 import { CategoryOption, WalletOption, selectTriggerClasses } from "@/components/transactions/options"
@@ -25,6 +25,8 @@ interface TransactionFiltersBarProps {
   onChange: (filters: TransactionFilters) => void
   onClear: () => void
   onAdd: () => void
+  /** Opens the box for importing a bank's CSV file. */
+  onImport: () => void
   wallets: Wallet[]
   categories: Category[]
   /** Today's date, "2026-09-30", for the date presets. */
@@ -37,6 +39,7 @@ export function TransactionFiltersBar({
   onChange,
   onClear,
   onAdd,
+  onImport,
   wallets,
   categories,
   today,
@@ -57,8 +60,8 @@ export function TransactionFiltersBar({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-3">
+        <div className="relative min-w-60 flex-1 basis-60">
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -86,10 +89,16 @@ export function TransactionFiltersBar({
             </button>
           ) : null}
         </div>
-        <Button size="lg" onClick={onAdd}>
-          <Plus aria-hidden />
-          Add transaction
-        </Button>
+        <div className="flex w-full gap-3 sm:ml-auto sm:w-auto">
+          <Button variant="outline" size="lg" onClick={onImport} className="flex-1 sm:flex-none">
+            <Upload aria-hidden />
+            Import CSV
+          </Button>
+          <Button size="lg" onClick={onAdd} className="flex-1 sm:flex-none">
+            <Plus aria-hidden />
+            Add transaction
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:flex xl:flex-wrap xl:items-center">

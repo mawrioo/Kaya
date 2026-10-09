@@ -32,7 +32,7 @@ The first start creates your database at `backend/data/nabungbego.db`, filled wi
 
 While the app is running on your laptop, open the **Network** address that `npm run dev` prints (something like `http://192.168.1.3:3000`) in your phone's browser. The phone must be on the same Wi-Fi. If Windows asks whether to let Node.js through the firewall, allow it on private networks. The laptop has to stay on and the app running.
 
-There is no login, so anyone on the same Wi-Fi who knows the address could open it.
+By default there is no login, so anyone on the same Wi-Fi who knows the address could open it. To stop that, turn on the PIN lock (see **PIN lock** below).
 
 ### Put Kaya on your iPhone's home screen
 
@@ -53,8 +53,9 @@ Good to know:
 | --- | --- |
 | `npm run dev` | Start the frontend and backend for everyday use |
 | `npm run db:reset -- --yes` | Erase everything and go back to the sample data |
+| `npm run pin:reset -- --yes` | Turn the PIN off, if you forgot it (your data is not touched) |
 | `npm test` | Run the backend tests and the quick-add parser and shortcut tests |
-| `npm run test:browser -w frontend` | Check quick add, its shortcuts and wallet nicknames in Chromium using a separate app and sample data |
+| `npm run test:browser -w frontend` | Check quick add, its shortcuts, wallet nicknames, the PIN lock, the CSV import, the totals and the report in Chromium using a separate app and sample data |
 | `npm run typecheck` | Check the code for mistakes |
 | `npm run lint` | Check the code style |
 | `npm run build`, then `npm run start` | Build and run the production version (built without shrinking the code, see ROADMAP Step 6) |
@@ -94,6 +95,32 @@ On **Wallets**, **Add wallet**, choose the type **Deposito (time deposit)**. Fil
 - Its balance is the amount plus the interest earned so far (simple interest by the day, before tax), worked out from the dates and never saved. The interest is not income.
 - When it matures (and doesn't renew), press **Move money** on its card: everything it holds goes back to the wallet it came from, as one transfer. This can't be undone.
 - The first time the backend starts after this update it adds six empty columns to the wallets table; nothing else in your data changes. Press **Back up now** first if you want a copy.
+
+### PIN lock
+
+By default Kaya opens for anyone who can reach its address. To ask for a PIN first, press your name at the bottom of the sidebar, then **Set a PIN**, and type 4 to 8 digits twice.
+
+- Each device (this computer's browser, your phone) shows a lock screen until the PIN has been typed once on it, and then remembers it for 1 day. **Lock Kaya**, in the same menu, asks again straight away on that device.
+- Nothing is sent to a device that hasn't typed the PIN: the page behind the lock screen is never even built.
+- Five wrong tries in a row make the next one wait 30 seconds, and every further wrong try doubles the wait, up to 15 minutes. The right PIN clears the count.
+- **PIN settings** (same menu) can change the PIN, which signs every other device out, or turn it off. Both ask for the current PIN.
+- **If you forget it:** a PIN can only be removed from the computer that runs Kaya. In this folder run `npm run pin:reset -- --yes`. Your data is not touched, and you can set a new PIN afterwards. It works while the app is running.
+- It keeps people on your Wi-Fi out. It is not a vault: only a scrambled copy of the PIN is saved, but anyone who can open the database file, or a backup, on this computer can read your numbers, PIN or not. A backup made while a PIN was set brings that PIN back with it if you ever go back to it.
+- The first time the backend starts after this update it adds two empty tables (`app_lock` and `app_sessions`); nothing else in your data changes. Press **Back up now** first if you want a copy.
+
+### Import from a bank's CSV
+
+On **Transactions**, press **Import CSV**. Choose the wallet the file is for and the file your bank lets you download (a CSV, not Excel or PDF); it is read on this computer and never uploaded.
+
+- Kaya works out which column is the date, the description and the amount, whether the file uses commas or semicolons, and how the amounts are written (one column with + and −, a column each for money out and in, or an amount with DB or CR). Look at "How the columns were read" and fix a column by hand if it guessed wrong.
+- Every line is shown before anything is saved. The ones Kaya can't read say why. A line you already have (same wallet, same day, same direction, same amount) says **Already in Kaya** and starts unticked, so importing the same statement twice adds nothing new.
+- Each line is filed under the category you used before for a note like it, or **Other**. Change any of them in the list.
+- Importing changes the wallet's balance exactly as adding the lines by hand would. The box shows what it goes from and to, and the bank's own balance from the file, so you can see if they agree. A transfer between your own wallets can't be told from a payment in a bank's file, so every line comes in as income or spending.
+- The message afterwards has an **Undo** (for ten seconds) that takes the whole import out again.
+
+### Print or save a month as a PDF
+
+On **Insights**, choose a month and press **Report**. It shows the month as a sheet of paper: figures, where the money went, budgets, the biggest expenses, the goals and every transaction. Press **Print or save as PDF**; in the print window choose **Save as PDF** instead of a printer to keep it as a file. The sheet is light paper whatever the theme is, and it never shows a wallet's balance.
 
 ### Checking quick add
 

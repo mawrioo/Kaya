@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { AnimatePresence, MotionConfig, motion } from "motion/react"
-import { Pencil, Trash2 } from "lucide-react"
+import { Copy, Pencil, Trash2 } from "lucide-react"
 
 import { TransactionRowContent } from "@/components/transaction-row"
 import { SwipeRow } from "@/components/transactions/swipe-row"
 import { addDays } from "@/lib/dates"
-import { formatDate } from "@/lib/format"
+import { formatDate, formatRupiah } from "@/lib/format"
 import { describeTransaction } from "@/lib/stats"
 import type { DayGroup } from "@/lib/transaction-filters"
+import { dayNet } from "@/lib/transaction-totals"
 import type { Category, Transaction, Wallet } from "@/lib/types"
 
 interface TransactionListProps {
@@ -23,6 +24,8 @@ interface TransactionListProps {
   /** The transaction being deleted. Its row slides out when it goes. */
   leavingId?: string
   onEdit: (tx: Transaction) => void
+  /** Starts a new transaction that begins as a copy of this one. */
+  onDuplicate: (tx: Transaction) => void
   onDelete: (tx: Transaction) => void
 }
 
@@ -42,7 +45,8 @@ const swipeButton = "flex flex-1 flex-col items-center justify-center gap-1 text
 /**
  * Every transaction as a row, newest first, under a heading for each day.
  * New rows slide in and deleted ones slide out (but not when a filter merely
- * hides or shows them). On a touch screen a row swipes open to show Edit and Delete.
+ * hides or shows them). On a touch screen a row swipes open to show Edit, Duplicate and Delete. Each day's heading says
+ * what that day came to.
  */
 export function TransactionList({
   groups,
@@ -52,6 +56,7 @@ export function TransactionList({
   freshIds,
   leavingId,
   onEdit,
+  onDuplicate,
   onDelete,
 }: TransactionListProps) {
   const [openId, setOpenId] = useState<string>()
@@ -91,12 +96,7 @@ export function TransactionList({
                 transition={TIMING}
                 className="overflow-hidden border-t first:border-t-0"
               >
-                <h2
-                  id={`day-${group.day}`}
-                  className="border-b bg-muted/60 px-5 py-2.5 text-sm font-medium text-muted-foreground md:px-6"
-                >
-                  {dayLabel(group.day, today)}
-                </h2>
+                <DayHeading id={`day-${group.day}`} label={dayLabel(group.day, today)} net={dayNet(group.items)} />
                 <ul>
                   <AnimatePresence initial={false}>
                     {group.items.map((tx) => {
@@ -111,7 +111,7 @@ export function TransactionList({
                           animate={{ height: "auto", opacity: 1 }}
                           exit={leavingId === tx.id && !dayIsLeaving ? { height: 0, opacity: 0, x: 24 } : undefined}
                           transition={TIMING}
-                          className="overflow-hidden border-t first:border-t-0"
+                          className="group/row overflow-hidden border-t first:border-t-0"
                         >
                           {isLocked(tx) ? (
                             <div className="px-5 py-3.5 md:px-6">
@@ -119,6 +119,7 @@ export function TransactionList({
                             </div>
                           ) : (
                           <SwipeRow
+                            actionCount={3}
                             open={openId === tx.id}
                             onOpenChange={(open) => setOpenId(open ? tx.id : undefined)}
                             actions={
@@ -134,6 +135,18 @@ export function TransactionList({
                                 >
                                   <Pencil className="size-[1.125rem]" aria-hidden />
                                   Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Duplicate ${title}`}
+                                  onClick={() => {
+                                    close()
+                                    onDuplicate(tx)
+                                  }}
+                                  className={`${swipeButton} bg-secondary text-secondary-foreground`}
+                                >
+                                  <Copy className="size-[1.125rem]" aria-hidden />
+                                  Duplicate
                                 </button>
                                 <button
                                   type="button"
@@ -169,6 +182,14 @@ export function TransactionList({
                                     </button>
                                     <button
                                       type="button"
+                                      onClick={() => onDuplicate(tx)}
+                                      aria-label={`Duplicate ${title}`}
+                                      className={`${inlineButton} hover:text-foreground`}
+                                    >
+                                      <Copy className="size-4" aria-hidden />
+                                    </button>
+                                    <button
+                                      type="button"
                                       onClick={() => onDelete(tx)}
                                       aria-label={`Delete ${title}`}
                                       className={`${inlineButton} hover:text-negative`}
@@ -192,5 +213,24 @@ export function TransactionList({
         </AnimatePresence>
       </div>
     </MotionConfig>
+  )
+}
+
+/**
+ * The heading of one day: its date on the left, and on the right what the day came to (income minus spending, in plain
+ * muted type: it is a sum, not a transaction, so it wears no colour). A day with only transfers has no total.
+ */
+function DayHeading({ id, label, net }: { id: string; label: string; net: number | undefined }) {
+  return (
+    <h2 className="flex items-baseline justify-between gap-4 border-b bg-muted/60 px-5 py-2.5 text-sm font-medium text-muted-foreground md:px-6">
+      {/* The day's group is named by its date alone, not by the total beside it. */}
+      <span id={id}>{label}</span>
+      {net === undefined ? null : (
+        <span className="tabular-nums">
+          <span className="sr-only">Net for the day: </span>
+          {formatRupiah(net, { sign: "always" })}
+        </span>
+      )}
+    </h2>
   )
 }

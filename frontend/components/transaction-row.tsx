@@ -67,7 +67,8 @@ export function TransactionRowContent({
           </p>
           {showDate ? <p className="shrink-0 whitespace-nowrap tabular-nums">{formatDate(tx.date)}</p> : null}
           {actions ? (
-            <div className="-my-2 -mr-2 flex shrink-0 items-center self-center pointer-coarse:hidden">{actions}</div>
+            // With a mouse the buttons appear when the row is pointed at, or when one of them has the keyboard.
+            <div className="row-actions -my-2 -mr-2 flex shrink-0 items-center self-center pointer-coarse:hidden">{actions}</div>
           ) : null}
         </div>
       </div>
