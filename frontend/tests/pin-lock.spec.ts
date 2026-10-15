@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test"
+import { expect, test, type BrowserContext, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
 // The PIN lock, in order, on one shared in-memory database. Whatever happens, the PIN is turned off again at the end,
@@ -6,7 +6,7 @@ import type { AppData } from "../lib/types"
 test.describe.configure({ mode: "serial" })
 
 // Contexts made by hand don't get the configured address, so it is given to them.
-const BASE = "http://localhost:3100"
+const BASE = "http://localhost:3200"
 const PIN = "4821"
 const NEW_PIN = "90210"
 

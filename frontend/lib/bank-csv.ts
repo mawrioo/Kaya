@@ -10,7 +10,7 @@
  */
 import { suggestCategory } from "./category-suggestion.ts"
 import { toIsoDateTime } from "./dates.ts"
-import type { Category, NewTransaction, Transaction } from "./types"
+import type { Wallet, ImportedTransaction, Category, Transaction } from "./types"
 
 /** The most lines one import may hold (the backend refuses more). */
 export const MAX_IMPORT_ROWS = 2000
@@ -522,7 +522,19 @@ export function readRows(rows: string[][], mapping: ColumnMapping, today: string
 
 // ---- checking against what the app already has ----------------------------------------------
 
+export interface TransferSuggestion {
+  walletId: string
+  walletName: string
+  /** The other side is already saved as income or spending; replace it, without counting its balance twice. */
+  transactionId?: string
+  description?: string
+}
+
 export interface ReviewRow extends ImportRow {
+  transferSuggestions?: TransferSuggestion[]
+  /** Set only by the owner's choice in the review. */
+  transfer?: TransferSuggestion
+
   /** Where it is in the list, so a row can be found again after others are ticked or unticked. */
   id: number
   /** "income" or "expense", from the sign of the amount. Meaningless for a row with a problem. */
@@ -545,8 +557,11 @@ const keyOf = (walletId: string, day: string, type: string, amount: number) => `
 export function findDuplicates(rows: ImportRow[], existing: readonly Transaction[], walletId: string): Set<number> {
   const available = new Map<string, number>()
   for (const tx of existing) {
-    if (tx.type === "transfer" || tx.walletId !== walletId) continue
-    const key = keyOf(walletId, tx.date.slice(0, 10), tx.type, tx.amount)
+    const type = tx.type === "transfer"
+      ? tx.fromWalletId === walletId ? "expense" : tx.toWalletId === walletId ? "income" : undefined
+      : tx.walletId === walletId ? tx.type : undefined
+    if (!type) continue
+    const key = keyOf(walletId, tx.date.slice(0, 10), type, tx.amount)
     available.set(key, (available.get(key) ?? 0) + 1)
   }
   const found = new Set<number>()
@@ -573,7 +588,7 @@ export function otherCategory(categories: readonly Category[], type: "income" | 
  */
 export function buildReview(
   rows: ImportRow[],
-  context: { walletId: string; transactions: readonly Transaction[]; categories: readonly Category[] }
+  context: { walletId: string; transactions: readonly Transaction[]; categories: readonly Category[]; wallets?: readonly Wallet[] }
 ): ReviewRow[] {
   const duplicates = findDuplicates(rows, context.transactions, context.walletId)
   const everything = [...context.transactions]
@@ -587,10 +602,26 @@ export function buildReview(
       id: index,
       type,
       categoryId,
+      transferSuggestions: duplicate ? [] : suggestTransfers(row, context.walletId, context.wallets ?? [], context.transactions),
       ...(suggestion ? { basedOn: suggestion.basedOn } : {}),
       duplicate,
       include: !row.problem && !duplicate,
     }
+  })
+}
+
+/** Exact same-day amounts on another wallet, or a wallet name/nickname written as whole words in the note. */
+export function suggestTransfers(row: ImportRow, walletId: string, wallets: readonly Wallet[], transactions: readonly Transaction[]): TransferSuggestion[] {
+  if (row.problem || !row.date || !row.amount) return []
+  const words = (value: string) => value.toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+  const note = ` ${words(row.note)} `
+  const others = wallets.filter((wallet) => wallet.id !== walletId && wallet.kind !== "deposito")
+  const named = others.filter((wallet) => [wallet.name, wallet.nickname].some((name) => name && words(name).length >= 3 && note.includes(` ${words(name)} `)))
+  return (named.length ? named : others).flatMap((wallet) => {
+    const matches = transactions.filter((tx) => tx.type !== "transfer" && tx.walletId === wallet.id &&
+      tx.type === (row.amount! < 0 ? "income" : "expense") && tx.amount === Math.abs(row.amount!) && tx.date.slice(0, 10) === row.date)
+    if (matches.length) return matches.map((tx) => ({ walletId: wallet.id, walletName: wallet.name, transactionId: tx.id, description: tx.description }))
+    return named.includes(wallet) ? [{ walletId: wallet.id, walletName: wallet.name }] : []
   })
 }
 
@@ -600,7 +631,7 @@ export function buildReview(
  * The ticked lines as transactions, oldest first, so lines that share a day are listed in the order the bank had them. (A
  * file written newest-first is turned round for that.) Each is dated that day at noon, since a file gives no time of day.
  */
-export function toTransactions(rows: readonly ReviewRow[], walletId: string): Extract<NewTransaction, { type: "income" | "expense" }>[] {
+export function toTransactions(rows: readonly ReviewRow[], walletId: string): ImportedTransaction[] {
   const chosen = rows.filter((row) => row.include && !row.problem && row.date !== null && row.amount !== null)
   const dated = chosen.map((row) => row.date as string)
   const newestFirst = dated.length > 1 && dated[0] > dated[dated.length - 1]
@@ -611,6 +642,15 @@ export function toTransactions(rows: readonly ReviewRow[], walletId: string): Ex
   return ordered.map(({ row }) => {
     const day = row.date as string
     const amount = row.amount as number
+    if (row.transfer) return {
+      type: "transfer",
+      amount: Math.abs(amount),
+      date: toIsoDateTime(day, new Date(`${day}T12:00:00`)),
+      description: row.note,
+      fromWalletId: amount < 0 ? walletId : row.transfer.walletId,
+      toWalletId: amount < 0 ? row.transfer.walletId : walletId,
+      ...(row.transfer.transactionId ? { replaceTransactionId: row.transfer.transactionId } : {}),
+    }
     return {
       type: amount > 0 ? "income" : "expense",
       amount: Math.abs(amount),

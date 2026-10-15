@@ -202,10 +202,10 @@ test("a line the app already has (same wallet, day, direction and amount) is fou
   assert.deepEqual([...findDuplicates(rows, [], "bca")], [])
 })
 
-test("a transfer in the app never counts as a duplicate of a payment", () => {
+test("a recorded transfer marks the corresponding statement line as already in Kaya", () => {
   const { rows } = read(`Date,Description,Amount\n05/10/2026,Kopi,-25.000\n`)
   const transfer = { id: "t", type: "transfer", amount: 25_000, date: "2026-10-05T09:00:00+07:00", description: "", fromWalletId: "bca", toWalletId: "jago" }
-  assert.equal(findDuplicates(rows, [transfer], "bca").size, 0)
+  assert.equal(findDuplicates(rows, [transfer], "bca").size, 1)
 })
 
 test("each line gets the category the owner used for a note like it, or Other; duplicates and problems start unticked", () => {

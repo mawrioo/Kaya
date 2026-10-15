@@ -1,10 +1,10 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { CircleAlert, Ellipsis, History, Pencil, Scale, Trash2, TrendingDown, TrendingUp } from "lucide-react"
 
-import { BalanceToggle, HideableMoney, ShowWhenVisible } from "@/components/balance-visibility"
+import { BalanceToggle, HideableMoney, ShowWhenVisible, useBalanceHidden } from "@/components/balance-visibility"
 import { useData } from "@/components/data-provider"
 import { WalletBadge } from "@/components/wallet-badge"
 import { depositoLine } from "@/lib/deposito"
@@ -45,6 +45,16 @@ interface WalletCardProps {
  * menu and "Update value" sit above that link so they can be pressed on their own.
  */
 export function WalletCard({ wallet, today, isNew, onEdit, onSetBalance, onHistory, onSettle, onDelete }: WalletCardProps) {
+  const hidden = useBalanceHidden(wallet.id)
+  const highlight = useRef<HTMLSpanElement>(null)
+  const previousBalance = useRef(wallet.balance)
+  useEffect(() => {
+    const changed = previousBalance.current !== wallet.balance
+    previousBalance.current = wallet.balance
+    if (!changed || hidden || matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const animation = highlight.current?.animate([{ opacity: 0.16 }, { opacity: 0 }], { duration: 280, easing: "cubic-bezier(0.16, 1, 0.3, 1)" })
+    return () => animation?.cancel()
+  }, [wallet.balance, hidden])
   const isInvestment = wallet.kind === "investment"
   const isDeposito = wallet.kind === "deposito"
 
@@ -52,11 +62,12 @@ export function WalletCard({ wallet, today, isNew, onEdit, onSetBalance, onHisto
     <li
       id={`wallet-card-${wallet.id}`}
       className={cn(
-        "flex",
+        "flex scroll-mt-24",
         isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3"
       )}
     >
       <div className="group relative flex w-full flex-col rounded-xl border bg-card p-5 shadow-sm transition-[box-shadow,translate] duration-200 hover:shadow-md has-[a:active]:translate-y-px has-[a:active]:shadow-xs has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring md:p-6">
+        <span ref={highlight} aria-hidden className="pointer-events-none absolute inset-0 rounded-xl bg-primary opacity-0" />
         <div className="flex items-start gap-3.5">
           <WalletBadge wallet={wallet} size="lg" />
 

@@ -1,8 +1,8 @@
-import { expect, test, type APIRequestContext } from "@playwright/test"
+import { expect, test, type APIRequestContext } from "./browser-fixtures"
 import type { AppData, Transaction } from "../lib/types"
 
 // The printable monthly report: its numbers against the data, as printed, in dark mode, and on a phone.
-const BASE = "http://localhost:3100"
+const BASE = "http://localhost:3200"
 const NBSP = String.fromCharCode(0xa0)
 const plain = (text: string) => text.split(NBSP).join(" ")
 const dots = (n: number) => String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
@@ -87,9 +87,18 @@ test("in dark mode the sheet is still light paper with dark ink, so what you see
   await page.goto("/insights/report?month=2026-09")
   const sheet = page.getByRole("article")
   await expect(sheet).toBeVisible()
-  const lightness = (css: string) => Number(/\((\d+(\.\d+)?)/.exec(css)?.[1])
-  expect(lightness(await sheet.evaluate((el) => getComputedStyle(el).backgroundColor))).toBeGreaterThan(90)
-  expect(lightness(await sheet.evaluate((el) => getComputedStyle(el).color))).toBeLessThan(30)
+  const colours = await sheet.evaluate((el) => {
+    const canvas = document.createElement("canvas")
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext("2d")!
+    return [getComputedStyle(el).backgroundColor, getComputedStyle(el).color].map((color) => {
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, 1, 1)
+      return Array.from(ctx.getImageData(0, 0, 1, 1).data).slice(0, 3)
+    })
+  })
+  expect(Math.min(...colours[0])).toBeGreaterThan(220)
+  expect(Math.max(...colours[1])).toBeLessThan(90)
   await context.close()
 })
 

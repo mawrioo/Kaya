@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test"
+import { expect, test, type APIRequestContext, type Page } from "./browser-fixtures"
 import type { AppData, Transaction } from "../lib/types"
 
 // Totals, day totals, hover buttons, Duplicate, and Save and add another. They share one in-memory database; everything
@@ -28,6 +28,12 @@ const sums = (transactions: Transaction[]) => ({
 const strip = (page: Page) => page.getByRole("region", { name: "Totals" })
 const quickAddCoin = (page: Page) => page.getByRole("button", { name: "Quick add", exact: true })
 
+/** These flows exercise all-time data after clearing the new default month filter. */
+async function allTransactions(page: Page) {
+  await page.goto("/transactions")
+  await page.getByRole("button", { name: "Clear filters", exact: true }).first().click()
+}
+
 test("the strip under the filters adds up what the list holds: money in, money out, net, and what it leaves out", async ({ page, request }) => {
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))
@@ -35,6 +41,19 @@ test("the strip under the filters adds up what the list holds: money in, money o
   const { income, spending, transfers } = sums(transactions)
 
   await page.goto("/transactions")
+  const today = new Date()
+  const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
+  const current = transactions.filter((tx) => tx.date.startsWith(month))
+  if (current.length > 0) {
+    const currentSums = sums(current)
+    await expect(strip(page)).toContainText(rp(currentSums.income, "always"))
+    await expect(strip(page)).toContainText(rp(-currentSums.spending))
+    await expect(strip(page)).toContainText(`Showing ${Math.min(30, current.length)}`)
+  } else {
+    await expect(page.getByText("Nothing matches these filters")).toBeVisible()
+    await expect(strip(page)).toHaveCount(0)
+  }
+  await page.getByRole("button", { name: "Clear filters", exact: true }).first().click()
   await expect(strip(page)).toBeVisible()
   const text = plain(await strip(page).innerText())
   for (const expected of [rp(income, "always"), rp(-spending), rp(income - spending, "always")]) expect(text).toContain(expected)
@@ -49,7 +68,7 @@ test("filters change the totals, and with nothing left the strip gives way to th
   const jago = wallets.find((wallet) => wallet.name === "Bank Jago")!
   const inJago = transactions.filter((tx) => tx.type !== "transfer" && tx.walletId === jago.id)
 
-  await page.goto("/transactions")
+  await allTransactions(page)
   await page.getByRole("combobox", { name: "Filter by wallet" }).click()
   await page.getByRole("option", { name: "Bank Jago" }).click()
   await expect(strip(page)).toContainText(rp(-sums(inJago).spending))
@@ -68,7 +87,7 @@ test("each day's heading says what that day came to, and a day with only transfe
   const withMoney = days.find(([, list]) => list.some((tx) => tx.type !== "transfer"))!
   const onlyTransfers = days.find(([, list]) => list.every((tx) => tx.type === "transfer"))
 
-  await page.goto("/transactions")
+  await allTransactions(page)
   const net = sums(withMoney[1]).income - sums(withMoney[1]).spending
   const [year, month, day] = withMoney[0].split("-").map(Number)
   const label = `${day} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month - 1]} ${year}`
@@ -83,7 +102,7 @@ test("each day's heading says what that day came to, and a day with only transfe
 })
 
 test("a row's buttons appear when it is pointed at, or when one has the keyboard; there are three: Edit, Duplicate, Delete", async ({ page }) => {
-  await page.goto("/transactions")
+  await allTransactions(page)
   const row = page.locator("li[data-swipe-row]").first()
   const buttons = row.locator(".row-actions")
   await page.mouse.move(2, 2)
@@ -100,7 +119,7 @@ test("a row's buttons appear when it is pointed at, or when one has the keyboard
 
 test("Duplicate opens the form filled in and dated today; nothing is saved until Save; the copied category survives a new note", async ({ page, request }) => {
   const before = await read(request)
-  await page.goto("/transactions")
+  await allTransactions(page)
   const original = before.transactions.filter((tx) => tx.type === "expense").sort((a, b) => b.date.localeCompare(a.date))[0]
   const target = page.locator(`li[data-swipe-row="${original.id}"]`)
 
@@ -131,7 +150,7 @@ test("Duplicate opens the form filled in and dated today; nothing is saved until
 
 test("Save and add another keeps the box open and starts over; the kind, wallet and date stay; an empty form is refused", async ({ page, request }) => {
   const before = await read(request)
-  await page.goto("/transactions")
+  await allTransactions(page)
   await page.getByRole("button", { name: "Add transaction", exact: true }).first().click()
   const dialog = page.getByRole("dialog", { name: "Add transaction" })
   await expect(dialog.getByRole("button", { name: "Save and add another" })).toBeVisible()
@@ -171,7 +190,7 @@ test("Save and add another keeps the box open and starts over; the kind, wallet 
 })
 
 test("editing has no Save and add another: it only saves the one", async ({ page }) => {
-  await page.goto("/transactions")
+  await allTransactions(page)
   const row = page.locator("li[data-swipe-row]").first()
   await row.hover()
   await row.getByRole("button", { name: /^Edit/ }).click()
@@ -209,9 +228,9 @@ test("Quick add can save and add another: it goes back to the one-line box, read
 
 test("on a tablet and a phone the strip and the toolbar fit, with nothing running off the side", async ({ browser }) => {
   for (const [width, height] of [[820, 1180], [390, 844], [320, 640], [1024, 768]]) {
-    const context = await browser.newContext({ baseURL: "http://localhost:3100", viewport: { width, height } })
+    const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, viewport: { width, height } })
     const page = await context.newPage()
-    await page.goto("/transactions")
+    await allTransactions(page)
     await expect(strip(page)).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no sideways scroll at ${width}px`).toBe(true)
     const box = await strip(page).boundingBox()

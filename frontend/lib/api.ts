@@ -93,8 +93,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
  * PIN-locked backend knows this page was asked for by a device that has typed the PIN; without it, the backend refuses and
  * a LockedError is thrown.
  */
-export const loadData = (sessionCookie?: string) =>
-  request<AppData>("/api/data", sessionCookie ? { headers: { cookie: sessionCookie } } : undefined)
+export const loadData = (sessionCookie?: string, signal?: AbortSignal) =>
+  request<AppData>("/api/data", { signal, ...(sessionCookie ? { headers: { cookie: sessionCookie } } : {}) })
 
 /** Types the PIN on this device. A wrong one throws an ApiError that says how many tries are left, or how long to wait. */
 export const unlock = (pin: string) => request<AuthResult>("/api/auth/unlock", { method: "POST", body: JSON.stringify({ pin }) })

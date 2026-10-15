@@ -1,8 +1,8 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test, type Page } from "./browser-fixtures"
 
 // The wallet cards follow the room they have, not the window: with the menu open a 768px tablet leaves them about 480px, and
 // two columns of that wrapped "Superbank" letter by letter. They are one column until there is room for two good ones.
-const BASE = "http://localhost:3100"
+const BASE = "http://localhost:3200"
 
 const columns = (page: Page) =>
   page.locator("[id^='wallet-card-']").first().evaluate((card) => getComputedStyle(card.parentElement!).gridTemplateColumns.split(" ").length)

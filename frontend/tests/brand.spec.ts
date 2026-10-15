@@ -1,76 +1,30 @@
-import { expect, test, type Locator, type Page } from "@playwright/test"
+import { expect, test, type Page } from "./browser-fixtures"
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 // The new Kaya mark in the sidebar and the phone's top bar, the tab icons, and the brand files. Nothing here saves anything.
-const SIMPLE_BLADE = "M54 50C43 36 50 16 69 6C73 25 72 40 63 50Q58.5 53 54 50z"
 const file = (...parts: string[]) => readFileSync(join(process.cwd(), ...parts))
 const brandLink = (page: Page) => page.getByRole("link", { name: "Kaya, home" })
 
-/** What the brand link draws, read from the page: the shapes, the colours they come out as, and how big it all is. */
-function markFacts(link: Locator) {
-  return link.evaluate((link) => {
-    const toRgb = (css: string) => {
-      const canvas = document.createElement("canvas")
-      canvas.width = canvas.height = 1
-      const context = canvas.getContext("2d", { willReadFrequently: true })!
-      context.fillStyle = css
-      context.fillRect(0, 0, 1, 1)
-      const [r, g, b] = context.getImageData(0, 0, 1, 1).data
-      return [r, g, b]
-    }
-    const svg = link.querySelector("svg")!
-    const paths = [...svg.querySelectorAll("path")]
-    const word = link.querySelector("span")!
-    return {
-      svgCount: link.querySelectorAll("svg").length,
-      ariaHidden: svg.getAttribute("aria-hidden"),
-      focusable: svg.getAttribute("focusable"),
-      width: svg.getBoundingClientRect().width,
-      height: svg.getBoundingClientRect().height,
-      linkHeight: link.getBoundingClientRect().height,
-      pathCount: paths.length,
-      blades: paths.slice(0, 4).map((path) => path.getAttribute("d")),
-      bladeColour: toRgb(getComputedStyle(paths[0]).fill),
-      diamondColour: toRgb(getComputedStyle(paths[4]).fill),
-      wordColour: toRgb(getComputedStyle(word).color),
-      letterSpacing: getComputedStyle(word).letterSpacing,
-      text: (link as HTMLElement).innerText.trim(),
-      hasCoinRim: !!link.querySelector(".coin-rim"),
-      pointerEvents: getComputedStyle(svg).pointerEvents,
-    }
-  })
-}
-
-const near = (found: number[], expected: number[], within = 2) => found.every((value, index) => Math.abs(value - expected[index]) <= within)
-
 async function expectTheNewMark(page: Page) {
-  const facts = await markFacts(brandLink(page))
-  // One decorative drawing: the simple mark (it is under 48px), four blades and the diamond.
-  expect(facts.svgCount).toBe(1)
-  expect(facts.ariaHidden).toBe("true")
-  expect(facts.focusable).toBe("false")
-  expect(facts.pointerEvents).toBe("none")
-  expect(facts.pathCount).toBe(5)
-  expect(facts.blades).toEqual([SIMPLE_BLADE, SIMPLE_BLADE, SIMPLE_BLADE, SIMPLE_BLADE])
-  expect(facts.width).toBe(44)
-  expect(facts.width).toBeLessThan(48)
-  expect(facts.height).toBe(44)
-  // It takes the room the 36px coin took, so nothing around it moves.
-  expect(facts.linkHeight).toBeCloseTo(36, 0)
-  // Cream blades like the wordmark beside them; the light clay diamond (#E07A45), because this ground is forest green in both themes.
-  expect(facts.bladeColour).toEqual(facts.wordColour)
-  expect(Math.min(...facts.bladeColour)).toBeGreaterThan(200)
-  expect(near(facts.diamondColour, [224, 122, 69])).toBe(true)
-  // The wordmark is "Kaya" at 20px, spaced 0.04em.
-  expect(parseFloat(facts.letterSpacing)).toBeCloseTo(0.8, 1)
-  // And the round K badge is gone.
-  expect(facts.text).toBe("Kaya")
-  expect(facts.hasCoinRim).toBe(false)
+  const link = brandLink(page)
+  await expect(link).toHaveText("Kaya")
+  await expect(link).toHaveAttribute("href", "/")
+  await expect(link.locator("svg")).toHaveCount(0)
+  const facts = await link.locator("span").first().evaluate((word) => ({
+    spacing: getComputedStyle(word).letterSpacing,
+    size: getComputedStyle(word).fontSize,
+    color: getComputedStyle(word).color,
+    expected: getComputedStyle(document.documentElement).getPropertyValue("--sidebar-primary"),
+  }))
+  expect(parseFloat(facts.spacing)).toBeCloseTo(0.8, 1)
+  expect(facts.size).toBe("20px")
+  expect(facts.color).toBeTruthy()
+  await expect(link.locator(".coin-rim")).toHaveCount(0)
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`the sidebar shows the Kaya mark with the on-dark colours, not the K coin (${theme} mode)`, async ({ page }, testInfo) => {
+  test(`the sidebar shows the cream Kaya wordmark (${theme} mode)`, async ({ page }, testInfo) => {
     const errors: string[] = []
     page.on("pageerror", (error) => errors.push(error.message))
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -78,14 +32,14 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/wallets")
     await expect(brandLink(page)).toBeVisible()
     await expectTheNewMark(page)
-    // The header keeps its height: 28px above, 36px for the mark, 24px below.
+    // The header keeps its height: 20px above, 32px for the controls, 12px below.
     const header = await page.locator("[data-slot='sidebar-header']").evaluate((node) => node.getBoundingClientRect().height)
-    expect(header).toBeCloseTo(88, 0)
+    expect(header).toBeCloseTo(64, 0)
     await page.screenshot({ path: testInfo.outputPath("sidebar.png"), clip: { x: 0, y: 0, width: 256, height: 400 }, animations: "disabled" })
     expect(errors).toEqual([])
   })
 
-  test(`the phone's top bar shows the same mark (${theme} mode)`, async ({ page }, testInfo) => {
+  test(`the phone's top bar shows the same wordmark (${theme} mode)`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.addInitScript((value) => localStorage.setItem("theme", value), theme)
     await page.goto("/")
@@ -93,7 +47,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(link).toBeVisible()
     await expectTheNewMark(page)
     const bar = (await page.locator("header", { has: page.getByRole("link", { name: "Kaya, home" }) }).boundingBox())!
-    const mark = (await link.locator("svg").boundingBox())!
+    const mark = (await link.boundingBox())!
     expect(bar.height).toBe(64)
     expect(mark.y).toBeGreaterThanOrEqual(bar.y)
     expect(mark.y + mark.height).toBeLessThanOrEqual(bar.y + bar.height)
@@ -153,31 +107,18 @@ test("every brand file is served from /brand/ exactly as it is in the kit", asyn
   }
 })
 
-test("the mark still turns once when you point at it (the K coin's old flip), and stops under reduced motion", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
+test("the wordmark stays still on hover in normal and reduced motion, and links Home by keyboard", async ({ page }) => {
   await page.goto("/wallets")
   const link = brandLink(page)
-  await expect(link).toBeVisible()
-  const timing = () => link.locator("svg").evaluate((svg) => svg.getAnimations().map((animation) => ({
-    name: (animation as CSSAnimation).animationName,
-    duration: Number(animation.effect!.getComputedTiming().duration),
-  })))
-
-  expect(await timing()).toEqual([])
-  await link.hover()
-  const normal = await timing()
-  expect(normal).toHaveLength(1)
-  expect(normal[0].name).toBe("coin-flip")
-  expect(normal[0].duration).toBeGreaterThan(700)
-
-  await page.mouse.move(700, 500)
-  await page.emulateMedia({ reducedMotion: "reduce" })
-  await link.hover()
-  const reduced = await timing()
-  expect(reduced.length).toBeLessThanOrEqual(1)
-  for (const animation of reduced) expect(animation.duration).toBeLessThan(1)
-  await page.waitForTimeout(150)
-  expect(await link.locator("svg").evaluate((svg) => svg.getAnimations().filter((animation) => animation.playState === "running").length)).toBe(0)
+  for (const reducedMotion of ["no-preference", "reduce"] as const) {
+    await page.emulateMedia({ reducedMotion })
+    await link.hover()
+    expect(await link.evaluate((node) => node.getAnimations({ subtree: true }).filter((animation) => animation.playState === "running").length)).toBe(0)
+  }
+  await link.focus()
+  await expect(link).toBeFocused()
+  await page.keyboard.press("Enter")
+  await expect(page).toHaveURL(/\/$/)
 })
 
 test("nothing else in the app still draws the round K badge", async ({ page }) => {

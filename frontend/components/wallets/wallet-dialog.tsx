@@ -235,21 +235,17 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
             </Field>
           ) : null}
 
-          {sourceId ? (
-            <Field
-              label="Amount put in"
-              htmlFor="wallet-balance"
-              hint={`It came out of ${lockedSource?.name ?? "another wallet"}, so it can't be changed here. To change it, delete this deposito and add it again.`}
-            >
-              <div
-                id="wallet-balance"
-                className="flex h-10 w-full items-center rounded-md border border-input bg-muted/50 px-3 text-sm tabular-nums"
-              >
-                {formatRupiah(Number(form.startingBalance || 0))}
-              </div>
-            </Field>
-          ) : (
-          <Field label="Amount put in" htmlFor="wallet-balance" error={errors.startingBalance}>
+          <Field
+            label="Amount put in"
+            htmlFor="wallet-balance"
+            error={errors.startingBalance}
+            hint={sourceId ? lockedSource
+              ? Number(form.startingBalance) === editing?.deposito?.principal
+                ? `Correcting this amount adjusts ${lockedSource.name} by the difference. Interest is recalculated from the start date.`
+                : `${formatRupiah(Math.abs(Number(form.startingBalance || 0) - (editing?.deposito?.principal ?? 0)))} ${Number(form.startingBalance) > (editing?.deposito?.principal ?? 0) ? "more comes from" : "goes back to"} ${lockedSource.name}. Interest is recalculated from the start date.`
+              : "Its source wallet is gone. Move the money into a wallet before correcting the amount."
+              : undefined}
+          >
             <AmountInput
               id="wallet-balance"
               value={form.startingBalance}
@@ -258,7 +254,6 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
               describedBy={errors.startingBalance ? "wallet-balance-error" : undefined}
             />
           </Field>
-          )}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Yearly rate (%)" htmlFor="deposito-rate" error={errors.depositoRate}>
@@ -301,10 +296,10 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
           </Field>
 
           <div className="grid grid-cols-1 content-start gap-2">
-            <span className="text-sm leading-none font-medium select-none">Renews by itself?</span>
+            <span className="text-sm leading-none font-medium select-none">Renew automatically?</span>
             <SegmentedSwitch
               name="deposito-rollover"
-              legend="Whether the bank renews the deposito by itself when the tenor ends"
+              legend="Renew automatically?"
               options={[
                 { value: "no", label: "No" },
                 { value: "yes", label: "Yes" },
@@ -313,7 +308,7 @@ function WalletFormBody({ editing, onCancel, onSave }: BodyProps) {
               onChange={(value) => update("depositoRollover", value === "yes")}
             />
             <p className="text-sm text-muted-foreground">
-              Yes if the bank renews it at the end of each term instead of paying you out. No means you move the money yourself when it matures.
+              Yes starts another term with the same principal and rate. Interest keeps adding up without compounding. No means you move the money yourself when it matures.
             </p>
           </div>
 

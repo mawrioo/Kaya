@@ -75,10 +75,10 @@ export function HistoryChart({ rows }: { rows: BalanceChange[] }) {
           <Line
             dataKey="value"
             type="monotone"
-            stroke="var(--primary)"
+            stroke="var(--chart-balance)"
             strokeWidth={2}
-            dot={points.length <= 24 ? { r: 4, fill: "var(--card)", stroke: "var(--primary)", strokeWidth: 2 } : false}
-            activeDot={{ r: 5, fill: "var(--primary)", stroke: "var(--card)", strokeWidth: 2 }}
+            dot={points.length <= 24 ? { r: 4, fill: "var(--card)", stroke: "var(--chart-balance)", strokeWidth: 2 } : false}
+            activeDot={{ r: 5, fill: "var(--chart-balance)", stroke: "var(--card)", strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>

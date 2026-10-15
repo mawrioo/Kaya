@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ArrowUpDown, Plus } from "lucide-react"
 import { toast } from "sonner"
 
+import { useLiveDate } from "@/components/use-live-date"
 import { useData } from "@/components/data-provider"
 import { TotalBalanceCard } from "@/components/home/total-balance-card"
 import { Button } from "@/components/ui/button"
@@ -35,7 +36,8 @@ const ADD_BUTTON_ID = "add-wallet-button"
  */
 export function WalletsView({ nowIso }: { nowIso: string }) {
   // "Today" comes from the server, so the months left on a deposito never disagree between the server and the browser.
-  const today = toDateInput(new Date(nowIso))
+  const liveDate = useLiveDate(nowIso)
+  const today = toDateInput(new Date(liveDate))
   const {
     wallets,
     transactions,
@@ -119,9 +121,16 @@ export function WalletsView({ nowIso }: { nowIso: string }) {
 
   async function handleSettle(wallet: Wallet, toWalletId?: string) {
     try {
-      const { transaction } = await settleDeposito(wallet.id, toWalletId)
+      const { transaction, undoId } = await settleDeposito(wallet.id, toWalletId)
       const target = wallets.find((entry) => entry.id === (transaction.type === "transfer" ? transaction.toWalletId : ""))
-      toast.success("Money moved", { description: `${formatRupiah(transaction.amount)} from ${wallet.name}${target ? ` to ${target.name}` : ""}` })
+      toast.success("Money moved", {
+        description: `${formatRupiah(transaction.amount)} from ${wallet.name}${target ? ` to ${target.name}` : ""}`,
+        duration: 10_000,
+        action: { label: "Undo", onClick: () => {
+          void undoDelete(undoId).then(() => toast.success("Money moved back", { description: `${wallet.name} is open again.` }))
+            .catch((error) => toast.error("Couldn't undo that", { description: errorMessage(error) }))
+        } },
+      })
     } catch (error) {
       toast.error("Couldn't move that", { description: errorMessage(error) })
       throw error // tells the dialog to stay open

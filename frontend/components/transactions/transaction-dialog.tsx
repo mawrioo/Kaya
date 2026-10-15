@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleAlert, Plus } from "lucide-react"
 import { toast } from "sonner"
 
@@ -132,6 +132,7 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
   )
   const [errors, setErrors] = useState<FormErrors>({})
   const [saving, setSaving] = useState(false)
+  const focusNext = useRef(false)
   const [quickLine, setQuickLine] = useState("")
   const [quickError, setQuickError] = useState("")
   const [quickStatus, setQuickStatus] = useState("")
@@ -259,6 +260,13 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
     await save(false)
   }
 
+  useEffect(() => {
+    if (!saving && focusNext.current) {
+      focusNext.current = false
+      document.getElementById(quickAdd ? "tx-quick-add" : "tx-amount")?.focus()
+    }
+  }, [saving, quickAdd])
+
   /** Checks the form and saves it. With `another`, the box stays open and starts over for the next one. */
   async function save(another: boolean) {
     if (saving) return
@@ -286,6 +294,7 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
    * back to the one-line box.
    */
   function startNext() {
+    focusNext.current = true
     // Quick add is for expenses, so it starts over as one even if this one was changed to income or a transfer.
     setForm((current) => ({
       ...current,
@@ -303,9 +312,7 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
       setQuickError("")
       setQuickStatus("Saved. Type the next one.")
       setReviewing(false)
-      requestAnimationFrame(() => document.getElementById("tx-quick-add")?.focus())
-    } else {
-      requestAnimationFrame(() => document.getElementById("tx-amount")?.focus())
+
     }
   }
 

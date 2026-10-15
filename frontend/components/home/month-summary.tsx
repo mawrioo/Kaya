@@ -20,8 +20,8 @@ export function MonthSummary({ totals, month, isCurrentMonth, className }: Month
   const biggest = Math.max(income, spending)
 
   const rows = [
-    { label: "Income", amount: income, bar: "bg-cat-moss" },
-    { label: "Spending", amount: spending, bar: "bg-cat-sand" },
+    { label: "Income", amount: income, bar: "bg-[var(--chart-income)]" },
+    { label: "Spending", amount: spending, bar: "bg-[var(--chart-spending)]" },
   ]
 
   return (

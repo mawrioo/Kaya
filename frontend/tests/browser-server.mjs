@@ -1,33 +1,62 @@
-/** Browser-test servers: a fresh in-memory database and a separate Next working folder. */
-import { cpSync, mkdirSync, mkdtempSync } from "node:fs"
-import { createRequire } from "node:module"
+/** Playwright setup owns both app copies, both processes and the throwaway database. */
+import { cpSync, mkdirSync, mkdtempSync, rmSync, openSync, closeSync } from "node:fs"
+import { spawn } from "node:child_process"
+import { randomUUID } from "node:crypto"
+import { createServer } from "node:net"
 import { dirname, join, resolve } from "node:path"
-import { fileURLToPath, pathToFileURL } from "node:url"
+import { fileURLToPath } from "node:url"
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
-if (process.argv[2] === "backend") {
-  process.env.PORT = "4100"
-  process.env.DB_PATH = ":memory:"
-  await import(pathToFileURL(join(repo, "backend/src/server.ts")).href)
-} else if (process.argv[2] === "frontend") {
+export default async function setup() {
+  // Refuse occupied test ports before starting either process.
+  for (const port of [3200, 4200]) await new Promise((resolve, reject) => {
+    const probe = createServer()
+    probe.once("error", reject)
+    probe.listen(port, () => probe.close(resolve))
+  })
+  const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
   const scratch = join(repo, ".nb-test")
   mkdirSync(scratch, { recursive: true })
-  const run = mkdtempSync(join(scratch, "quick-add-"))
-  const original = join(repo, "frontend")
-  const copy = join(run, "frontend")
-  const excluded = new Set(["node_modules", ".next", "test-results", "playwright-report", "tests"])
-  cpSync(original, copy, {
-    recursive: true,
-    filter: (source) => !excluded.has(source.slice(original.length + 1).split(/[\\/]/)[0]) && !source.endsWith(".tsbuildinfo"),
-  })
-  mkdirSync(join(run, "backend/src"), { recursive: true })
-  cpSync(join(repo, "backend/src/types.ts"), join(run, "backend/src/types.ts"))
-  process.env.BACKEND_URL = "http://127.0.0.1:4100"
-  // Found the way Node finds any package, so it also works from a scratch copy of the project inside the repo.
-  const next = createRequire(join(repo, "frontend/package.json")).resolve("next/dist/bin/next")
-  process.chdir(copy)
-  process.argv = [process.execPath, next, "dev", copy, "-p", "3100"]
-  await import(pathToFileURL(next).href)
-} else {
-  throw new Error("Choose frontend or backend for the isolated browser checks.")
+  const run = mkdtempSync(join(scratch, "browser-"))
+  const excluded = new Set(["node_modules", ".next", "data", "test-results", "playwright-report"])
+  for (const name of ["frontend", "backend"]) {
+    const original = join(repo, name)
+    cpSync(original, join(run, name), {
+      recursive: true,
+      filter: (source) => !excluded.has(source.slice(original.length + 1).split(/[\\/]/)[0]) && !source.endsWith(".tsbuildinfo"),
+    })
+  }
+  process.env.KAYA_BROWSER_TOKEN = randomUUID()
+  const env = { ...process.env, NODE_ENV: "development", __NEXT_DEV_SERVER: "1", NEXT_RUNTIME: "nodejs", TURBOPACK: "1", KAYA_BROWSER_COPY: run, DB_PATH: join(run, "sample.db"), PORT: "4200", BACKEND_URL: "http://127.0.0.1:4200" }
+  mkdirSync(join(repo, "frontend/test-results"), { recursive: true })
+  const log = openSync(join(repo, "frontend/test-results/servers.log"), "w")
+  const children = [
+    spawn(process.execPath, [join(repo, "frontend/tests/browser-backend.mjs")], { env, stdio: ["ignore", log, log] }),
+    spawn(process.execPath, [join(repo, "frontend/tests/browser-frontend.mjs")], { cwd: join(run, "frontend"), env, stdio: ["ignore", log, log] }),
+  ]
+  const cleanup = async () => {
+    for (const child of children) {
+      if (child.exitCode === null) {
+        const exited = new Promise((resolve) => child.once("exit", resolve))
+        child.kill("SIGTERM")
+        await exited
+      }
+    }
+    closeSync(log)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    rmSync(run, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+  }
+  try {
+    for (const address of ["http://127.0.0.1:4200/api/data", "http://localhost:3200"]) {
+      const deadline = Date.now() + 180000
+      for (;;) {
+        if (children.some((child) => child.exitCode !== null)) throw new Error("A test server stopped; see test-results/servers.log.")
+        try { if ((await fetch(address, { signal: AbortSignal.timeout(5000) })).ok) break } catch { /* Starting. */ }
+        if (Date.now() > deadline) throw new Error(`Test server did not start: ${address}`)
+        await new Promise((resolve) => setTimeout(resolve, 300))
+      }
+    }
+    const data = await (await fetch("http://127.0.0.1:4200/api/data")).json()
+    if (data.transactions.length !== 41 || data.wallets.find((w) => w.id === "wallet-bca")?.balance !== 8742300) throw new Error("The browser app is not using sample data.")
+    return cleanup
+  } catch (error) { await cleanup(); throw error }
 }

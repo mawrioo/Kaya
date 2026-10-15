@@ -57,8 +57,8 @@ export function GoalHistoryChart({ rows, targetAmount }: { rows: GoalMovement[];
         <AreaChart data={points} margin={{ top: 12, right: 8, bottom: 0, left: 8 }} accessibilityLayer={false}>
           <defs>
             <linearGradient id="goal-history-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--highlight)" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="var(--highlight)" stopOpacity={0.02} />
+              <stop offset="0%" stopColor="var(--cat-ochre)" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="var(--cat-ochre)" stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <XAxis
@@ -80,11 +80,11 @@ export function GoalHistoryChart({ rows, targetAmount }: { rows: GoalMovement[];
           <Area
             dataKey="value"
             type="monotone"
-            stroke="var(--highlight)"
+            stroke="var(--cat-ochre)"
             strokeWidth={2}
             fill="url(#goal-history-fill)"
-            dot={points.length <= 24 ? { r: 4, fill: "var(--card)", stroke: "var(--highlight)", strokeWidth: 2 } : false}
-            activeDot={{ r: 5, fill: "var(--highlight)", stroke: "var(--card)", strokeWidth: 2 }}
+            dot={points.length <= 24 ? { r: 4, fill: "var(--card)", stroke: "var(--cat-ochre)", strokeWidth: 2 } : false}
+            activeDot={{ r: 5, fill: "var(--cat-ochre)", stroke: "var(--card)", strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </AreaChart>

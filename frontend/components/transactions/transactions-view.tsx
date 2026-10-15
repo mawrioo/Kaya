@@ -9,6 +9,7 @@ import { TagArt } from "@/components/illustrations/tag"
 import { WalletArt } from "@/components/illustrations/wallet"
 import { toast } from "sonner"
 
+import { useLiveDate } from "@/components/use-live-date"
 import { useData } from "@/components/data-provider"
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog"
 import { ImportDialog } from "@/components/transactions/import-dialog"
@@ -63,16 +64,19 @@ export function TransactionsView({
   /** Or of a whole year, "2026" (from the Year view on Insights). A month wins if both are given. */
   initialYear?: string
 }) {
+  const liveDate = useLiveDate(nowIso)
   const { wallets, categories, transactions, addTransaction, updateTransaction, deleteTransaction, importTransactions, undoDelete } = useData()
 
-  // Arriving from a wallet card starts with that wallet's transactions, and from a category with that category's (for a month).
-  const [filters, setFilters] = useState<TransactionFilters>(() => ({
+  // Start on this calendar month unless a link names a month or year. Wallet, category and type filters still follow the link.
+  const [storedFilters, setFilters] = useState<TransactionFilters>(() => ({
     ...NO_FILTERS,
     walletId: initialWalletId && wallets.some((wallet) => wallet.id === initialWalletId) ? initialWalletId : "all",
     categoryId: initialCategoryId && categories.some((category) => category.id === initialCategoryId) ? initialCategoryId : "all",
     type: initialType ?? "all",
-    ...(initialMonth ? monthDates(initialMonth) : initialYear ? yearDates(initialYear) : {}),
+    ...(initialMonth ? monthDates(initialMonth) : initialYear ? yearDates(initialYear) : monthDates(toDateInput(new Date(liveDate)).slice(0, 7))),
   }))
+  const [followMonth, setFollowMonth] = useState(!initialMonth && !initialYear)
+  const filters = followMonth ? { ...storedFilters, ...monthDates(toDateInput(new Date(liveDate)).slice(0, 7)) } : storedFilters
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction>()
   // The transaction a new one is being copied from ("Duplicate").
@@ -94,7 +98,7 @@ export function TransactionsView({
   const currentIds = transactions.map((tx) => tx.id)
   const [seenIds, setSeenIds] = useState(() => new Set(currentIds))
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(() => new Set())
-  if (currentIds.some((id) => !seenIds.has(id))) {
+  if (currentIds.length !== seenIds.size || currentIds.some((id) => !seenIds.has(id))) {
     setFreshIds(new Set(currentIds.filter((id) => !seenIds.has(id))))
     setSeenIds(new Set(currentIds))
   }
@@ -123,6 +127,8 @@ export function TransactionsView({
 
   /** Every change to the filters starts the list again from the newest. */
   function updateFilters(next: TransactionFilters) {
+    if (next.from !== filters.from || next.to !== filters.to || next === NO_FILTERS) setFollowMonth(false)
+    setFreshIds(new Set())
     setFilters(next)
     setLimit(PAGE_SIZE)
     setRevealId(undefined)
@@ -270,7 +276,7 @@ export function TransactionsView({
         onImport={openImport}
         wallets={wallets}
         categories={categories}
-        today={toDateInput(new Date(nowIso))}
+        today={toDateInput(new Date(liveDate))}
       />
 
       {matching.length > 0 ? (
@@ -286,7 +292,7 @@ export function TransactionsView({
           groups={groups}
           wallets={wallets}
           categories={categories}
-          today={toDateInput(new Date(nowIso))}
+          today={toDateInput(new Date(liveDate))}
           freshIds={freshIds}
           leavingId={leavingId}
           onEdit={openEdit}
@@ -325,7 +331,7 @@ export function TransactionsView({
         open={importOpen}
         onOpenChange={setImportOpen}
         defaultWalletId={lastWalletId ?? wallets.find((wallet) => wallet.kind !== "deposito")?.id ?? ""}
-        today={toDateInput(new Date(nowIso))}
+        today={toDateInput(new Date(liveDate))}
         onImport={handleImport}
         onCloseAutoFocus={returnFocus.restore}
       />

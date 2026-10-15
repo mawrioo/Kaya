@@ -19,9 +19,9 @@ const VIEWS: { value: View; label: string }[] = [
 ]
 
 // Income and spending stay neutral (moss and sand), like the bars on Home. The savings line is the app's own green.
-const INCOME_FILL = "var(--cat-moss)"
-const SPENDING_FILL = "var(--cat-sand)"
-const SAVINGS_STROKE = "var(--primary)"
+const INCOME_FILL = "var(--chart-income)"
+const SPENDING_FILL = "var(--chart-spending)"
+const SAVINGS_STROKE = "var(--chart-balance)"
 
 interface MonthChartProps {
   transactions: Transaction[]
@@ -96,7 +96,7 @@ export function MonthChart({ transactions, categories, months, bounds, selected,
   }))
   const first = points[0]?.month
   const last = points.at(-1)?.month
-  const hasData = transactions.some((tx) => tx.type !== "transfer")
+  const hasData = points.some((point) => point.income > 0 || point.spending > 0)
 
   // Biggest overall first, so the largest category sits at the bottom of every stack.
   const segments: Segment[] = categories
@@ -207,7 +207,8 @@ export function MonthChart({ transactions, categories, months, bounds, selected,
               </p>
             ) : null}
 
-            <MonthTable points={points} segments={segments} view={view} />
+            <p className="mt-3 text-sm text-muted-foreground">Transfers between your wallets are excluded. Open the figures below to compare exact amounts or choose a month.</p>
+            <MonthTable points={points} segments={segments} view={view} onSelect={onSelect} selected={selected} />
           </>
         )}
       </div>
@@ -342,12 +343,14 @@ function keptText(rate: number): string {
 }
 
 /**
- * The same figures as the chart, as a table for screen readers. The table sits in a hidden box of its own: a
- * table can't be squeezed to one pixel, so on its own it would make the page scroll sideways.
+ * Exact figures behind a native disclosure, usable with touch and keyboard. Wide category tables scroll
+ * inside their own region; they never widen the page.
  */
-function MonthTable({ points, segments, view }: { points: MonthPoint[]; segments: Segment[]; view: View }) {
+function MonthTable({ points, segments, view, onSelect, selected }: { points: MonthPoint[]; segments: Segment[]; view: View; onSelect: (month: string) => void; selected?: string }) {
   return (
-    <div className="sr-only">
+    <details className="chart-figures mt-4 text-sm">
+      <summary className="min-h-11 cursor-pointer rounded-md py-3 font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">View monthly figures</summary>
+      <div className="max-h-80 overflow-auto rounded-lg border" tabIndex={0} role="region" aria-label="View monthly figures">
       <table>
         <caption>
           {view === "totals" ? "Income and spending, month by month" : view === "savings" ? "Share of income kept, month by month" : "Spending by category, month by month"}
@@ -384,7 +387,7 @@ function MonthTable({ points, segments, view }: { points: MonthPoint[]; segments
             const rate = savingsRate(point.income, point.spending)
             return (
               <tr key={point.month}>
-                <th scope="row">{formatMonth(point.month)}</th>
+                <th scope="row"><button type="button" aria-current={selected === point.month ? "date" : undefined} onClick={() => onSelect(point.month)} className="min-h-11 cursor-pointer rounded-md text-left underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">{formatMonth(point.month)}</button></th>
                 {view === "totals" ? (
                   <>
                     <td>{formatRupiah(point.income)}</td>
@@ -410,6 +413,7 @@ function MonthTable({ points, segments, view }: { points: MonthPoint[]; segments
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </details>
   )
 }

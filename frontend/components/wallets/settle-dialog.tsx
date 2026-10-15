@@ -36,7 +36,7 @@ interface SettleDialogProps {
  * A deposito that has matured and doesn't renew waits for the owner to confirm. The money goes back to the wallet it came
  * from (an older deposito, or one whose wallet was deleted, asks for a wallet instead). Nothing moves until "Move money" is
  * pressed. It becomes one transfer for everything the deposito holds (the money put in and the interest), so it is not
- * income, and it can't be undone.
+ * income. The message after saving offers Undo.
  */
 export function SettleDialog({ open, onOpenChange, wallet, onConfirm, onCloseAutoFocus }: SettleDialogProps) {
   return (
@@ -125,8 +125,8 @@ function SettleBody({
       )}
 
       <p className="text-sm text-muted-foreground">
-        It is saved as one transfer, so it isn&apos;t counted as income. The deposito then shows Rp 0 and can&apos;t be changed.
-        This can&apos;t be undone.
+        It is saved as one transfer, so it isn&apos;t counted as income. The deposito then shows Rp 0.
+        The message afterwards has Undo for ten seconds to move it back and reopen the deposito.
       </p>
 
       <DialogFooter>

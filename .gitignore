@@ -15,3 +15,8 @@ backend/data/backups/
 .nb-test/
 frontend/test-results/
 frontend/playwright-report/
+
+# Claude Code instructions (any folder)
+CLAUDE.md
+
+.

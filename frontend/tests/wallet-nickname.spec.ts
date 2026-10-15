@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
 // These share one database in order: set a nickname, use it, refuse a bad one, clear it.

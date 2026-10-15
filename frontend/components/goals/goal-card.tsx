@@ -58,7 +58,7 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
   return (
     <li
       id={`goal-card-${goal.id}`}
-      className={cn("flex", isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3")}
+      className={cn("flex scroll-mt-24", isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3")}
     >
       <div className="flex w-full flex-col rounded-xl border bg-card p-5 shadow-sm md:p-6">
         <div className="flex items-start gap-3.5">

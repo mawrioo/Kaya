@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     // The cream page colour while it opens, and the forest green of the sidebar and top bar around it.
-    background_color: "#F7F2E7",
+    background_color: "#EDE5D7",
     theme_color: "#1F3D2B",
     icons: [
       { src: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },

@@ -1,6 +1,8 @@
 "use client"
 
+import { useLiveDate } from "@/components/use-live-date"
 import { useData } from "@/components/data-provider"
+import { QuietReminders } from "@/components/home/quiet-reminders"
 import { HomeBudgets } from "@/components/home/home-budgets"
 import { MonthSummary } from "@/components/home/month-summary"
 import { RecentTransactions } from "@/components/home/recent-transactions"
@@ -8,7 +10,6 @@ import { SavingsGoals } from "@/components/home/savings-goals"
 import { SpendingByCategory } from "@/components/home/spending-by-category"
 import { TotalBalanceCard } from "@/components/home/total-balance-card"
 import { WalletCards } from "@/components/home/wallet-cards"
-import { PetCard } from "@/components/mascot/money-pet"
 import { MonthlyNote } from "@/components/monthly-note"
 import { toDateInput } from "@/lib/dates"
 import {
@@ -25,19 +26,16 @@ import {
  * `nowIso` comes from the server so the server and the browser agree on the month.
  */
 export function HomeContent({ nowIso }: { nowIso: string }) {
+  const liveDate = useLiveDate(nowIso)
   const { wallets, categories, goals, transactions, monthlyBudget } = useData()
-  const now = new Date(nowIso)
+  const now = new Date(liveDate)
   const month = pickMonth(transactions, now)
 
   return (
     <div className="mt-8 flex flex-col gap-6 md:mt-10">
-      {/* TEMPORARY (Compare options, "Own card"): the pet's card beside the total from 1280px, under it below that. While it is
-          hidden, the total takes the whole row as before (a hidden flex item leaves no gap). */}
-      <div className="flex flex-col gap-6 xl:flex-row">
-        <TotalBalanceCard wallets={wallets} className="min-w-0 xl:flex-1" />
-        <PetCard className="pet-spot pet-spot-card xl:w-64 xl:shrink-0" />
-      </div>
+      <TotalBalanceCard wallets={wallets} />
       <WalletCards wallets={wallets} />
+      <QuietReminders today={toDateInput(now)} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
         <MonthSummary

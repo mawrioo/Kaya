@@ -77,11 +77,14 @@ function DeleteBody({ wallet, onCancel, onConfirm }: { wallet: Wallet; onCancel:
   const [deleting, setDeleting] = useState(false)
 
   const goalNames = goals.filter((goal) => goal.walletId === wallet.id).map((goal) => goal.name)
-  const blocked = blockedReason(wallets.length, goalNames)
+  const source = wallet.deposito?.sourceWalletId ? wallets.find((entry) => entry.id === wallet.deposito?.sourceWalletId) : undefined
+  const returnsPrincipal = wallet.deposito !== undefined && wallet.deposito.status !== "settled"
+  const blocked = blockedReason(wallets.length, goalNames) ?? (returnsPrincipal && (!source || source.kind === "deposito")
+    ? "This deposito has no source wallet to return its principal to. Move its money into a wallet before deleting it."
+    : undefined)
   // When goals are what is in the way, the way out is on the Goals page.
   const canMoveGoals = wallets.length > 1 && goalNames.length > 0
   const impact = walletDeleteImpact(transactions, wallet.id)
-  const sourceName = wallet.deposito?.sourceWalletId ? wallets.find((entry) => entry.id === wallet.deposito?.sourceWalletId)?.name : undefined
   const phrase = deletePhrase(wallet)
   const confirmed = squash(typed) === squash(phrase)
 
@@ -127,13 +130,14 @@ function DeleteBody({ wallet, onCancel, onConfirm }: { wallet: Wallet; onCancel:
       </DialogHeader>
 
       <ul className="grid list-disc grid-cols-1 gap-1.5 pl-5 text-sm marker:text-muted-foreground">
-        <li>The wallet and its balance leave your total.</li>
-        {wallet.deposito && wallet.deposito.status !== "settled" ? (
-          <li>
-            Its {formatRupiah(wallet.balance)} is not moved back to {sourceName ?? "another wallet"}, so it is gone from your
-            money here. {wallet.deposito.status === "matured" ? "Use Move money first to keep it." : "Wait until it matures and use Move money to keep it."}
-          </li>
-        ) : null}
+        {returnsPrincipal && wallet.deposito ? (
+          <>
+            <li>The deposito is removed. Its {formatRupiah(wallet.deposito.principal)} principal goes back to {source?.name}.</li>
+            <li>The interest shown here is left out. Undo puts the principal back into the deposito.</li>
+          </>
+        ) : (
+          <li>The wallet and its balance leave your total.</li>
+        )}
         <li>
           {impact.transactions === 0
             ? "It has no transactions."
@@ -142,7 +146,7 @@ function DeleteBody({ wallet, onCancel, onConfirm }: { wallet: Wallet; onCancel:
         {impact.transfers > 0 ? (
           <li>
             {impact.transfers === 1 ? "One of them is a transfer" : `${impact.transfers} of them are transfers`} with
-            another wallet. That wallet keeps its balance.
+            another wallet. {returnsPrincipal ? "Only the returned principal changes that wallet's balance." : "That wallet keeps its balance."}
           </li>
         ) : null}
       </ul>

@@ -309,11 +309,11 @@ describe("editing a deposito", () => {
     assert.equal(saved?.deposito?.principal, 1_000_000)
   })
 
-  it("won't change the amount once it came out of a wallet, and nothing moves", () => {
+  it("corrects the principal and takes the difference from its source", () => {
     const { store, wallet } = setup()
-    assert.throws(() => store.updateWallet(wallet.id, edit(wallet, {}, 2_000_000)), /came out of BCA, so it can't be changed here/)
-    assert.equal(store.getData().wallets.find((entry) => entry.id === wallet.id)?.deposito?.principal, 1_000_000)
-    assert.equal(balanceOf(store, "wallet-bca"), BCA - 1_000_000)
+    store.updateWallet(wallet.id, edit(wallet, {}, 2_000_000))
+    assert.equal(store.getData().wallets.find((entry) => entry.id === wallet.id)?.deposito?.principal, 2_000_000)
+    assert.equal(balanceOf(store, "wallet-bca"), BCA - 2_000_000)
   })
 
   it("won't be given a second source", () => {

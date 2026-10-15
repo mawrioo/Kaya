@@ -16,6 +16,7 @@ import type {
   IconName,
   NewCategory,
   NewTransaction,
+  ImportedTransaction,
   NewWallet,
   PaletteColor,
   RestoreCategory,
@@ -92,10 +93,10 @@ export const MAX_IMPORT_ROWS = 2000
 
 /**
  * Checks a list of transactions read from a bank's file. Each one goes through the same checks as one typed by hand,
- * and a problem names the row ("Row 7: ..."). A transfer can't be told from a payment in a bank's file, so only income and
- * spending are accepted. Nothing is saved unless every row passes.
+ * and a problem names the row ("Row 7: ..."). Transfers are chosen explicitly during review.
+ * Nothing is saved unless every row passes.
  */
-export function parseTransactionImport(body: unknown, refs: References): Exclude<NewTransaction, { type: "transfer" }>[] {
+export function parseTransactionImport(body: unknown, refs: References): ImportedTransaction[] {
   if (!isObject(body) || !Array.isArray(body.transactions)) throw new ValidationError("Send the transactions as a list.")
   const rows: unknown[] = body.transactions
   if (rows.length === 0) throw new ValidationError("There is nothing to import.")
@@ -104,8 +105,11 @@ export function parseTransactionImport(body: unknown, refs: References): Exclude
   return rows.map((row, index) => {
     try {
       const transaction = parseNewTransaction(row, refs)
-      if (transaction.type === "transfer") throw new ValidationError("An import can only hold income and spending, not transfers.")
-      return transaction
+      const replaceId = isObject(row) ? row.replaceTransactionId : undefined
+      if (replaceId !== undefined && (transaction.type !== "transfer" || typeof replaceId !== "string" || !replaceId)) {
+        throw new ValidationError("Only a reviewed transfer can replace another transaction.")
+      }
+      return { ...transaction, ...(typeof replaceId === "string" ? { replaceTransactionId: replaceId } : {}) }
     } catch (error) {
       if (error instanceof ValidationError) throw new ValidationError(`Row ${index + 1}: ${error.message}`)
       throw error

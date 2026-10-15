@@ -25,6 +25,7 @@ import {
   type AmountMode,
   type ColumnMapping,
   type ParsedFile,
+  type TransferSuggestion,
 } from "@/lib/bank-csv"
 import { formatRupiah } from "@/lib/format"
 import type { NewTransaction } from "@/lib/types"
@@ -59,6 +60,7 @@ export function ImportDialog({ open, onOpenChange, defaultWalletId, today, onImp
 }
 
 interface Edit {
+  transfer?: TransferSuggestion
   include?: boolean
   categoryId?: string
 }
@@ -103,8 +105,8 @@ function ImportBody({
     [file, mapping, today]
   )
   const base = useMemo(
-    () => (read ? buildReview(read.rows, { walletId, transactions, categories }) : []),
-    [read, walletId, transactions, categories]
+    () => (read ? buildReview(read.rows, { walletId, transactions, categories, wallets }) : []),
+    [read, walletId, transactions, categories, wallets]
   )
   const rows = useMemo(() => base.map((row) => (edits[row.id] ? { ...row, ...edits[row.id] } : row)), [base, edits])
 
@@ -119,6 +121,8 @@ function ImportBody({
 
   const toggle = useCallback((id: number, include: boolean) => setEdits((current) => ({ ...current, [id]: { ...current[id], include } })), [])
   const chooseCategory = useCallback((id: number, categoryId: string) => setEdits((current) => ({ ...current, [id]: { ...current[id], categoryId } })), [])
+
+  const chooseTransfer = useCallback((id: number, transfer?: TransferSuggestion) => setEdits((current) => ({ ...current, [id]: { ...current[id], transfer } })), [])
 
   function setAll(include: boolean) {
     setEdits(Object.fromEntries(importable.map((row) => [row.id, { ...edits[row.id], include }])))
@@ -429,7 +433,7 @@ function ImportBody({
           </div>
           <ul className="max-h-[min(46svh,26rem)] overflow-y-auto">
             {rows.map((row) => (
-              <ImportRow key={row.id} row={row} categories={categories} onToggle={toggle} onCategory={chooseCategory} />
+              <ImportRow key={row.id} row={row} categories={categories} onToggle={toggle} onCategory={chooseCategory} onTransfer={chooseTransfer} />
             ))}
           </ul>
         </div>
@@ -454,6 +458,13 @@ function ImportBody({
             </>
           )}
         </div>
+      ) : null}
+
+      {ticked.some((row) => row.transfer) ? (
+        <p className="text-sm text-muted-foreground">
+          Transfers move money between both wallets and stay out of income and spending.
+          An already recorded other side is replaced, so its balance is counted once. Undo restores it.
+        </p>
       ) : null}
 
       {importError ? (

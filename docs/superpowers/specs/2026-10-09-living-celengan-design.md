@@ -1,5 +1,7 @@
 # The money pet (design)
 
+> **Update, 12 Oct 2026.** The drawing below was replaced by the **Pink god** (a different creature at each level, `components/mascot/pet-god.tsx`). The owner chose: its own page only (no card on Home), no sprout, half batik. The pet now also reacts on its page (looks at the pointer, wiggles when pointed at or tapped, perks up when money comes in). The five states and the 20% lines below are unchanged. What is current, and the open questions, are in ROADMAP "Step 25" and "Waiting for the owner: Step 25"; the look is in DESIGN.md "Money pet".
+
 Agreed with the owner on 9 Oct 2026, revised the same day after the first drawing: the pet is a cute pig, not a celengan, drawn simply (thick brown outline, flat colour, big oval eyes, stubby legs, no slot, no batik), and its look follows **one thing only: this month's saving rate**. Each state is drastically different, like the owner's reference pictures (a healthy pink creature that turns yellow, sags, and finally melts into a puddle with flies).
 
 ## The pet

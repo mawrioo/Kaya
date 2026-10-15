@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AnimatePresence, MotionConfig, motion } from "motion/react"
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "motion/react"
 import { Copy, Pencil, Trash2 } from "lucide-react"
 
 import { TransactionRowContent } from "@/components/transaction-row"
@@ -59,6 +59,8 @@ export function TransactionList({
   onDuplicate,
   onDelete,
 }: TransactionListProps) {
+  const reducedMotion = useReducedMotion()
+  const enterTransform = reducedMotion ? "none" : "translateY(6px)"
   const [openId, setOpenId] = useState<string>()
   // A transfer that moved a matured deposito's money is a record that can't be changed or deleted.
   const depositoIds = new Set(wallets.filter((wallet) => wallet.kind === "deposito").map((wallet) => wallet.id))
@@ -90,9 +92,9 @@ export function TransactionList({
               <motion.section
                 key={group.day}
                 aria-labelledby={`day-${group.day}`}
-                initial={dayIsNew ? { height: 0, opacity: 0 } : false}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={dayIsLeaving ? { height: 0, opacity: 0 } : undefined}
+                initial={dayIsNew ? { opacity: 0, transform: enterTransform } : false}
+                animate={{ opacity: 1, transform: "translateY(0px)" }}
+                exit={dayIsLeaving ? { opacity: 0, transform: enterTransform } : undefined}
                 transition={TIMING}
                 className="overflow-hidden border-t first:border-t-0"
               >
@@ -107,9 +109,9 @@ export function TransactionList({
                         <motion.li
                           key={tx.id}
                           data-swipe-row={tx.id}
-                          initial={freshIds.has(tx.id) && !dayIsNew ? { height: 0, opacity: 0 } : false}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={leavingId === tx.id && !dayIsLeaving ? { height: 0, opacity: 0, x: 24 } : undefined}
+                          initial={freshIds.has(tx.id) && !dayIsNew ? { opacity: 0, transform: enterTransform } : false}
+                          animate={{ opacity: 1, transform: "translateY(0px)" }}
+                          exit={leavingId === tx.id && !dayIsLeaving ? { opacity: 0, transform: reducedMotion ? "none" : "translateX(12px)" } : undefined}
                           transition={TIMING}
                           className="group/row overflow-hidden border-t first:border-t-0"
                         >

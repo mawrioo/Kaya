@@ -7,6 +7,7 @@ import { CelenganArt } from "@/components/illustrations/celengan"
 import { coinShower } from "@/lib/celebrate"
 import { toast } from "sonner"
 
+import { useLiveDate } from "@/components/use-live-date"
 import { useData } from "@/components/data-provider"
 import { GoalSummary } from "@/components/goal-summary"
 import { DeleteGoalDialog } from "@/components/goals/delete-goal-dialog"
@@ -40,7 +41,8 @@ const COMPLETED_TOGGLE_ID = "completed-toggle"
  */
 export function GoalsView({ nowIso }: { nowIso: string }) {
   const { goals, wallets, addGoal, updateGoal, addToGoal, takeFromGoal, reorderGoals, deleteGoal, undoDelete } = useData()
-  const today = toDateInput(new Date(nowIso))
+  const liveDate = useLiveDate(nowIso)
+  const today = toDateInput(new Date(liveDate))
 
   const [open, setOpen] = useState<DialogName>()
   // The goal the open dialog is about. Kept after it closes so its content doesn't vanish mid-fade.

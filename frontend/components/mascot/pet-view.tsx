@@ -26,7 +26,7 @@ export function PetView() {
         className="pet-home grid grid-cols-1 items-center gap-6 rounded-xl border bg-card p-6 shadow-sm md:grid-cols-[auto_1fr] md:gap-10 md:p-8"
       >
         {status ? (
-          <Pet mood={status.mood} label={status.sentence} className="mx-auto w-56 md:w-72" />
+          <Pet mood={status.mood} label={status.sentence} className="mx-auto w-56 md:w-72" lively />
         ) : (
           <span aria-hidden className="mx-auto block aspect-[200/172] w-56 md:w-72" />
         )}

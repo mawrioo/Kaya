@@ -1,11 +1,11 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test"
+import { expect, test, type APIRequestContext, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
 // Importing a bank's CSV, on the shared in-memory database. What it imports it takes out again (with Undo, and then by hand
 // for anything left), so the files that run after this one find the data as they left it.
 test.describe.configure({ mode: "serial" })
 
-const BASE = "http://localhost:3100"
+const BASE = "http://localhost:3200"
 const read = async (request: APIRequestContext) => (await (await request.get("/api/data")).json()) as AppData
 const balance = (data: AppData, name: string) => data.wallets.find((wallet) => wallet.name === name)!.balance
 let baseline: AppData

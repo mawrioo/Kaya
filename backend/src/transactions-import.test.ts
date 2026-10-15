@@ -79,10 +79,14 @@ describe("importing transactions from a bank's file", () => {
     assert.deepEqual(store.getData(), before, "nothing was saved and no balance moved")
   })
 
-  it("refuses transfers: a bank's file can't tell them from payments", () => {
+  it("accepts explicitly reviewed transfers and Undo reverses both wallets", () => {
     const store = freshStore()
     const transfer = { type: "transfer", amount: 5_000, date: "2026-10-05T12:00:00+07:00", description: "", fromWalletId: "wallet-bca", toWalletId: "wallet-jago" }
-    refuses(() => store.importTransactions({ transactions: [spent(1_000), transfer] }), /^Row 2: An import can only hold income and spending/)
+    const before = store.getData()
+    const result = store.importTransactions({ transactions: [spent(1_000), transfer] })
+    assert.equal(balanceOf(store, "wallet-bca"), BCA - 6_000)
+    store.undo(result.undoId)
+    assert.deepEqual(store.getData(), before)
   })
 
   it("refuses an empty list, a list that isn't a list, and too many rows", () => {

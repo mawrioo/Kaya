@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
 // Files run in name order and share one in-memory database. Only the toast checks save a transaction.
@@ -175,7 +175,7 @@ for (const [width, height] of [[320, 700], [390, 844], [768, 900], [1440, 900]] 
       const button = coin(page)
       await expect(button).toBeVisible()
       const box = (await button.boundingBox())!
-      expect(box).toMatchObject({ width: 56, height: 56 })
+      expect(box).toMatchObject({ width: 44, height: 44 })
       expect(width - (box.x + box.width)).toBeCloseTo(24, 0)
       expect(height - (box.y + box.height)).toBeCloseTo(24, 0)
       // Anything that drops in a moment after the page loads (the Next.js dev badge used to) has had time to appear.
@@ -203,14 +203,14 @@ test("the sidebar's bottom is back to its own spacing: nothing is reserved under
   await page.goto("/wallets")
   const footer = page.locator("[data-slot='sidebar-footer']")
   await expect(footer).toBeVisible()
-  expect(await footer.evaluate((node) => getComputedStyle(node).paddingBottom)).toBe("24px")
+  expect(await footer.evaluate((node) => getComputedStyle(node).paddingBottom)).toBe("16px")
   // The theme switch is the last thing, 24px from the bottom of the window.
   const bottom = await footer.evaluate((node) => node.getBoundingClientRect().bottom)
   expect(Math.round(bottom)).toBe(900)
 })
 
 for (const [width, height] of [[390, 844], [1440, 900]] as const) {
-  test(`a message appears above the coin, never on it, at ${width}px`, async ({ page }, testInfo) => {
+  test(`a message appears at the top, clear of the coin, at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height })
     await page.goto("/")
     await expect(coin(page)).toBeEnabled()
@@ -227,7 +227,10 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     const toastBox = (await toast.boundingBox())!
     const coinBox = (await coin(page).boundingBox())!
     expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(coinBox.y)
-    expect(coinBox.y - (toastBox.y + toastBox.height)).toBeLessThan(40)
+    expect(toastBox.y).toBeGreaterThanOrEqual(16)
+    expect(toastBox.y).toBeLessThan(120)
+    if (width < 600) expect(toastBox.x + toastBox.width / 2).toBeCloseTo(width / 2, 0)
+    else expect(width - toastBox.x - toastBox.width).toBeCloseTo(24, 0)
     expect(await coinIsUncovered(page)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath("toast.png"), animations: "disabled" })
   })

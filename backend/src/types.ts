@@ -174,7 +174,7 @@ export interface WalletChanges {
   nickname?: string | null
   /**
    * A deposito's details and the amount put in. Leave out to keep them; refused for any other wallet, or once it is
-   * settled. The amount can't change once the money came from a wallet. `fromWalletId` is only for an older deposito that
+   * settled. Correcting the principal adjusts the source wallet by the difference. `fromWalletId` is only for an older deposito that
    * has no source yet: it takes the amount out of that wallet now, as a transfer.
    */
   deposito?: DepositoInput & { principal: Rupiah; fromWalletId?: string }
@@ -423,6 +423,7 @@ export interface SaveWalletResult {
 
 /** The reply to moving a matured deposito's money into another wallet: the deposito, every wallet, and the transfer that was recorded. */
 export interface SettleDepositoResult {
+  undoId: string
   wallet: Wallet
   wallets: Wallet[]
   transaction: Transaction
@@ -433,7 +434,11 @@ export interface SettleDepositoResult {
  * (see UndoResult). The same goes for deleting a wallet or a goal.
  */
 /** The reply to importing transactions from a bank's file: what was saved, every wallet as it is now, and the id that undoes it. */
+/** A reviewed CSV line; a transfer can replace its already recorded other side. */
+export type ImportedTransaction = NewTransaction & { replaceTransactionId?: string }
+
 export interface ImportTransactionsResult {
+  replacedTransactionIds: string[]
   transactions: Transaction[]
   wallets: Wallet[]
   undoId: string
@@ -446,6 +451,8 @@ export interface DeleteTransactionResult {
 /** The reply to deleting a wallet: the wallets left, which transactions went with it, and the id that undoes it. */
 export interface DeleteWalletResult {
   wallets: Wallet[]
+  /** All current balance changes, including a deposito's principal returned to its source. */
+  balanceAdjustments: BalanceAdjustment[]
   deletedTransactionIds: string[]
   undoId: string
 }
@@ -482,15 +489,17 @@ export interface DeleteGoalResult {
  * with all its transactions and the balances that were set by hand for it; a goal with its history.
  */
 export type UndoResult =
+  | { kind: "settlement"; wallets: Wallet[]; removedTransactionIds: string[] }
   | { kind: "transaction"; transaction: Transaction; wallets: Wallet[] }
   /** Undoing an import takes its transactions out again (any that were deleted since are simply not there). */
-  | { kind: "import"; wallets: Wallet[]; removedTransactionIds: string[] }
+  | { kind: "import"; wallets: Wallet[]; removedTransactionIds: string[]; restoredTransactions: Transaction[] }
   | { kind: "goal"; goal: Goal; goals: Goal[] }
   | {
       kind: "wallet"
       wallet: Wallet
       wallets: Wallet[]
       transactions: Transaction[]
+      /** All current balance changes, after reversing any returned deposito principal. */
       balanceAdjustments: BalanceAdjustment[]
     }
 

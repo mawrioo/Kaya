@@ -1,6 +1,8 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
+
+import { createRefreshGuard } from "@/lib/live-refresh"
 
 import * as api from "@/lib/api"
 import type {
@@ -47,7 +49,7 @@ interface DataStore extends AppData {
   removePin: (currentPin: string) => Promise<void>
   /** Forgets this device, so the PIN is asked for again. The page opens again, on the lock screen. */
   lockNow: () => Promise<void>
-  /** Saves many income and spending transactions read from a bank's file, all or nothing. Returns them, and the id that undoes it. */
+  /** Saves reviewed transactions read from a bank's file, all or nothing. Returns them, and the id that undoes it. */
   importTransactions: (transactions: NewTransaction[]) => Promise<ImportTransactionsResult>
   /** Adds a transaction. Returns it, with every wallet as it is now. */
   addTransaction: (input: NewTransaction) => Promise<SaveTransactionResult>
@@ -111,21 +113,46 @@ const REFRESH_EVERY_MS = 5000
 export function DataProvider({ initial, children }: { initial: AppData; children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(initial)
 
-  // When the owner comes back to this tab (or this app on their phone), pick up anything
-  // changed elsewhere, such as a transaction added from the laptop while the phone was asleep.
+  const guard = useRef(createRefreshGuard())
+
+  // Poll only the visible app. One read at a time, with a deadline, and no stale read may overwrite a local save.
   useEffect(() => {
-    let lastCheck = Date.now()
+    let stopped = false
+    let inFlight = false
+    let controller: AbortController | undefined
     async function refresh() {
-      if (document.visibilityState !== "visible" || Date.now() - lastCheck < REFRESH_EVERY_MS) return
-      lastCheck = Date.now()
+      if (stopped || inFlight || document.visibilityState !== "visible" || !navigator.onLine) return
+      const ticket = guard.current.ticket()
+      if (ticket === undefined) return
+      inFlight = true
+      controller = new AbortController()
+      const timeout = window.setTimeout(() => controller?.abort(), 10_000)
       try {
-        setData(await api.loadData())
+        const incoming = await api.loadData(undefined, controller.signal)
+        if (!stopped && guard.current.accepts(ticket)) {
+          setData((current) => guard.current.accepts(ticket) && JSON.stringify(current) !== JSON.stringify(incoming) ? incoming : current)
+        }
       } catch {
-        // The backend is unreachable right now; keep showing what we have.
+        // A temporary network failure keeps the last saved data. The next foreground check retries.
+      } finally {
+        clearTimeout(timeout)
+        inFlight = false
       }
     }
+    const first = window.setTimeout(refresh, 0)
+    const timer = window.setInterval(refresh, REFRESH_EVERY_MS)
     document.addEventListener("visibilitychange", refresh)
-    return () => document.removeEventListener("visibilitychange", refresh)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("online", refresh)
+    return () => {
+      stopped = true
+      controller?.abort()
+      clearTimeout(first)
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", refresh)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("online", refresh)
+    }
   }, [])
 
   const value: DataStore = {
@@ -144,10 +171,10 @@ export function DataProvider({ initial, children }: { initial: AppData; children
       const result = await api.undoDelete(undoId)
       setData((current) => {
         if (result.kind === "goal") return { ...current, goals: result.goals }
-        if (result.kind === "import") {
+        if (result.kind === "import" || result.kind === "settlement") {
           // An import that is undone takes its transactions out again.
           const gone = new Set(result.removedTransactionIds)
-          return { ...current, wallets: result.wallets, transactions: current.transactions.filter((tx) => !gone.has(tx.id)) }
+          return { ...current, wallets: result.wallets, transactions: [...current.transactions.filter((tx) => !gone.has(tx.id)), ...(result.kind === "import" ? result.restoredTransactions : [])] }
         }
         if (result.kind === "transaction") {
           const others = current.transactions.filter((tx) => tx.id !== result.transaction.id)
@@ -159,10 +186,7 @@ export function DataProvider({ initial, children }: { initial: AppData; children
           ...current,
           wallets: result.wallets,
           transactions: [...current.transactions.filter((tx) => !back.has(tx.id)), ...result.transactions],
-          balanceAdjustments: [
-            ...current.balanceAdjustments.filter((entry) => entry.walletId !== result.wallet.id),
-            ...result.balanceAdjustments,
-          ],
+          balanceAdjustments: result.balanceAdjustments,
         }
       })
       return result
@@ -182,7 +206,7 @@ export function DataProvider({ initial, children }: { initial: AppData; children
     },
     importTransactions: async (transactions) => {
       const result = await api.importTransactions(transactions)
-      setData((current) => ({ ...current, wallets: result.wallets, transactions: [...current.transactions, ...result.transactions] }))
+      setData((current) => ({ ...current, wallets: result.wallets, transactions: [...current.transactions.filter((tx) => !result.replacedTransactionIds.includes(tx.id)), ...result.transactions] }))
       return result
     },
     backUp: async () => {
@@ -219,8 +243,8 @@ export function DataProvider({ initial, children }: { initial: AppData; children
       return wallet
     },
     updateWallet: async (id, input) => {
-      const { wallet, wallets } = await api.updateWallet(id, input)
-      setData((current) => ({ ...current, wallets }))
+      const { wallet, wallets, adjustment } = await api.updateWallet(id, input)
+      setData((current) => ({ ...current, wallets, balanceAdjustments: adjustment ? [...current.balanceAdjustments, adjustment] : current.balanceAdjustments }))
       return wallet
     },
     updateWalletValue: async (id, value) => {
@@ -253,14 +277,14 @@ export function DataProvider({ initial, children }: { initial: AppData; children
       return result
     },
     deleteWallet: async (id) => {
-      const { wallets, deletedTransactionIds, undoId } = await api.deleteWallet(id)
+      const { wallets, deletedTransactionIds, undoId, balanceAdjustments } = await api.deleteWallet(id)
       const gone = new Set(deletedTransactionIds)
       setData((current) => ({
         ...current,
         wallets,
         transactions: current.transactions.filter((tx) => !gone.has(tx.id)),
-        // The balances that were set by hand for it go with it.
-        balanceAdjustments: current.balanceAdjustments.filter((entry) => entry.walletId !== id),
+        // Includes the principal returned to a deposito's source, and removes the deleted wallet's history.
+        balanceAdjustments,
       }))
       return undoId
     },
@@ -348,5 +372,14 @@ export function DataProvider({ initial, children }: { initial: AppData; children
     },
   }
 
-  return <DataContext value={value}>{children}</DataContext>
+  // Every local action marks a read boundary, including failed saves and Undo.
+  const guarded = Object.fromEntries(Object.entries(value).map(([key, action]) => [key,
+    typeof action !== "function" ? action : async (...args: unknown[]) => {
+      guard.current.begin()
+      try { return await action(...args) }
+      finally { guard.current.end() }
+    },
+  ])) as DataStore
+
+  return <DataContext value={guarded}>{children}</DataContext>
 }

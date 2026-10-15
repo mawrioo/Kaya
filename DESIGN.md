@@ -2,10 +2,11 @@
 name: Kaya
 description: A calm, warm, premium "mindful money" tracker. Cream paper, forest green, one orange accent.
 colors:
-  cream: "#F7F2E7"
-  card-white: "#FFFEFB"
+  cream: "#EDE5D7"
+  cream-on-forest: "#F7F2E7"
+  card-white: "#F4EEE3"
   ink: "#18261E"
-  ink-muted: "#5E6A61"
+  ink-muted: "#536056"
   forest: "#1F3D2B"
   forest-hover: "#2A4C37"
   sage: "#E5ECE0"
@@ -15,7 +16,7 @@ colors:
   orange: "#E8833A"
   orange-ink: "#2A1606"
   positive: "#2D6A45"
-  clay: "#B0432C"
+  clay: "#A23B27"
   hairline: "#E6DFD2"
   track: "#ECE6DA"
   night: "#0F1712"
@@ -95,7 +96,7 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.forest}"
-    textColor: "{colors.cream}"
+    textColor: "{colors.cream-on-forest}"
     rounded: "{rounded.control}"
     height: "36px"
   button-secondary:
@@ -104,14 +105,14 @@ components:
     rounded: "{rounded.control}"
     height: "36px"
   nav-item:
-    textColor: "{colors.cream}"
+    textColor: "{colors.cream-on-forest}"
     rounded: "{rounded.control}"
     height: "44px"
     padding: "0 12px"
   nav-item-hover:
     backgroundColor: "{colors.forest-hover}"
   nav-item-active:
-    backgroundColor: "{colors.cream}"
+    backgroundColor: "{colors.cream-on-forest}"
     textColor: "{colors.forest}"
   card:
     backgroundColor: "{colors.card-white}"
@@ -142,21 +143,21 @@ components:
 
 ## Overview
 
-A personal ledger that feels like good paper rather than a trading screen. Cream grounds, warm white cards and a deep forest green sidebar carry the calm; one orange accent marks progress. Serif is reserved for headings and big amounts, so numbers read as the most important thing on the page. Inter handles everything you scan.
+A personal ledger that feels like good paper rather than a trading screen. Cream grounds, warm ivory cards and a deep forest green sidebar carry the calm; one orange accent marks progress. Serif is reserved for headings and big amounts, so numbers read as the most important thing on the page. Inter handles everything you scan.
 
 The source of truth for every value is `app/globals.css` (OKLCH, with hex comments). The hex values here mirror it. Preview everything at `/styleguide`.
 
 ## Colors
 
-Two themes share the same roles. Light mode is a warm cream page (`#F7F2E7`, made a touch creamier on 30 Sep 2026 because the first cream read too bright) under near-white cards, so cards stand out gently. Dark mode is deep green-black with cream text, never neutral gray, and its accents are softened a step.
+Two themes share the same roles. Light mode is a deeper warm cream page (`#EDE5D7`) under ivory cards and popovers (`#F4EEE3`). On 13 Oct 2026 the owner found the cream too bright: both large surfaces were dimmed together, and secondary text (`#536056`) and clay spending/error text (`#A23B27`) were darkened to keep contrast clear. The forest sidebar and its cream accents keep their established colours. The printable report retains its original light paper palette through `.paper`. Dark mode is deep green-black with cream text, never neutral gray, and its accents are softened a step.
 
 | Role | Light | Dark | Used for |
 |---|---|---|---|
-| `background` | `#F7F2E7` | `#0F1712` | Page |
-| `card` | `#FFFEFB` | `#17221B` | Cards, date pill |
+| `background` | `#EDE5D7` | `#0F1712` | Page |
+| `card` | `#F4EEE3` | `#17221B` | Cards, date pill |
 | `muted` | `#F0EBDD` | `#1D2922` | Quiet fills |
 | `foreground` | `#18261E` | `#EEE8DB` | Text |
-| `muted-foreground` | `#5E6A61` | `#A2AEA4` | Labels, meta, captions |
+| `muted-foreground` | `#536056` | `#A2AEA4` | Labels, meta, captions |
 | `primary` | `#1F3D2B` | `#B4D1B6` | Primary buttons, links |
 | `sidebar` | `#1F3D2B` | `#173024` | Sidebar and mobile top bar |
 | `sidebar-primary` | `#F7F2E7` | `#DFD9CA` | Active nav pill, selected theme option |
@@ -164,22 +165,22 @@ Two themes share the same roles. Light mode is a warm cream page (`#F7F2E7`, mad
 | `sand` / `sand-foreground` | `#F1E8D8` / `#6B5230` | `#2C281E` / `#D8C39F` | Chips, secondary buttons |
 | `highlight` | `#E8833A` | `#E6915A` | Progress fills, the Quick add coin, sidebar focus ring |
 | `positive` | `#2D6A45` | `#8FC79F` | Helper lines, income |
-| `negative` / `destructive` | `#B0432C` | `#E58A73` | Spending amounts, errors, overspending |
+| `negative` / `destructive` | `#A23B27` | `#E58A73` | Spending amounts, errors, overspending |
 | `border` | `#E6DFD2` | `#27342C` | Hairlines |
 | `track` | `#ECE6DA` | `#26342C` | Progress track |
 
 ### Contrast (WCAG 2.2)
 
-Every text pairing clears AA (4.5:1) in both themes. The weakest pairings:
+The light-mode palette was rechecked on 13 Oct 2026: main, secondary, spending and income text on the page, cards, muted fills and secondary fills all exceed 4.5:1 (lowest 5.09:1; destructive-button hover 4.64:1). Representative pairs are below; the unchanged dark-theme values and other component checks come from the earlier audit:
 
 | Pair | Light | Dark |
 |---|---|---|
-| Secondary text on muted fill | 4.8 | 6.6 |
-| Secondary text on page | 5.1 | 7.9 |
+| Secondary text on muted fill | 5.6 | 6.6 |
+| Secondary text on page | 5.3 | 7.9 |
 | Sidebar secondary text on sidebar | 5.9 | 6.0 |
 | Sidebar secondary text on the theme switch's track (and on a hovered row) | 4.8 | 4.9 |
 | Clay on card | 5.7 | 6.4 |
-| Helper green on card | 6.4 | 8.5 |
+| Helper green on card | 5.6 | 8.5 |
 | Orange focus ring on sidebar (needs 3:1) | 4.4 | 5.8 |
 | The small "Rp" in an amount (92% strength), in the weakest colour | 4.7 | 5.6 |
 | Destructive button text on its tint (resting / hovered) | 4.9 / 4.6 | 4.9 / 4.5 |
@@ -276,7 +277,7 @@ Motion is small and only marks change. In the Reorder list the row you drag lift
 
 Step 6 added a few more, all answering something you did (nothing moves on its own except the Home donut, once). The **Completed** fold fades in as its arrow turns (0.2s). The **donut** draws itself clockwise from 12 o'clock when Home opens (0.65s, a mask that exists only while it runs, so the tooltip is never clipped). Buttons, round buttons, links, nav items and wallet cards squeeze or settle slightly while pressed. The **eye** blinks when pressed, and the amount (or its dots) fades back in. A digit that changes pops in from below (0.34s). The **Kaya mark** in the sidebar turns once when you point at it (the old K coin's flip, kept on the new mark for now). The **sprout** by the sidebar's calm line sways once when you point at the line. When money is added to a goal, a **coin** falls into the bar and lands where the fill ends (0.8s, in step with the bar). When a goal is **reached**, a short shower of coins and paper pieces in the palette's colours falls once (about 3s, drawn by `lib/celebrate.ts`), with a celengan in the message. A wrong PIN shakes the lock screen's dots once. Under "reduce motion" the shower isn't made at all, the coin has already gone, the donut is simply there, and the others end at once. The `motion` library's own animations (the reorder lists) follow it too, through one `MotionProvider` in the root layout.
 
-**The money pet is the one exception to "nothing moves on its own"** (asked for on 9 Oct 2026; see Money pet). It breathes, sways, blinks at random moments and glances about; healthy ears twitch, Thriving hops, Wilting leans, and Melted oozes while its stink lines drift and its flies buzz. Every loop is slow and small, and under "reduce motion" the pet sits still in its state.
+**The money pet is the one exception to "nothing moves on its own"** (asked for on 9 Oct 2026; see Money pet). It breathes, blinks at random moments and glances about; healthy ears twitch, Thriving floats in its cloud under a breathing glow, Happy hops now and then, Wilting sighs under its rain cloud, and Melted's ghost drifts up. Every loop is slow and small. On its page it also reacts to you: its face turns a little towards the pointer (or towards where a finger taps), it wiggles when pointed at or tapped, and it perks up with a few coins when money comes in. Under "reduce motion" none of it happens and the pet sits still in its state.
 
 ## Shapes
 
@@ -313,11 +314,18 @@ The logo is the **Kaya mark**: four Parang-curved blades turning around a Kawung
 
 ### Money pet
 
-`components/mascot/pet.tsx` (the drawing) and `money-pet.tsx` (connected to the data). A cute pig drawn simply, in the style of the owner's reference pictures: a thick brown outline (`--pet-ink`), flat colour, big oval eyes with a white highlight, a snout, stubby legs and a soft shadow. No coin slot or batik: it is a pet, not the celengan. Its state follows this month's saving rate (see PRODUCT.md), and each state is drastically different: **Thriving** bright pink with happy closed eyes, an open smile and orange sparkles; **Happy** pink with shiny eyes and a smile; **Okay** a softer pink with a plain mouth; **Wilting** turning mustard from the top right, saggy, ears flopped, worried brows and heavy lids, a frown; **Melted** an olive puddle with no legs, heavy eyes with bags, a tear, stink lines, flies and a bubble. The bottom two are a deliberate exception to "calm over alarm" (the owner asked for a pet that can be sad and gross), but no words around it ever scold.
+`components/mascot/pet.tsx` (`Pet`, and its reactions), `pet-god.tsx` (the five drawings), `pet-front.tsx` (the front-facing pig three of them are built on), `pet-parts.tsx` (the shared eyes, snout, mouth, legs, blink, tear, stink, flies, sparkles) and `money-pet.tsx` (connected to the data). The owner chose the **Pink god** on 12 Oct 2026: a cute pig seen straight on, with a brown outline (`--pet-ink`, 2.4 wide), big oval eyes with a white highlight, a snout, light from above and a soft cast shadow, that becomes a different creature at each level of this month's saving rate (see PRODUCT.md):
+- **Thriving:** a pink god sitting in a cloud with no legs, its hands resting on the cloud, eyes closed in calm, a halo, a breathing pink glow, petals drifting down and small clouds at the sides.
+- **Happy:** bright pink with a big open smile, hugging a gold coin, little hearts floating up, a small hop now and then.
+- **Okay:** warm pink with a small smile and a butterfly visiting near its head.
+- **Wilting:** turning mustard, ears flopped, worried brows and heavy lids, cracked, with a plaster, under a small rain cloud.
+- **Melted:** broken clay. The bottom half with its sad face sits in a puddle among pieces, its ghost floats up, and it rains.
 
-Its colours are its own `--pet-*` tokens, the same in both themes except the flies, stink and shadow, which sit on the page and take light colours in dark mode. It shows a state, never a number. Where it sits is still being compared (Compare options).
+The bottom two are a deliberate exception to "calm over alarm" (the owner asked for a pet that can be sad), but no words around it ever scold. It shows a state, never a number. No sprout on its head (the owner turned it off on 12 Oct).
 
-**Being compared (10 Oct 2026):** a remade drawing (`pet-remake.tsx`) beside the one above. The same pig and colours, turned about 20° to the viewer's right so it doesn't stare straight out (the far eye and ear smaller, the snout leaning that way), lit from the top left with a shaded underside and a soft shadow on the ground, a thinner outline (2.4 instead of 3.5), and calmer: no swaying, smaller breaths, a small hop now and then when thriving. It looks the same in light and dark mode (only its ground shadow deepens in the dark). A sprout on its head grows and fades with the month: a small orange flower (Kaya's one orange, for progress) when thriving, two leaves when happy, a small sprout when okay, drooping and yellow when wilting, fallen and brown when melted. The pet's card and page can also sit on the total balance card's sage wash with half the batik (fading in from the right) or the batik across the whole card.
+Its colours are its own `--pet-*` tokens in `globals.css`, the same in light and dark mode (middle tones that read on both); only its ground shadow deepens in the dark. It lives on its own page (`/pet`, Pet in the menu), at the top of a card that wears the total balance card's look: the sage wash with batik fading in from the right (`.pet-home`).
+
+**Reactions** (only the big pet on the Pet page; the five small ones stay still): the face (eyes most, snout and mouth less) turns up to about 2px towards a mouse anywhere on the page, or towards where a finger taps, and looks back 1.6s later; pointing at it or tapping it gives a small wiggle (0.65s, up to 3.5°); when money comes in (an income, or "Add money" on a goal, even on another page while the app is open) it squashes and jumps once while three coins and two sparkles rise out of it (about 1s). The pink god keeps its eyes closed, so it opens one eye for a peek while it wiggles or perks up. None of it happens under "reduce motion".
 
 ### Account menu (bottom of the sidebar)
 
@@ -382,11 +390,11 @@ A wallet of its own kind ("Deposito (time deposit)", piggy-bank icon). It sits i
 Under the balance on its Wallets card, in small muted type: one line (`5% a year · ends 1 Oct 2027 · 11 months left`; `renews on …` when it renews by itself; `matured on … · goes back to BCA` once it has; `Money moved out on …` once settled), then `Rp 1.000.000 put in · +Rp 4.109 interest so far, before tax` (the interest in green; this line is left out while the balance is hidden with the eye, because together they are the balance). A matured deposito that doesn't renew has a secondary **Move money** button.
 
 - **Menu:** Edit details and Delete wallet only. There is no Correct balance and no History, because the balance follows its rate and dates.
-- **Add:** no Nickname box. After Type come **Money comes from** (a dropdown of every wallet except deposito wallets, with a line saying what it holds and that the amount is taken out of it now, as a transfer, and goes back to it at maturity), Amount put in (the big amount box; more than the source holds is refused with "BCA only holds Rp 8.742.300."), Yearly rate (%) and Tenor (months) side by side (one column on a phone), Start date (the usual calendar; today by default), a two-way "Renews by itself?" switch (No, Yes) with a line saying what each means, and a quiet paragraph: the balance is worked out from the dates, the interest is never income, and "Interest is shown before tax. A final tax of 20% applies to deposit interest above Rp 7.500.000 a year." The plain Starting balance box is replaced by Amount put in. Adding it makes **one transfer** from the source wallet to the deposito ("Opened deposito …", dated the start day, or today if that day hasn't come), so the total does not change.
-- **Edit:** the rate, start date, tenor and renew choice can be changed until the money has been moved out. **The amount can't:** it is shown, not typed, with "It came out of BCA, so it can't be changed here. To change it, delete this deposito and add it again." An older deposito that never recorded where its money came from shows "Money came from (optional)": choosing a wallet takes the amount out of it now, as one transfer; leaving it empty changes nothing. After the money has been moved out only the name, note and look can change, and the form says so.
-- **Move money** (a dialog): "Move the money back to BCA", what it holds (money put in and interest), "It goes back to BCA, the wallet it came from." and a line saying it is saved as one transfer, isn't income, and can't be undone. There is nothing to choose and nothing moves until "Move money" is pressed. If it doesn't know where it came from (an older deposito, or the wallet was deleted) the dialog asks "Move it into" with every wallet except deposito wallets. Afterwards the deposito shows Rp 0 and "Money moved out on …", and the source wallet has what it gave plus the interest.
-- **Delete:** the usual dialog, with one more bullet while the money is still in: "Its Rp … is not moved back to BCA, so it is gone from your money here. Use Move money first to keep it." (or "Wait until it matures and use Move money to keep it.").
-- **Rules the backend enforces:** no income, spending or transfer can be recorded in a deposito, changed or deleted; the transfers that opening and Move money make are the exception, and they can't be edited or deleted afterwards (their rows in Transactions have no Edit or Delete). The transaction form, Quick add and a goal's "Money comes from" never offer a deposito (a goal saved in a deposito can only say "it's already there"). A deposito can be deleted (with the usual undo); the other wallet keeps its balance as it stands.
+- **Add:** no Nickname box. After Type come **Money comes from** (a dropdown of every wallet except deposito wallets, with a line saying what it holds and that the amount is taken out of it now, as a transfer, and goes back to it at maturity), Amount put in (the big amount box; more than the source holds is refused with "BCA only holds Rp 8.742.300."), Yearly rate (%) and Tenor (months) side by side (one column on a phone), Start date (the usual calendar; today by default), a two-way "Renew automatically?" switch (No, Yes), named the same for screen readers, with "Yes starts another term with the same principal and rate. Interest keeps adding up without compounding. No means you move the money yourself when it matures.", and a quiet paragraph: the balance is worked out from the dates, the interest is never income, and "Interest is shown before tax. A final tax of 20% applies to deposit interest above Rp 7.500.000 a year." The plain Starting balance box is replaced by Amount put in. Adding it makes **one transfer** from the source wallet to the deposito ("Opened deposito …", dated the start day, or today if that day hasn't come), so the total does not change.
+- **Edit:** the rate, start date, tenor and renew choice can be changed until the money has been moved out. **Amount put in** uses the same big amount box as Add. A muted live hint says exactly how much more comes from, or goes back to, the source wallet, and that interest is recalculated from the start date. Only the difference moves, recorded as a correction in the source wallet’s history. An increase beyond the available balance is refused in the existing error message. An older deposito that never recorded where its money came from shows "Money came from (optional)": choosing a wallet takes the amount out of it now, as one transfer; leaving it empty changes nothing. After the money has been moved out only the name, note and look can change, and the form says so.
+- **Move money** (a dialog): "Move the money back to BCA", what it holds (money put in and interest), "It goes back to BCA, the wallet it came from." and a line saying it is saved as one transfer, is not income, and the message afterwards offers Undo for ten seconds to move it back and reopen the deposito. There is nothing to choose and nothing moves until "Move money" is pressed. If it doesn't know where it came from (an older deposito, or the wallet was deleted) the dialog asks "Move it into" with every wallet except deposito wallets. Afterwards the deposito shows Rp 0 and "Money moved out on …", and the source wallet has what it gave plus the interest. The existing "Money moved" message carries Undo; it reverses that amount while keeping later spending and says "Money moved back" / "[name] is open again."
+- **Delete:** the usual typed-name dialog and ten-second Undo. While it still holds money, the first bullets say "The deposito is removed. Its Rp … principal goes back to BCA." and "The interest shown here is left out. Undo puts the principal back into the deposito." The source receives only principal, recorded in its history as a balance correction, never income or spending. Undo removes that correction, takes the principal back and restores the deposito. If its source is missing, the dialog explains that its money must be moved into a wallet before it can be deleted. Deleting a settled deposito makes no further return.
+- **Rules the backend enforces:** no income, spending or transfer can be recorded in a deposito, changed or deleted; the transfers that opening and Move money make are the exception, and they can't be edited or deleted afterwards (their rows in Transactions have no Edit or Delete). The transaction form, Quick add and a goal's "Money comes from" never offer a deposito (a goal saved in a deposito can only say "it's already there"). A funded deposito can be deleted (with the usual undo); its principal returns to its source, without interest. Other wallet deletions keep the existing rules.
 - **Renewing:** each term ends and the next starts by itself on the same day, with the same rate and the same amount. Interest keeps adding up from the start date (never interest on interest), and it never reads "matured".
 - **Known limit:** Insights' total-balance line works backwards from today's balances and the recorded transactions, so a deposito's interest earned since then also shows in earlier days of that line, by a small amount.
 
@@ -623,7 +631,7 @@ One card (the usual white card, hairline, `shadow-sm`) between the filters and t
 
 ### Date presets
 
-The date filter's popover opens with three quick ranges as pill chips above the calendar: This month, Last month, Last 3 months. The active one is filled forest (sage in dark mode) and marked `aria-pressed`. Picking one applies it and closes the popover.
+Transactions starts with this calendar month selected (13 Oct 2026), unless the address names a month or year. Clear filters removes that date limit and shows all time. The date filter's popover opens with three quick ranges as pill chips above the calendar: This month, Last month, Last 3 months. The active one is filled forest (sage in dark mode) and marked `aria-pressed`. Picking one applies it and closes the popover.
 
 ### Load more
 
@@ -667,7 +675,9 @@ The category list ends, after a hairline, with "Add new category" (a small round
 
 **Step 2, "Check the lines".** The wallet again ("Import into") with a ghost "Choose another file"; a folded card "How the columns were read" (it opens by itself when the date or amount column couldn't be found) holding a date column, a description column, three ways the amounts are written (a segmented switch: "+ and −", "Out and in apart", "With DB / CR") and the matching column pickers, what a number with no minus sign means (money in or out) and the bank's balance column; changing any of it re-reads the lines at once. Then one card with a header row (a "Select all" tick, with the half-ticked state, and "3 of 5 ticked · 1 already in Kaya · 1 can't be read · 1 other line left out") over a list that scrolls on its own (46svh at most). Each line is a tick, the description, the date, the amount (green "+" or clay "−"; muted when unticked) and its category in the app's own dropdown look (a native `select`, drawn like the others, for a long list on a phone). "From your earlier “Kopi Kenangan”." says where a category was learned. A line the app already has wears a sand chip "Already in Kaya"; one that can't be read says why in clay with a small alert icon and its line number in the file, and its tick is off for good. Under the list, in muted text: what the wallet's balance goes from and to, and the bank's own balance from the file ("That matches." when it does). While the wallet's balance is hidden with the eye this says only that each line changes the balance, as if added by hand. The footer is Cancel and "Import 3 transactions" (it counts the ticked lines and is off at zero).
 
-**After.** A message "Imported 3 transactions" ("Into BCA.") with an Undo button for ten seconds; Undo takes every line of that import out again, gives the balances back and says "Import undone".
+**Possible transfers (13 Oct 2026).** A matching row gets a small muted “Possible transfer · review” label and a native dropdown. It starts on “Keep as spending” or “Keep as income”; the owner must choose a transfer. Options name the other wallet and, when already saved, the matching line’s note. Selected transfers use neutral amounts and replace the category picker with a plain explanation of the other wallet’s balance change. A matched existing line is named in that explanation and replaced, never counted twice. The footer explains that transfers stay out of income/spending and Undo restores replaced lines. On a narrow phone the amount sits below the description and choices, keeping the text readable; desktop retains the right-aligned amount. The enclosing dialog scrolls when needed. Names/nicknames are matched as whole words; amount matches need the exact same day and opposite direction, with ambiguous options left for review.
+
+**After.** A message "Imported 3 transactions" ("Into BCA.") with an Undo button for ten seconds; Undo takes every line of that import out again, restores any replaced other-side lines, gives the balances back and says "Import undone".
 
 ### Native select
 
@@ -729,3 +739,23 @@ A 6px sand track with an orange fill, always paired with a percentage in text. A
 
 ### Rotating greeting
 `components/rotating-greeting.tsx`, with the words in `lib/greetings.ts` and the typing steps in `lib/typewriter.ts`. The whole Home greeting, name included ("Good morning, Mario"), types itself in 20 languages: English, Indonesian, Chinese, Korean, Japanese, Javanese, Spanish, French, German, Hindi, Portuguese, Italian, Dutch, Russian, Turkish, Thai, Vietnamese, Tagalog, Malay, Greek, then round again. The page opens with the English line whole (so the first paint is what the server drew). After 2.5 seconds it deletes itself one letter at a time (35ms a letter, quicker than typing), waits 0.3 seconds empty, and types the next language one letter at a time (70ms a letter), then rests 2.5 seconds again. A language takes about 5 seconds, so the whole list takes a minute and a half or two. The name is typed and deleted with the greeting, and follows the owner's name if it is changed while the page is open. It is the same name, as the owner typed it, in every language: the owner decided on 8 Oct 2026 not to have it written in each language's own letters. The part of the day (morning before 12, afternoon before 18, otherwise evening) is worked out on the server as before and picks the words in every language. Letters are cut the way a person sees them (a Thai letter with its mark, a Hindi letter with its vowel sign stay together), so nothing is ever half drawn. Each line carries its language tag (`lang`), so Chinese and Japanese get the right letter shapes. A thin orange bar (the same orange as the cursor in a text box) follows the last letter: solid while letters come and go, blinking while the line rests. It has no width, so it never pushes a word onto the next line. Screen readers hear the English greeting and name once (a hidden copy) and skip the typing. With "reduce motion" on, nothing moves and there is no bar. The words have a line height of 1.3 (the title's is 1.1) so Thai and Hindi marks aren't cut, and they wrap as they come (normal wrapping, not the balanced wrapping other titles use, which would shuffle words about while it types). On a phone the longer greetings wrap onto a second line, so Home's title keeps two lines of height below 768px and the page below never jumps (94px there, 57px on a desktop). The title's font (Source Serif 4) is loaded with the Latin, Latin extended, Vietnamese, Cyrillic and Greek sets; Chinese, Korean, Japanese, Hindi and Thai use the computer's own fonts, so they look different on each system. The speeds are the four numbers at the top of `lib/typewriter.ts`.
+
+## Dynamic finishing details (14 Oct 2026)
+
+Preserve the softer cream, ivory cards, forest sidebar and serif/sans pairing. Inter and Source Serif 4 are now bundled locally (variable fonts, optical sizing retained); builds and local use need no font service. Source and OFL licences live beside the font files.
+
+Charts share `--chart-income` (moss), `--chart-spending` (sand mixed 15% toward the theme's foreground for contrast), and `--chart-balance` (primary green). Goal history uses category ochre rather than the bright highlight. Category colours remain tied to their category badges. Income and spending are also named in legends and exact-value tables, never distinguished by colour alone.
+
+The Month by month and Total balance panels have native disclosure controls: ?View monthly figures? and ?View balance figures?. Their tables use tabular figures, quiet header tint, hairline row dividers, a 320px maximum height and contained scrolling. Monthly labels are 44px keyboard/touch targets that choose the month. The balance table and chart are omitted while that total is hidden. These disclosures replace the previous screen-reader-only tables.
+
+?A little heads-up? is a single quiet Home section, only present when there is a useful reminder. Each row has a plain title, one sentence, a link to review and a 44px dismiss target. No alarm colour, amount, badge count or toast interrupts a visit. Reminder targets have room below the mobile top bar when linked to.
+
+Motion review, scoped to this change:
+
+| Before | After | Why |
+| --- | --- | --- |
+| Changed digits moved with `top` for 340ms | 220ms opacity feedback, same inline spacing | Keeps amount widths stable and avoids frame-by-frame layout work |
+| Transaction entrances animated height | 260ms opacity/transform, movement off for reduced motion | Acknowledges new entries with less work during refresh |
+| Changed wallet amounts had no card cue | 280ms tint-opacity fade, disabled for hidden balances and reduced motion | Shows where saved money moved without exposing hidden balances |
+
+Review decision: approve the scoped motion implementation; no new per-frame React state, layout animation or dependencies. Timing and property use were checked in code and Chromium. Real-device frame timing is still unmeasured.

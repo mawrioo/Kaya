@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Inter, Source_Serif_4 } from "next/font/google"
+import localFont from "next/font/local"
 import { cookies } from "next/headers"
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -22,18 +22,9 @@ import { cn } from "@/lib/utils"
 
 import "./globals.css"
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-})
-
-// Variable font with the optical-size axis: finer at display sizes, sturdier small.
-const sourceSerif = Source_Serif_4({
-  // The Home greeting rotates through many languages; these also cover Vietnamese, Turkish, Russian and Greek in the title's own font.
-  subsets: ["latin", "latin-ext", "vietnamese", "cyrillic", "greek"],
-  axes: ["opsz"],
-  variable: "--font-source-serif",
-})
+// Bundled variable fonts keep the same typography when Kaya is offline.
+const inter = localFont({ src: "./fonts/Inter.ttf", weight: "100 900", display: "swap", variable: "--font-inter" })
+const sourceSerif = localFont({ src: "./fonts/SourceSerif4.ttf", weight: "200 900", display: "swap", variable: "--font-source-serif" })
 
 export const metadata: Metadata = {
   title: {
@@ -49,7 +40,7 @@ export const viewport: Viewport = {
   // Lets the page use the whole screen, so the bottom safe-area spacing (the home bar) is measured as it should be.
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F2E7" },
+    { media: "(prefers-color-scheme: light)", color: "#EDE5D7" },
     { media: "(prefers-color-scheme: dark)", color: "#0F1712" },
   ],
 }

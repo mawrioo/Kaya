@@ -35,6 +35,7 @@ export function QuickAddButton() {
   const [tipOpen, setTipOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   // Handing the keyboard back to the coin is not a visit: it must not pop the tooltip open.
+  const shortcutOrigin = useRef<HTMLElement | null>(null)
   const quietTip = useRef(false)
   // The server-drawn button must wait for its click handler to be ready.
   const ready = useSyncExternalStore(subscribe, clientReady, serverReady)
@@ -47,6 +48,7 @@ export function QuickAddButton() {
     function onKeyDown(event: KeyboardEvent) {
       const windowOpen = !!document.querySelector(OPEN_WINDOW)
       if (!opensQuickAdd(event, { windowOpen })) return
+      shortcutOrigin.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
       event.preventDefault()
       setTipOpen(false)
       setOpen(true)
@@ -79,8 +81,8 @@ export function QuickAddButton() {
             aria-haspopup="dialog"
             aria-keyshortcuts="Control+K Meta+K"
             disabled={!ready}
-            onClick={() => setOpen(true)}
-            className="print-hidden group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] hover:-translate-y-[3px] disabled:cursor-default"
+            onClick={() => { shortcutOrigin.current = null; setOpen(true) }}
+            className="print-hidden group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-[3px] disabled:cursor-default"
           >
             {/* Pointing at the coin lifts it a little (on the button, so the shadow lifts with it). */}
             <span
@@ -103,7 +105,7 @@ export function QuickAddButton() {
         onSave={save}
         onCloseAutoFocus={(event) => {
           event.preventDefault()
-          const back = buttonRef.current
+          const back = shortcutOrigin.current?.isConnected ? shortcutOrigin.current : buttonRef.current
           quietTip.current = true
           back?.focus({ preventScroll: true })
           requestAnimationFrame(() => {

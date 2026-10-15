@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Printer } from "lucide-react"
 
+import { useLiveDate } from "@/components/use-live-date"
 import { useData } from "@/components/data-provider"
 import { CompareTab } from "@/components/insights/compare-tab"
 import { ExportMenu } from "@/components/insights/export-menu"
@@ -33,8 +34,9 @@ const VIEWS: { value: View; label: string }[] = [
  * agree on the month.
  */
 export function InsightsView({ nowIso }: { nowIso: string }) {
+  const liveDate = useLiveDate(nowIso)
   const { transactions } = useData()
-  const now = new Date(nowIso)
+  const now = new Date(liveDate)
   const bounds = monthBounds(transactions, now)
   const years = { first: yearOf(bounds.first), last: yearOf(bounds.last) }
 

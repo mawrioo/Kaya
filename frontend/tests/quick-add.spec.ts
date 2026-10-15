@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
 test.beforeAll(async ({ request }) => {
@@ -86,9 +86,9 @@ for (const width of [320, 390, 1440]) {
       await page.goto("/wallets")
       const trigger = page.getByRole("button", { name: "Quick add", exact: true })
       await expect(trigger).toBeVisible()
-      // A 56px coin in the bottom-right corner, 24px from the right and from the bottom.
+      // A 44px coin in the bottom-right corner, 24px from the right and from the bottom.
       const button = await trigger.boundingBox()
-      expect(button).toMatchObject({ width: 56, height: 56 })
+      expect(button).toMatchObject({ width: 44, height: 44 })
       expect(width - (button!.x + button!.width)).toBeCloseTo(24, 0)
       expect(900 - (button!.y + button!.height)).toBeCloseTo(24, 0)
       await page.screenshot({ path: testInfo.outputPath("button.png"), fullPage: true, animations: "disabled" })

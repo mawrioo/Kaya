@@ -218,7 +218,7 @@ describe("undoing the deletion of a wallet", () => {
       result.transactions,
       before.transactions.filter((tx) => (tx.type === "transfer" ? tx.fromWalletId === "wallet-bca" || tx.toWalletId === "wallet-bca" : tx.walletId === "wallet-bca"))
     )
-    assert.deepEqual(result.balanceAdjustments, before.balanceAdjustments.filter((entry) => entry.walletId === "wallet-bca"))
+    assert.deepEqual(result.balanceAdjustments, before.balanceAdjustments)
   })
 
   it("leaves the other wallets' balances alone, both when deleting and when undoing", () => {

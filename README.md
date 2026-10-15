@@ -7,136 +7,128 @@
 
 # Kaya
 
-A calm personal finance tracker for Indonesian Rupiah. It runs on your own computer and keeps your data in one file that you own.
+A calm personal finance tracker for Indonesian Rupiah. See money across your wallets, understand everyday spending, and save toward something that matters. Kaya runs on your computer and keeps your data in a local SQLite file.
 
-```
-frontend/   what you see: the Next.js app
-backend/    what saves your data: a small server and a SQLite database
-kaya-logo/  the logo kit: SVG and PNG files, the React mark and the rules for using them
-```
+[Watch the short demo](docs/portfolio/kaya-demo.mp4) · [Read the short case study](docs/portfolio/CASE-STUDY.md)
 
-## Start it
+![Kaya Home showing wallet balances and a monthly spending overview with fictional sample data](docs/portfolio/screenshots/home.png)
 
-From this folder:
+The screenshots and demo use fictional data with **BCA, Bank Jago, Superbank and Pluang**. No bank connection or real financial data is used.
 
-```
-npm install        # the first time only
+More screenshots: [Wallets](docs/portfolio/screenshots/wallets.png) · [Transactions](docs/portfolio/screenshots/transactions.png) · [Goals](docs/portfolio/screenshots/goals.png) · [Insights](docs/portfolio/screenshots/insights.png) · [Dark mode](docs/portfolio/screenshots/home-dark.png) · [Mobile](docs/portfolio/screenshots/mobile.png)
+
+## What it does
+
+- Track income, spending and transfers across wallets. Transfers move money without inflating income or spending.
+- Add an expense in one line, search and filter transactions, and review bank CSV files before importing.
+- Set category budgets and savings goals, then see monthly comparisons, charts and printable reports.
+- Track investment values and depositos, correct balances, and undo supported changes.
+- Use light or dark mode, keyboard controls and a phone layout, with optional PIN protection and manual backups.
+
+The interface uses warm cream, forest green and quiet language. Budgets show where things stand without scolding. Numbers stay prominent, and small coin animations mark savings progress.
+
+## Run locally
+
+Use **Node.js 24** and npm. From this folder:
+
+```sh
+npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. That one command starts both parts. Press Ctrl+C to stop both.
+Open **http://localhost:3000**. The command starts the Next.js frontend on port 3000 and the backend on port 4000. Press **Ctrl+C** to stop both.
 
-The first start creates your database at `backend/data/nabungbego.db`, filled with sample data. After that it is yours: everything you add, edit or delete is saved, and it is still there after a refresh, a restart, or opening the app another day.
+The first start creates `backend/data/nabungbego.db` with sample data. Later starts keep your changes. Entries stay saved after refreshing, restarting or opening another browser.
 
-## Use it on your phone
+## How it is built
 
-While the app is running on your laptop, open the **Network** address that `npm run dev` prints (something like `http://192.168.1.3:3000`) in your phone's browser. The phone must be on the same Wi-Fi. If Windows asks whether to let Node.js through the firewall, allow it on private networks. The laptop has to stay on and the app running.
+**Frontend:** Next.js 16, React, TypeScript, Tailwind CSS v4, Radix/shadcn components and Recharts. Inter and Source Serif 4 are bundled locally.
 
-By default there is no login, so anyone on the same Wi-Fi who knows the address could open it. To stop that, turn on the PIN lock (see **PIN lock** below).
+**Backend:** Hono on Node.js 24 with SQLite. The backend saves changes and calculates balances. Shared TypeScript types describe the data sent to the frontend.
 
-### Put Kaya on your iPhone's home screen
+```text
+Browser → Next.js /api/... → Hono → SQLite
 
-1. On the laptop, run `npm run dev`, and note the **Network** address it prints.
-2. On the iPhone (same Wi-Fi), open that address in **Safari**. It must be Safari: other iPhone browsers can't add apps to the home screen.
-3. Tap the **Share** button, then **Add to Home Screen**, then **Add**.
+frontend/          pages, components and browser tests
+backend/           API, data storage and backend tests
+kaya-logo/         logo assets and usage rules
+docs/portfolio/    screenshots, demo and case study
+```
 
-Kaya now has its own icon and opens full screen, without Safari's address bar. The round orange coin at the bottom right is Quick add, as on the laptop.
+The browser calls `/api/...` on the frontend's address; Next.js forwards requests to the backend, which listens on this computer only. Visible pages refresh saved data about every five seconds, including changes made from another device using the same server.
 
-Good to know:
-- **It only works while the laptop is on, the app is running, and the phone is on the same Wi-Fi.** The icon is only a shortcut to the laptop; the data stays on the laptop.
-- **The address can change.** Routers hand out addresses and may give the laptop a new one after a restart, and then the icon stops working. To stop that, reserve an address for the laptop in your router's settings (look for "DHCP reservation" or "static lease", using the laptop's MAC address). Then add the icon again once, with the new address.
-- **Away from home** it won't open. A tool such as Tailscale can reach the laptop from anywhere, but it is not set up here.
+Kaya is made for one owner and local use. It has no bank sync or hosted account system. Investment values are entered by hand, and backups are manual.
 
-## Handy commands
+## Useful commands
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Start the frontend and backend for everyday use |
-| `npm run db:reset -- --yes` | Erase everything and go back to the sample data |
-| `npm run pin:reset -- --yes` | Turn the PIN off, if you forgot it (your data is not touched) |
-| `npm test` | Run the backend tests and the quick-add parser and shortcut tests |
-| `npm run test:browser -w frontend` | Check quick add, its shortcuts, wallet nicknames, the PIN lock, the CSV import, the totals and the report in Chromium using a separate app and sample data |
-| `npm run typecheck` | Check the code for mistakes |
-| `npm run lint` | Check the code style |
-| `npm run build`, then `npm run start` | Build and run the production version (built without shrinking the code, see ROADMAP Step 6) |
+| `npm run dev` | Start both parts for everyday use |
+| `npm run build` | Build the frontend for production |
+| `npm run start` | Run both parts after building |
+| `npm run typecheck` | Check frontend and backend types |
+| `npm run lint` | Check frontend code style |
+| `npm test` | Run backend and frontend unit tests |
+| `npx playwright install chromium` | Install the browser for automated checks |
+| `npm run test:browser -w frontend` | Run isolated Chromium browser tests |
+| `npm run pin:reset -- --yes` | Turn off a forgotten PIN without deleting financial data |
 
-## Add an expense in one line
+`npm run db:reset -- --yes` **erases the selected database and restores sample data**. For experiments, set `DB_PATH` to a throwaway file first; never reset a database you want to keep.
 
-Press the round orange **+** coin at the bottom right of any page (or **Ctrl+K**). Type `nasi goreng 25rb BCA`, then press **Fill form** (or Enter). Check the filled details, choose a category if needed, and press **Add transaction** to save.
+Browser tests use copies of **both** apps under `.nb-test/`, a throwaway database and ports **3200/4200**. They refuse occupied test ports, verify the standard sample data (BCA Rp 8.742.300 and 41 transactions), and clean up their processes and copies afterwards. They open `localhost:3200` and never use your everyday app on 3000/4000. Logs, screenshots and retained failure traces go into `frontend/test-results/`.
 
-- Amounts: `25rb`, `25k`, `25 ribu`, `25.000` and `25000` all mean Rp 25.000. `1,5jt` and `1,5 juta` mean Rp 1.500.000. `Rp 25.000` works too. Dots in groups of three mean thousands; use a comma for decimal shorthand, like `12,5rb`.
-- Wallets: use a full wallet name, such as `BCA` or `Bank Jago`, or the wallet's **nickname** (see below); capitals don't matter. With no matching name, it keeps the selected wallet (initially the first wallet, then the last one saved through Quick add during this visit). Unknown names stay in the note. Check the Wallet field before saving.
-- Categories: suggested from your earlier notes. A category you picked by hand stays selected. A new note without a match needs you to choose one.
-- The date starts as today. Change it in the review form for an older expense.
-- Use one amount and one wallet. For quantities, give the amount a unit: `2 nasi goreng 25rb BCA` keeps `2 nasi goreng` as the note. Unclear or invalid amounts get a message instead of changing the form.
-- This version handles expenses. Use the regular **Add transaction** form for income and transfers. Quick add works locally, with no AI or external service. Filling and cancelling never save a transaction.
+The latest full validation and its limits are recorded in [ROADMAP.md](ROADMAP.md#step-30-browser-checks-and-dynamic-finishing-work-14-oct-2026).
 
-### Open it from the keyboard
+## Everyday use
 
-- Press **Ctrl+K** (**Cmd+K** on a Mac) on any page, even while you are typing in a box such as the search field. When you close it, the keyboard goes back to where it was.
-- Only Ctrl+K does it. A plain letter never opens Quick add, so it can't take a letter out of a note.
-- Nothing opens while a dialog, menu or list is already open.
-- The coin has no word on it. Point at it (or Tab to it) and a small label says "Quick add" and shows the shortcut.
+### Add an expense quickly
 
-### Wallet nicknames
+Press the orange **+** coin or **Ctrl+K** (**Cmd+K** on Mac). Type `nasi goreng 25rb BCA`, press **Fill form**, review the details and category, then press **Add transaction**.
 
-On **Wallets**, choose **Edit details** (or **Add wallet**) and fill in **Nickname (optional)**: a short word such as `jago` for Bank Jago. Quick add then understands `kopi 20rb jago` as well as `kopi 20rb Bank Jago`.
+`25rb`, `25k`, `25.000` and `25000` all mean Rp 25.000; `1,5jt` means Rp 1.500.000. Use one amount and one wallet name. Set an optional nickname in **Wallets → Edit details** to write something like `kopi 20rb jago`. Categories can be suggested from earlier notes. Quick add handles expenses; the regular form also handles income and transfers. Nothing saves until you confirm.
 
-- Up to 20 characters, with at least one letter. Capitals and extra spaces don't matter.
-- It can't be the name of another wallet or another wallet's nickname, and a wallet can't be given a name that is another wallet's nickname.
-- It is only used by Quick add: it isn't shown on the wallet cards. Empty the box to take it away. A wallet that you delete and then **Undo** comes back with its nickname, unless another wallet has taken that word in the meantime.
-- It is saved in the database, so your phone and your computer share it. The first time the backend starts after this update it adds one empty column (`nickname`) to the wallets table; nothing else in your data changes.
+### Import a bank CSV
 
-### Deposito (time deposit)
+On **Transactions**, choose **Import CSV**, the wallet and your CSV file. The file is read locally. Check the detected columns, dates, amounts and categories before saving. Unreadable rows explain why; likely duplicates start unticked.
 
-On **Wallets**, **Add wallet**, choose the type **Deposito (time deposit)**. Fill in the wallet the money comes from, the amount, the yearly rate, the tenor in months, the start date, and whether the bank renews it by itself.
+Possible transfers are offered for review. Choose whether a row stays income/spending or becomes a transfer to another wallet. When the matching other side is already recorded, Kaya replaces it so the balance is counted once. Nothing becomes a transfer automatically.
 
-- The amount leaves the source wallet as one transfer, so your total doesn't change. A deposito has no nickname, and nothing else can be recorded in it.
-- Its balance is the amount plus the interest earned so far (simple interest by the day, before tax), worked out from the dates and never saved. The interest is not income.
-- When it matures (and doesn't renew), press **Move money** on its card: everything it holds goes back to the wallet it came from, as one transfer. This can't be undone.
-- The first time the backend starts after this update it adds six empty columns to the wallets table; nothing else in your data changes. Press **Back up now** first if you want a copy.
+The preview explains the balance change. After import, **Undo** is available for ten seconds and restores any replaced rows. Bank-specific formats may need column adjustments; anonymised statements are still needed for further tuning.
+
+### Goals, depositos and reports
+
+A goal sets aside money already in a wallet. **Add money** can update the goal alone or transfer money from another wallet. Deleting a goal leaves the money in place.
+
+A deposito is funded from another wallet. It shows simple daily interest before tax, without counting it as income. Automatic renewal keeps the same principal and rate without compounding. At maturity, **Move money** returns principal and interest to the source wallet and offers **Undo** for ten seconds. Deleting a funded deposito returns **only the principal**; principal corrections adjust the source wallet by the difference.
+
+On **Insights**, choose a month and **Report → Print or save as PDF**. The report includes spending, budgets, goals and transactions, with no wallet balances. **Export** saves a month or year as CSV.
+
+## Use it on your phone
+
+Keep Kaya running on your laptop and open the **Network** address printed by `npm run dev` (for example `http://192.168.1.3:3000`) on a phone connected to the same Wi-Fi. If Windows asks, allow Node.js on private networks.
+
+On iPhone, open the address in **Safari → Share → Add to Home Screen**. Kaya then opens from its own icon. The laptop must stay on and the app must keep running. If the laptop's address changes, update the shortcut; reserving its address in the router avoids this. Away-from-home access is not configured.
 
 ### PIN lock
 
-By default Kaya opens for anyone who can reach its address. To ask for a PIN first, press your name at the bottom of the sidebar, then **Set a PIN**, and type 4 to 8 digits twice.
+Open your name at the bottom of the sidebar and choose **Set a PIN**. Enter 4–8 digits twice. Each device unlocks for one day; **Lock Kaya** locks it immediately. **PIN settings** changes or removes the PIN and asks for the current one. Repeated wrong attempts introduce a waiting period.
 
-- Each device (this computer's browser, your phone) shows a lock screen until the PIN has been typed once on it, and then remembers it for 1 day. **Lock Kaya**, in the same menu, asks again straight away on that device.
-- Nothing is sent to a device that hasn't typed the PIN: the page behind the lock screen is never even built.
-- Five wrong tries in a row make the next one wait 30 seconds, and every further wrong try doubles the wait, up to 15 minutes. The right PIN clears the count.
-- **PIN settings** (same menu) can change the PIN, which signs every other device out, or turn it off. Both ask for the current PIN.
-- **If you forget it:** a PIN can only be removed from the computer that runs Kaya. In this folder run `npm run pin:reset -- --yes`. Your data is not touched, and you can set a new PIN afterwards. It works while the app is running.
-- It keeps people on your Wi-Fi out. It is not a vault: only a scrambled copy of the PIN is saved, but anyone who can open the database file, or a backup, on this computer can read your numbers, PIN or not. A backup made while a PIN was set brings that PIN back with it if you ever go back to it.
-- The first time the backend starts after this update it adds two empty tables (`app_lock` and `app_sessions`); nothing else in your data changes. Press **Back up now** first if you want a copy.
+Without a PIN, anyone who can reach the app's address can open it. With one, the backend refuses financial data until the device unlocks. The database and backups are not encrypted, so someone who can read those files can still read the data.
 
-### Import from a bank's CSV
+Forgot the PIN? Run `npm run pin:reset -- --yes` on the computer running Kaya. Your financial data stays intact.
 
-On **Transactions**, press **Import CSV**. Choose the wallet the file is for and the file your bank lets you download (a CSV, not Excel or PDF); it is read on this computer and never uploaded.
+## Your data and backups
 
-- Kaya works out which column is the date, the description and the amount, whether the file uses commas or semicolons, and how the amounts are written (one column with + and −, a column each for money out and in, or an amount with DB or CR). Look at "How the columns were read" and fix a column by hand if it guessed wrong.
-- Every line is shown before anything is saved. The ones Kaya can't read say why. A line you already have (same wallet, same day, same direction, same amount) says **Already in Kaya** and starts unticked, so importing the same statement twice adds nothing new.
-- Each line is filed under the category you used before for a note like it, or **Other**. Change any of them in the list.
-- Importing changes the wallet's balance exactly as adding the lines by hand would. The box shows what it goes from and to, and the bank's own balance from the file, so you can see if they agree. A transfer between your own wallets can't be told from a payment in a bank's file, so every line comes in as income or spending.
-- The message afterwards has an **Undo** (for ten seconds) that takes the whole import out again.
+Your data lives at `backend/data/nabungbego.db`. Choose **your name → Back up now** to make a dated copy in `backend/data/backups/`. Backups happen only when requested and old copies are kept. Copy that folder to another drive for protection against losing the computer.
 
-### Print or save a month as a PDF
+To restore a backup:
 
-On **Insights**, choose a month and press **Report**. It shows the month as a sheet of paper: figures, where the money went, budgets, the biggest expenses, the goals and every transaction. Press **Print or save as PDF**; in the print window choose **Save as PDF** instead of a printer to keep it as a file. The sheet is light paper whatever the theme is, and it never shows a wallet's balance.
+1. Stop the app with **Ctrl+C**.
+2. In `backend/data/`, rename `nabungbego.db` to `nabungbego-before-restore.db` (choose another name if that file already exists).
+3. Delete `nabungbego.db-wal` and `nabungbego.db-shm` if present, so old journal data cannot override the backup.
+4. Copy the backup into `backend/data/` and name the copy `nabungbego.db`.
+5. Start the app again. A backup taken with a PIN enabled also restores that PIN.
 
-### Checking quick add
+## More about the project
 
-`npm test` includes the pure parser and form-fill checks. For the browser checks, install Chromium once with `npx playwright install chromium`, then run `npm run test:browser -w frontend`. They start their own servers on ports 3100 and 4100, use a fresh in-memory sample database, and copy the frontend into `.nb-test/quick-add-*/frontend`. They refuse to reuse occupied test ports and never use the normal app on ports 3000 and 4000. The test servers stop when the checks finish. Screenshots and failed-test traces go into `frontend/test-results/`; disposable frontend copies stay in `.nb-test/`. Both folders are ignored by Git.
-
-## Your data
-
-- It lives in `backend/data/nabungbego.db`.
-- **Back it up:** press your name at the bottom of the sidebar, then **Back up now** in the menu that opens. It copies the file into `backend/data/backups/`, named with the date and time (for example `nabungbego-2026-10-04-153012.db`). It only happens when you press it, and old copies are never deleted. To keep them safe from a broken computer, copy that folder to a USB stick or a cloud drive now and then.
-- **Go back to a backup:**
-  1. Stop the app (Ctrl+C).
-  2. In `backend/data`, rename `nabungbego.db` to something like `nabungbego-before-restore.db`, and **delete** `nabungbego.db-wal` and `nabungbego.db-shm` if they are there (a leftover one would bring the newer data back on top of the backup).
-  3. Copy the backup you want from `backend/data/backups/` into `backend/data/` and rename the copy to `nabungbego.db`.
-  4. Start the app again.
-- Testing something risky? Start the backend on a throwaway database instead: set the `DB_PATH` environment variable to another file.
-
-## More
-
-`PRODUCT.md` says what the app is for, `DESIGN.md` describes how it looks, and `ROADMAP.md` tracks what has been built and what comes next.
+[Product](PRODUCT.md) · [Design system](DESIGN.md) · [Roadmap and validation](ROADMAP.md) · [Short case study](docs/portfolio/CASE-STUDY.md)

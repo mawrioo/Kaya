@@ -3,6 +3,7 @@
  * transaction, so a transaction row and the wallet balances it moves are saved
  * together or not at all.
  */
+import { isDeepStrictEqual } from "node:util"
 import { randomUUID } from "node:crypto"
 import type { DatabaseSync } from "node:sqlite"
 
@@ -174,6 +175,8 @@ interface DeletedWallet {
   updates: BalanceUpdateRow[]
   /** The bits of goal history that said money came from this wallet: deleting it made the database forget that. */
   movementIds: number[]
+  /** Principal returned to a deposito's source when it was deleted; undo takes it back. */
+  returnedPrincipal?: { walletId: string; amount: number; updateId: number }
 }
 
 const GOAL_COLUMNS = "id, name, target_amount, saved_amount, target_date, wallet_id, icon, pace_from, pace_amount, reached_at"
@@ -515,17 +518,42 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
    */
   function importTransactions(body: unknown): ImportTransactionsResult {
     const inputs = parseTransactionImport(body, references())
+    const replaced: { transaction: Transaction; place: number }[] = []
     const saved = transact(() => {
-      const transactions: Transaction[] = inputs.map((input) => ({ ...input, id: `tx-${randomUUID()}` }))
-      for (const transaction of transactions) insertTransaction(transaction)
-      return { transactions, wallets: getWallets() }
+      const transactions: Transaction[] = []
+      for (const { replaceTransactionId, ...input } of inputs) {
+        if (replaceTransactionId !== undefined) {
+          const before = findTransaction(replaceTransactionId)
+          if (!before || before.type === "transfer" || input.type !== "transfer" ||
+              before.amount !== input.amount || before.date.slice(0, 10) !== input.date.slice(0, 10) ||
+              before.walletId !== (before.type === "income" ? input.toWalletId : input.fromWalletId)) {
+            throw new ValidationError("A matching transaction changed since you reviewed it. Reopen the file and check the lines again.")
+          }
+          const { place } = db.prepare("SELECT rowid AS place FROM transactions WHERE id = ?").get(before.id) as { place: number }
+          replaced.push({ transaction: before, place })
+          db.prepare("DELETE FROM transactions WHERE id = ?").run(before.id)
+          applyToBalances(before, -1)
+        }
+        const transaction: Transaction = { ...input, id: `tx-${randomUUID()}` }
+        insertTransaction(transaction)
+        transactions.push(transaction)
+      }
+      return { transactions, wallets: getWallets(), replacedTransactionIds: replaced.map((entry) => entry.transaction.id) }
     })
     const ids = saved.transactions.map((transaction) => transaction.id)
-    return { ...saved, undoId: rememberUndo(() => removeImported(ids)) }
+    return { ...saved, undoId: rememberUndo(() => {
+      // If an import replaced an existing line, don't undo across subsequent edits or deletions.
+      if (replaced.length && saved.transactions.some((tx) => !isDeepStrictEqual(findTransaction(tx.id), tx))) {
+        throw new ValidationError("An imported transaction has changed since, so that import can't be undone.")
+      }
+      const result = removeImported(ids)
+      for (const { transaction, place } of replaced) restoreTransaction(transaction, place)
+      return { ...result, wallets: getWallets(), restoredTransactions: replaced.map((entry) => entry.transaction) }
+    }) }
   }
 
-  /** Undoes an import: takes those transactions out again and gives the wallets their balances back. Any already deleted are skipped. */
-  function removeImported(ids: string[]): UndoResult {
+  /** Undoes an import and reverses its balance changes. Call inside the Undo transaction. */
+  function removeImported(ids: string[]): Extract<UndoResult, { kind: "import" }> {
     const removed: string[] = []
     for (const id of ids) {
       const before = findTransaction(id)
@@ -534,7 +562,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       applyToBalances(before, -1)
       removed.push(id)
     }
-    return { kind: "import", wallets: getWallets(), removedTransactionIds: removed }
+    return { kind: "import", wallets: getWallets(), removedTransactionIds: removed, restoredTransactions: [] }
   }
 
   function updateTransaction(id: string, body: unknown): SaveTransactionResult | undefined {
@@ -706,7 +734,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
     })
   }
 
-  function updateWallet(id: string, body: unknown): SaveWalletResult | undefined {
+  function updateWallet(id: string, body: unknown, now: Date = new Date()): SaveWalletResult | undefined {
     const changes = parseWalletChanges(body, getWallets(), id)
     return transact(() => {
       const wallet = findWallet(id)
@@ -723,16 +751,34 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
         nickname,
         id
       )
+      let adjustment: BalanceAdjustment | undefined
       if (changes.deposito) {
         if (!wallet.deposito) throw new ValidationError("That wallet isn't a deposito.")
         if (wallet.deposito.status === "settled") {
           throw new ValidationError("This deposito's money has been moved out, so its details can't be changed. You can still rename it.")
         }
         const sourceId = wallet.deposito.sourceWalletId
+        if (sourceId === undefined && changes.deposito.principal !== wallet.deposito.principal && changes.deposito.fromWalletId === undefined) {
+          throw new ValidationError("Choose the wallet the money came from before correcting the principal.")
+        }
         if (sourceId !== undefined) {
           const sourceName = findWallet(sourceId)?.name ?? "another wallet"
-          if (changes.deposito.principal !== wallet.deposito.principal) {
-            throw new ValidationError(`The amount came out of ${sourceName}, so it can't be changed here. Delete this deposito and add it again with the right amount.`)
+          const difference = changes.deposito.principal - wallet.deposito.principal
+          if (difference !== 0) {
+            const source = findWallet(sourceId)
+            if (!source || source.kind === "deposito") {
+              throw new ValidationError("The source wallet is gone, so the principal can't be corrected here. Move the money into a wallet first.")
+            }
+            if (difference > 0 && source.balance < difference) {
+              throw new ValidationError(`${source.name} only holds ${rupiah(source.balance)}, so it can't put in another ${rupiah(difference)}.`)
+            }
+            const next = source.balance - difference
+            if (!Number.isSafeInteger(next)) throw new ValidationError("That would make the source wallet's balance too large.")
+            const at = isoWithOffset(now)
+            db.prepare("INSERT INTO wallet_value_updates (wallet_id, at, old_balance, new_balance, kind) VALUES (?, ?, ?, ?, 'correction')")
+              .run(sourceId, at, source.balance, next)
+            db.prepare("UPDATE wallets SET balance = ? WHERE id = ?").run(next, sourceId)
+            adjustment = { walletId: sourceId, at, change: -difference }
           }
           if (changes.deposito.fromWalletId !== undefined) {
             throw new ValidationError(`This deposito already came from ${sourceName}.`)
@@ -753,7 +799,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
           fundDeposito(id, changes.deposito.fromWalletId, changes.deposito.principal, changes.deposito.startDate, new Date())
         }
       }
-      return walletResult(id)
+      return { ...walletResult(id), ...(adjustment ? { adjustment } : {}) }
     })
   }
 
@@ -812,11 +858,11 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
    * Moves the money of a deposito that has matured into another wallet, as one transfer for everything it holds (the
    * money put in and the interest earned). The deposito then shows 0 and "settled", and nothing it earned is income.
    * Refused while it is still running (or renews by itself), when it has already been moved, and for a target that is
-   * itself a deposito. All or nothing, and it can't be undone: the transfer can't be changed or deleted either.
+   * itself a deposito. Undo reverses only this move and reopens the deposito.
    */
   function settleDeposito(id: string, body: unknown, now: Date = new Date()): SettleDepositoResult | undefined {
     const named = parseSettleDeposito(body)
-    return transact(() => {
+    const saved = transact(() => {
       const wallets = getWallets()
       const wallet = wallets.find((entry) => entry.id === id)
       if (!wallet) return undefined
@@ -843,6 +889,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       if (target.id === id) throw new ValidationError("Choose a different wallet from the deposito itself.")
       if (target.kind === "deposito") throw new ValidationError("Choose a wallet that is not a deposito.")
       const amount = wallet.balance
+      if (!Number.isSafeInteger(target.balance + amount)) throw new ValidationError("That would make the receiving wallet’s balance too large.")
       const transaction: Transaction = {
         id: `tx-${randomUUID()}`,
         type: "transfer",
@@ -860,17 +907,36 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       const after = getWallets()
       const settled = after.find((entry) => entry.id === id)
       if (!settled) throw new Error(`Wallet ${id} disappeared while settling.`)
-      return { wallet: settled, wallets: after, transaction }
+      return { wallet: settled, wallets: after, transaction, principal: deposito.principal }
     })
+    if (!saved) return undefined
+    const { principal, ...result } = saved
+    const transaction = result.transaction
+    return { ...result, undoId: rememberUndo(() => {
+      const current = findWallet(id)
+      const target = findWallet(transaction.toWalletId)
+      const recorded = findTransaction(transaction.id)
+      if (!current?.deposito || current.deposito.settledAt !== result.wallet.deposito?.settledAt ||
+          !target || target.kind === "deposito" || !isDeepStrictEqual(recorded, transaction)) {
+        throw new ValidationError("The deposito or its transfer has changed since, so that move can't be undone.")
+      }
+      const next = target.balance - transaction.amount
+      if (!Number.isSafeInteger(next)) throw new ValidationError("That would make the receiving wallet's balance too large.")
+      db.prepare("DELETE FROM transactions WHERE id = ?").run(transaction.id)
+      db.prepare("UPDATE wallets SET balance = ? WHERE id = ?").run(next, target.id)
+      db.prepare("UPDATE wallets SET balance = ?, deposit_settled_at = NULL WHERE id = ?").run(principal, id)
+      return { kind: "settlement", wallets: getWallets(), removedTransactionIds: [transaction.id] }
+    }) }
   }
 
   /**
    * Deletes a wallet and every transaction that touches it, including transfers
    * to and from other wallets. Those other wallets keep the balance they have,
-   * because their real accounts still hold what they hold. It refuses to delete
-   * the last wallet, or a wallet that a goal is saved in.
+   * because their real accounts still hold what they hold. A funded deposito is
+   * the exception: its principal goes back to its source, without interest.
+   * It refuses to delete the last wallet, or a wallet that a goal is saved in.
    */
-  function deleteWallet(id: string): DeleteWalletResult | undefined {
+  function deleteWallet(id: string, now: Date = new Date()): DeleteWalletResult | undefined {
     const deleted = transact(() => {
       const wallet = findWallet(id)
       if (!wallet) return undefined
@@ -900,14 +966,31 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
           .all(id) as unknown as BalanceUpdateRow[],
         movementIds: (db.prepare("SELECT id FROM goal_movements WHERE wallet_id = ?").all(id) as { id: number }[]).map((row) => row.id),
       }
+      if (wallet.deposito && wallet.deposito.status !== "settled") {
+        const source = wallet.deposito.sourceWalletId ? findWallet(wallet.deposito.sourceWalletId) : undefined
+        if (!source || source.kind === "deposito") {
+          throw new ValidationError("This deposito has no source wallet to return its principal to. Move its money into a wallet before deleting it.")
+        }
+        const amount = wallet.deposito.principal
+        const balance = source.balance + amount
+        if (!Number.isSafeInteger(balance)) throw new ValidationError("Returning the principal would make that wallet's balance too large.")
+        // The deposito's transfers disappear with it, so keep the returned principal in balance history,
+        // without creating income or a transaction that points at a wallet about to be deleted.
+        const update = db.prepare(
+          "INSERT INTO wallet_value_updates (wallet_id, at, old_balance, new_balance, kind) VALUES (?, ?, ?, ?, ?)"
+        ).run(source.id, isoWithOffset(now), source.balance, balance, "correction")
+        db.prepare("UPDATE wallets SET balance = ? WHERE id = ?").run(balance, source.id)
+        saved.returnedPrincipal = { walletId: source.id, amount, updateId: Number(update.lastInsertRowid) }
+      }
       db.prepare(`DELETE FROM transactions WHERE ${touching}`).run(id, id, id)
       db.prepare("DELETE FROM wallet_value_updates WHERE wallet_id = ?").run(id)
       db.prepare("DELETE FROM wallets WHERE id = ?").run(id)
-      return { saved, wallets: getWallets() }
+      return { saved, wallets: getWallets(), balanceAdjustments: getBalanceAdjustments() }
     })
     if (!deleted) return undefined
     return {
       wallets: deleted.wallets,
+      balanceAdjustments: deleted.balanceAdjustments,
       deletedTransactionIds: deleted.saved.transactions.map((tx) => tx.id),
       undoId: rememberUndo(() => restoreWallet(deleted.saved)),
     }
@@ -916,11 +999,11 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
   /**
    * Undoes deleting a wallet: puts back the wallet with its balance and its place in the list, all its transactions,
    * the balances that were set by hand for it, and the bits of goal history that said money came from it. The other
-   * wallets are not touched, because deleting it never changed them. It is refused if another wallet has its name now,
+   * wallets are not touched, except to take back a deposito's returned principal. It is refused if another wallet has its name now,
    * or if a wallet it had transfers with, or a category its transactions used, has been deleted since.
    */
   function restoreWallet(saved: DeletedWallet): UndoResult {
-    const { row, transactions, places, updates, movementIds } = saved
+    const { row, transactions, places, updates, movementIds, returnedPrincipal } = saved
     const existing = getWallets()
     if (existing.some((wallet) => wallet.name.toLowerCase() === row.name.toLowerCase())) {
       throw new ValidationError(`You have another wallet called ${row.name} now, so that can't be undone.`)
@@ -936,6 +1019,19 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       } else if (!categoryIds.has(tx.categoryId)) {
         throw new ValidationError("A category its transactions used has been deleted since, so that can't be undone.")
       }
+    }
+
+    if (returnedPrincipal) {
+      const source = existing.find((wallet) => wallet.id === returnedPrincipal.walletId)
+      const update = db.prepare("SELECT 1 FROM wallet_value_updates WHERE id = ? AND wallet_id = ?").get(returnedPrincipal.updateId, returnedPrincipal.walletId)
+      if (!source || !update) {
+        throw new ValidationError("The wallet its principal returned to is missing, so that can't be undone.")
+      }
+      // Reverse only the returned amount, preserving any later spending or other balance changes.
+      const balance = source.balance - returnedPrincipal.amount
+      if (!Number.isSafeInteger(balance)) throw new ValidationError("Taking back the principal would make that wallet's balance too large.")
+      db.prepare("UPDATE wallets SET balance = ? WHERE id = ?").run(balance, source.id)
+      db.prepare("DELETE FROM wallet_value_updates WHERE id = ?").run(returnedPrincipal.updateId)
     }
 
     // Its nickname comes back too, unless another wallet has taken that word since: then the wallet is still restored, without it.
@@ -983,11 +1079,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
       wallet,
       wallets,
       transactions,
-      balanceAdjustments: updates.map((update) => ({
-        walletId: update.wallet_id,
-        at: update.at,
-        change: update.new_balance - update.old_balance,
-      })),
+      balanceAdjustments: getBalanceAdjustments(),
     }
   }
 

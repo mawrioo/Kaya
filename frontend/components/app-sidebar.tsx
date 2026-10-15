@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useReturnFocus } from "@/hooks/use-return-focus"
 import { errorMessage } from "@/lib/api"
-import { PET_HREF, isActivePath, mainNav } from "@/lib/navigation"
+import { isActivePath, mainNav } from "@/lib/navigation"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -88,8 +88,7 @@ export function AppSidebar() {
               {mainNav.map(({ href, label, icon: Icon }) => {
                 const active = isActivePath(pathname, href)
                 return (
-                  // TEMPORARY (Compare options, "Own page"): the Pet link only shows while that choice is picked.
-                  <SidebarMenuItem key={href} className={href === PET_HREF ? "pet-spot-page" : undefined}>
+                  <SidebarMenuItem key={href}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}

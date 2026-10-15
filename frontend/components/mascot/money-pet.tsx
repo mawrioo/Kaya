@@ -3,10 +3,8 @@
 import { useSyncExternalStore } from "react"
 
 import { useData } from "@/components/data-provider"
-import { Pet } from "@/components/mascot/pet"
 import { petStatus, type PetStatus } from "@/lib/mascot"
 import { monthKey } from "@/lib/stats"
-import { cn } from "@/lib/utils"
 
 const noChange = () => () => {}
 
@@ -26,31 +24,14 @@ export function useThisMonth(): string | null {
   return useSyncExternalStore(noChange, () => monthKey(new Date()), () => null)
 }
 
-/** The pet on its own, named for screen readers by one plain sentence. `className` sets its size. */
-export function MoneyPet({ className }: { className?: string }) {
-  const status = usePetStatus()
-  if (!status) return <span aria-hidden className={cn("block aspect-[200/172]", className)} />
-  return <Pet mood={status.mood} label={status.sentence} className={className} />
-}
-
-/** The pet in a card of its own, with its state in a word and a sentence under it. */
-export function PetCard({ className }: { className?: string }) {
-  const status = usePetStatus()
-  return (
-    <section
-      aria-label="Your pet"
-      className={cn("pet-home flex flex-col items-center justify-center rounded-xl border bg-card p-5 text-center shadow-sm md:p-6", className)}
-    >
-      {status ? <Pet mood={status.mood} className="w-40" /> : <span aria-hidden className="block aspect-[200/172] w-40" />}
-      <p className="type-title mt-3">{status?.title ?? " "}</p>
-      <p className="mt-1 max-w-[24ch] text-sm text-muted-foreground">{status ? captionFor(status) : " "}</p>
-    </section>
-  )
-}
-
-/** The sentence without "Your pet is …:", which the title already says. */
-function captionFor(status: PetStatus): string {
-  const [, rest] = status.sentence.split(": ")
-  if (!rest) return "This month so far."
-  return rest.charAt(0).toUpperCase() + rest.slice(1)
+/**
+ * All the money that has come in so far: every income transaction plus what the goals have saved. When it goes up (a new
+ * income, or "Add money" on a goal), the pet perks up.
+ */
+export function useMoneyIn(): number {
+  const { transactions, goals } = useData()
+  let total = 0
+  for (const transaction of transactions) if (transaction.type === "income") total += transaction.amount
+  for (const goal of goals) total += goal.savedAmount
+  return total
 }

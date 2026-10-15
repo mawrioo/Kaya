@@ -124,10 +124,10 @@ function BalanceChart({ points, scale }: { points: BalancePoint[]; scale: Balanc
           <Line
             dataKey="total"
             type="monotone"
-            stroke="var(--primary)"
+            stroke="var(--chart-balance)"
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 5, fill: "var(--primary)", stroke: "var(--card)", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "var(--chart-balance)", stroke: "var(--card)", strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
@@ -137,15 +137,16 @@ function BalanceChart({ points, scale }: { points: BalancePoint[]; scale: Balanc
 }
 
 /**
- * The same figures as the line, as a table for screen readers: every day of a month, or the last day of each month of a
- * year. The table sits in a hidden box of its own: a table can't be squeezed to one pixel, so on its own it would make
- * the page scroll sideways.
+ * The same figures as the line, in an expandable table: every day of a month, or the last day of each month of a
+ * year. The scrolling region keeps long tables contained on a phone.
  */
 function BalanceTable({ points, scale }: { points: BalancePoint[]; scale: BalancePanelProps["scale"] }) {
   const rows = scale === "weeks" ? points : points.filter((point, index) => index === points.length - 1 || points[index + 1].date.slice(0, 7) !== point.date.slice(0, 7))
 
   return (
-    <div className="sr-only">
+    <details className="chart-figures mt-4 text-sm">
+      <summary className="min-h-11 cursor-pointer rounded-md py-3 font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">View balance figures</summary>
+      <div className="max-h-80 overflow-auto rounded-lg border" tabIndex={0} role="region" aria-label="View balance figures">
       <table>
         <caption>{scale === "weeks" ? "Total balance at the end of each day" : "Total balance at the end of each month"}</caption>
         <thead>
@@ -163,6 +164,7 @@ function BalanceTable({ points, scale }: { points: BalancePoint[]; scale: Balanc
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </details>
   )
 }
