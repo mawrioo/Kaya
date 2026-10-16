@@ -159,7 +159,7 @@ Two themes share the same roles. Light mode is a deeper warm cream page (`#EDE5D
 | `foreground` | `#18261E` | `#EEE8DB` | Text |
 | `muted-foreground` | `#536056` | `#A2AEA4` | Labels, meta, captions |
 | `primary` | `#1F3D2B` | `#B4D1B6` | Primary buttons, links |
-| `sidebar` | `#1F3D2B` | `#173024` | Sidebar and mobile top bar |
+| `sidebar` | `#1A3826` | `#132C20` | Sidebar and mobile top bar |
 | `sidebar-primary` | `#F7F2E7` | `#DFD9CA` | Active nav pill, selected theme option |
 | `sage` / `sage-foreground` | `#E5ECE0` / `#2E5A40` | `#1F3128` / `#A9CBAF` | Round icon badges |
 | `sand` / `sand-foreground` | `#F1E8D8` / `#6B5230` | `#2C281E` / `#D8C39F` | Chips, secondary buttons |
@@ -759,3 +759,15 @@ Motion review, scoped to this change:
 | Changed wallet amounts had no card cue | 280ms tint-opacity fade, disabled for hidden balances and reduced motion | Shows where saved money moved without exposing hidden balances |
 
 Review decision: approve the scoped motion implementation; no new per-frame React state, layout animation or dependencies. Timing and property use were checked in code and Chromium. Real-device frame timing is still unmeasured.
+
+### Sidebar shade (17 Oct 2026)
+
+At the owner's request, the sidebar is slightly darker: OKLCH lightness falls from 0.331 to 0.311 in light mode (approximately #1A3826), and from 0.285 to 0.269 in dark mode (approximately #132C20). Hue and chroma stay the same. Text, active pills and hover colours stay unchanged. The shared sidebar token also colours the mobile header, menu and lock screen. This supersedes the earlier sidebar background values; the brand forest remains #1F3D2B.
+
+### Sidebar colour comparison panel removed (17 Oct 2026)
+
+Removed the temporary Compare options button, its colour picker and its CSS overrides. The darker sidebar base tokens remain the permanent colours. The Insights Month / Compare / Year switch is unchanged.
+
+### README landscape poster (17 Oct 2026)
+
+The README uses the 2880 x 1800 (16:10) dark poster in docs/portfolio/kaya-poster.png, with editable HTML and a repeatable capture/render workflow beside it. The owner chose the previous two-column composition: total and wallets on the left, insights below, goals and feature copy on the right. Card boxes keep their original dimensions. Presentation-only capture styles enlarge text and amounts by 25% in every panel, and kawung motifs by 35% (36px to 48.6px); spacing tightens inside the cards to accommodate the type. This supersedes the full-width 4:3 experiment. Kaya's mark, fonts, palette, icons and fictional 100m / six-wallet fixture remain. AI assistant replaces Quick add without an Upcoming badge as requested; that is poster copy only, and AI chat remains unimplemented. App source and live UI are unchanged.

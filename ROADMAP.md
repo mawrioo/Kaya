@@ -12,7 +12,7 @@ Kaya/
 ```
 
 - **Run everything:** `npm run dev` from this folder. It starts both parts (frontend on port 3000, backend on port 4000). Open http://localhost:3000.
-- **Your data** lives in one file, `backend/data/nabungbego.db`, created with the sample data the first time the backend starts. It is never committed (see `.gitignore`) and survives refreshes, restarts and other browsers. The **Back up now** button at the bottom of the sidebar copies it into `backend/data/backups/` (also never committed), and the README says how to go back to a copy.
+- **Your data** lives in one file, `backend/data/nabungbego.db`, created with the sample data the first time the backend starts. It is never committed (see `.gitignore`) and survives refreshes, restarts and other browsers. The **Back up now** button at the bottom of the sidebar copies it into `backend/data/backups/` (also never committed), and the [usage guide](docs/USAGE.md#your-data-and-backups) says how to go back to a copy.
 - **Start again from the sample data:** `npm run db:reset -- --yes` (it refuses to run without `--yes`, because it erases everything you entered).
 - **Tests:** `npm test` (backend and quick-add parser), `npm run typecheck`, `npm run lint`, and `npm run test:browser -w frontend` (isolated browser checks). When testing, point the backend at a throwaway database with the `DB_PATH` environment variable, never at your real file.
 - **Testing in a browser while your own `npm run dev` is running** (it uses ports 3000 and 4000 and your real data): don't touch it. Start a second backend with `PORT=4200` and `DB_PATH=<a throwaway file>`, and a second frontend from a copy of `frontend/` placed inside the repo (for example `.nb-test/frontend`, so `node_modules` is found and Next's per-folder dev lock doesn't clash), started with `BACKEND_URL=http://127.0.0.1:4200 next dev -p 3200`. Point the tests at port 3200, have them reset the throwaway database first, and stop if it doesn't show the sample data (41 transactions, BCA Rp 8.742.300). Delete the copy afterwards. **When a step changes the database, don't edit `backend/src` while you work:** your backend restarts on every edit and would run the one-time upgrade on your real file half-finished. Build in a copy of `backend/` as well (for example `.nb-test/backend`, without its `data` folder, but with its own `node_modules`), run that on port 4200, and copy the finished files across in one go.
@@ -973,3 +973,53 @@ Numbers start again. Some are left over from the Step 6 list, some are new. Stil
 **Polish**
 - Receipt photos, tags and splitting one payment across categories (large).
 - Running it away from home: the app and database would need to live on an always-on computer, with a login and backups (large).
+
+### Local data cleared (16 Oct 2026)
+
+- At the owner's explicit request, cleared the active local database's transactions, wallets (including depositos), goals, histories, custom categories, budgets and profile name. Restored only the ten built-in categories; PIN protection and device sessions were preserved. No sample financial records were added, and the initialization marker remains set so restarting will not restore them.
+- Verified zero rows in the cleared tables, ten preset categories, valid foreign keys and SQLite integrity check OK. No app code or schema changed; browser tests and the code test suites were not run for this data-only operation.
+- Next: refresh Kaya and add the owner's wallets to start again. Existing feature work remains awaiting review; no new feature selected.
+
+### Slightly darker sidebar (17 Oct 2026)
+
+- Chosen by the owner: deepened the sidebar background slightly in both themes, preserving its forest hue and all text and interaction colours. Shared mobile and lock-screen surfaces follow the same token. Documented in DESIGN.md.
+- Checked the token diff and calculated text contrast; no browser inspection or full test suites for this CSS-only change.
+- Next: owner review of the shade. No other feature work included.
+
+### Sidebar colour comparison panel removed (17 Oct 2026)
+
+Removed the temporary sidebar Compare options button, panel component and colour-preview overrides, keeping the darker sidebar base colours. Restored the Insights Compare option after clarifying which button the owner meant. Verified frontend TypeScript and targeted lint; no browser tests run. Next: owner review.
+
+### README landscape poster (17 Oct 2026)
+
+Created and installed a dark landscape README poster, replacing the lead screenshot and standalone header lockup. Delivered a 2880 x 1620 PNG, editable HTML and a repeatable local renderer under docs/portfolio/. The artwork uses Kaya's own mark, fonts and colours, a kawung edge and clearly illustrative financial entries. Existing screenshots and demo links remain available.
+
+Validation: rendered and visually inspected the PNG; checked bundled font and logo loading, canvas bounds, no external requests and renderer cleanup. No app code or database changed; app test suites were not run for this presentation-only change. Next: owner review of the poster.
+
+### README poster matched to the real UI (17 Oct 2026)
+
+- Replaced the simplified ledger artwork with actual dark-mode component captures: the Rp 100.000.000 total across six wallets, matching share bar and legend, four wallet cards, monthly totals, spending chart and savings goals. Added short feature copy for Quick add, CSV import, budgets and reports. PNG is now 2880 x 1800 (16:10); README and portfolio instructions updated.
+- Added capture-poster.mjs and component assets under docs/portfolio/poster-parts/. The capture uses copies of both apps, checks the standard seed first, then creates the explicitly fictional reference fixture only in its throwaway database. Confirmed six wallets and a 100m total; captured live components with no CSS or markup alterations.
+- Validation: checked fonts, images, canvas bounds and browser errors, visually inspected the composition, and confirmed the owned app copy and servers were cleaned up. No real data or app source was changed. Full app test suites were not run for this presentation-only revision.
+- Next: owner review of the revised poster.
+
+### Poster scale and upcoming AI feature (17 Oct 2026)
+
+- Gave the total-balance panel and wallet cards the full poster width. Their numbers, icons and kawung pattern are about 56% larger at the same display width, preserving the original captured component proportions. Supporting insights and goals sit below. Export is now 3072 x 2304 (4:3 landscape).
+- Replaced the Quick add feature text with AI assistant, visibly marked Upcoming, describing the planned local spending questions. This is presentation copy only; the chat feature remains deferred and unimplemented.
+- Verified the rendered PNG visually, fonts and image loading, no canvas overflow, and renderer cleanup. Reused the existing fictional component captures; no app server, database or full test suite was needed for this composition change. README, portfolio notes and DESIGN.md are updated.
+- Next: owner review of the poster size and feature copy.
+
+### Poster typography corrected inside the original cards (17 Oct 2026)
+
+- Restored the owner's preferred two-column, 2880 x 1800 composition and original card sizes. Enlarged text and amounts exactly 25% across all UI panels, and the kawung tile exactly 35%, using presentation-only capture styles. Adjusted internal spacing without enlarging any card. This replaces the previous full-width composition.
+- Poster copy now says AI assistant without Upcoming, as explicitly requested. No AI feature was implemented; its backlog status stays unchanged.
+- Isolated capture verified the standard sample before preparing fictional data, then checked every panel's unchanged bounds, text scale of 1.25 and absence of clipped text. Batik mask size verified at 48.6px. PNG rendered and visually inspected; fonts, assets and canvas bounds passed. Capture processes and copies cleaned up. No real database or app source changed; full app test suites not run for this artwork change.
+- Next: owner review of the corrected poster.
+
+### Shorter GitHub README (17 Oct 2026)
+
+- Kept the latest Kaya poster first, followed by the demo and a collapsible screenshot gallery. Rewrote the overview around core modules, tech stack, design philosophy, getting started, roadmap and further reading; removed case-study links from the main README.
+- Moved detailed usage, phone access, PIN, backup/restore and development commands to docs/USAGE.md. Updated the current product and roadmap links to the restore guide. The AI assistant remains described as planned, matching its implementation status.
+- Validation: checked local Markdown links, requested section order, media files and whitespace. No app code or data changed; application tests were not run for this documentation-only update.
+- Next: owner review of the shorter README.

@@ -1,0 +1,169 @@
+{
+  "date": "2026-10-17",
+  "fictional": true,
+  "total": 100000000,
+  "typeScale": 1.25,
+  "batikScale": 1.35,
+  "captures": {
+    "total": {
+      "x": 392,
+      "y": 137.1875,
+      "width": 1104,
+      "height": 280,
+      "checks": {
+        "width": 1104,
+        "height": 280,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": "48.6px 48.6px, 100% 100%"
+      }
+    },
+    "wallet-bca": {
+      "x": 392,
+      "y": 441.1875,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "wallet-mandiri": {
+      "x": 672,
+      "y": 441.1875,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "wallet-jago": {
+      "x": 952,
+      "y": 441.1875,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "wallet-superbank": {
+      "x": 1232,
+      "y": 441.1875,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "wallet-pluang": {
+      "x": 392,
+      "y": 613.984375,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "wallet-deposito": {
+      "x": 672,
+      "y": 613.984375,
+      "width": 264,
+      "height": 156.796875,
+      "checks": {
+        "width": 264,
+        "height": 156.796875,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "month": {
+      "x": 392,
+      "y": 794.78125,
+      "width": 427.1875,
+      "height": 334.5,
+      "checks": {
+        "width": 427.1875,
+        "height": 334.5,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "spending": {
+      "x": 843.1875,
+      "y": 794.78125,
+      "width": 652.8125,
+      "height": 334.5,
+      "checks": {
+        "width": 652.8125,
+        "height": 334.5,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    },
+    "goals": {
+      "x": 392,
+      "y": 660.78125,
+      "width": 540,
+      "height": 443.5,
+      "checks": {
+        "width": 540,
+        "height": 443.5,
+        "clipped": [],
+        "typeScale": [
+          1.25,
+          1.25
+        ],
+        "batik": null
+      }
+    }
+  }
+}

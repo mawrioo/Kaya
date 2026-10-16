@@ -1,0 +1,21 @@
+/* Presentation-only spacing, injected into the isolated capture browser.
+   Card bounds stay fixed; capture-poster.mjs enlarges computed type by 25%. */
+*, *::before, *::after { transition: none !important; animation: none !important; }
+[data-poster-panel="total"] { padding: 24px; }
+[data-poster-panel="total"] > p:nth-of-type(1) { margin-top: 10px; }
+[data-poster-panel="total"] > p:nth-of-type(2) { margin-top: 6px; }
+[data-poster-panel="total"] > .mt-8 { margin-top: 24px; }
+[data-poster-panel="total"] > ul { margin-top: 12px; column-gap: 12px; }
+[data-poster-panel="total"] > ul > li { gap: 6px; }
+[data-poster-panel="total"] .kawung {
+  -webkit-mask-size: 48.6px 48.6px, 100% 100% !important;
+  mask-size: 48.6px 48.6px, 100% 100% !important;
+}
+[data-poster-panel^="wallet-"] > div { padding: 16px; }
+[data-poster-panel^="wallet-"] > div > p:nth-of-type(1) { margin-top: 12px; }
+[data-poster-panel="month"],
+[data-poster-panel="spending"],
+[data-poster-panel="goals"] { padding: 20px; }
+[data-poster-panel="spending"] li { gap: 8px; }
+[data-poster-panel="goals"] .mt-auto { padding-top: 12px; }
+[data-poster-panel="goals"] .mt-auto > p { padding-top: 12px; }

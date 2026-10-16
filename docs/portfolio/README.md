@@ -16,6 +16,29 @@ All financial data is fictional. The screenshots show the starting point; the vi
 
 October starts with Rp 10.000.000 income, Rp 4.000.000 spending and Rp 6.000.000 left over. Moving money between wallets is excluded from those totals. After lunch is saved, BCA holds Rp 9.975.000 and October spending is Rp 4.025.000.
 
+## README poster
+
+[Kaya landscape poster](kaya-poster.png) is a 2880 x 1800 PNG (16:10). The previous two-column layout and card sizes are preserved. The actual Kaya components are captured with presentation-only overrides: text and amounts are 25% larger across every UI panel, and individual kawung tiles are 35% larger (36px to 48.6px). Spacing is adjusted inside the existing card bounds. The [HTML artwork](kaya-poster.html) arranges the total balance, wallets, monthly totals, spending chart and goals. AI assistant replaces Quick add in the feature copy, without an Upcoming badge at the owner's request; the assistant implementation remains in the project backlog. CSV import, budgets and reports are also described.
+
+The poster uses a separate fictional fixture matching the owner's reference: **Rp 100.000.000 across six wallets** (BCA 25m, Mandiri 20m, Bank Jago 10m, Superbank 25m, Pluang 15m, Deposito 5m). Four wallet cards are shown, as in the reference; all six appear in the balance breakdown. The existing screenshots and video still use the 30m fixture above. The poster's monthly figures and goals reuse that fixture, and the demo deposito starts on 17 Oct 2026 with no interest yet.
+
+Render the composition again from the repository root, using the checked-in component images:
+
+```sh
+node docs/portfolio/render-poster.mjs
+```
+
+To refresh the real UI components first:
+
+```sh
+node --disable-warning=ExperimentalWarning docs/portfolio/capture-poster.mjs
+node docs/portfolio/render-poster.mjs
+```
+
+`capture-poster.mjs` reuses the isolated browser harness on localhost:3200/4200, verifies the standard sample (41 transactions and BCA Rp 8.742.300), then writes its fixture only to the newly created disposable database. It verifies exactly six wallets and the 100m total, applies `poster-capture.css` only in that browser, checks exactly 1.25x text sizes and unchanged card bounds with no clipped text, captures the components into `poster-parts/`, and stops its servers and removes its app copies. It never accesses the owner's database. The capture manifest records the component bounds and demo date.
+
+`render-poster.mjs` serves only the artwork and its local assets on an automatically assigned loopback port, checks fonts, images and canvas bounds, and exports the PNG. It closes the browser and server afterwards. The renderer does not start Kaya or open a database. Both scripts use installed Playwright Chromium; if it is missing, install it with `npx playwright install chromium`.
+
 ## Screenshots
 
 - [Home](screenshots/home.png)

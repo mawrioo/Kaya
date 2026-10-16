@@ -4,7 +4,6 @@ import { cookies } from "next/headers"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { BalanceVisibilityProvider } from "@/components/balance-visibility"
-import { CompareOptions } from "@/components/compare-options"
 import { DataProvider } from "@/components/data-provider"
 import { LockScreen } from "@/components/lock/lock-screen"
 import { MobileTopbar } from "@/components/mobile-topbar"
@@ -89,7 +88,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                           </div>
                         </SidebarInset>
                         <QuickAddButton />
-                        <CompareOptions />
                       </SidebarProvider>
                     </TooltipProvider>
                     {/* Messages come from the top right (the owner's pick, 8 Oct 2026). On a phone they start under the 64px top bar. */}

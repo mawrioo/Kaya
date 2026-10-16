@@ -118,7 +118,7 @@
   --input: oklch(0.863 0.022 83.3); /* #D9D1C2 */
   --ring: oklch(0.477 0.086 154.9); /* #2F6B47 */
 
-  --sidebar: oklch(0.331 0.049 156.2); /* #1F3D2B */
+  --sidebar: oklch(0.311 0.049 156.2); /* #1A3826 deeper forest */
   --sidebar-foreground: oklch(0.888 0.017 137.0); /* #D5DDD2 */
   --sidebar-muted: oklch(0.775 0.034 152.2); /* #A6BCAB */
   --sidebar-primary: oklch(0.962 0.016 86.4); /* #F7F2E7 cream pill */
@@ -199,7 +199,7 @@
   --input: oklch(0.367 0.025 158.6); /* #34433A */
   --ring: oklch(0.780 0.061 150.1); /* #9CC3A3 */
 
-  --sidebar: oklch(0.285 0.039 161.7); /* #173024 still reads as forest */
+  --sidebar: oklch(0.269 0.039 161.7); /* #132C20 deeper forest */
   --sidebar-foreground: oklch(0.866 0.017 145.4); /* #CCD6CC */
   --sidebar-muted: oklch(0.733 0.034 156.8); /* #98AFA0 */
   --sidebar-primary: oklch(0.886 0.021 88.7); /* #DFD9CA softened pill */
@@ -840,20 +840,6 @@ main[data-slot="sidebar-inset"] {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* TEMPORARY: sidebar colour choices from the "Compare options" panel (data-cmp-* on the root element). Remove with the panel. */
-:root[data-cmp-bg="darker"] {
-  --sidebar: oklch(0.323 0.049 156.2);
-}
-:root[data-cmp-bg="lighter"] {
-  --sidebar: oklch(0.365 0.05 156.2);
-}
-:root.dark[data-cmp-bg="darker"] {
-  --sidebar: oklch(0.277 0.039 161.7);
-}
-:root.dark[data-cmp-bg="lighter"] {
-  --sidebar: oklch(0.315 0.04 161.7);
 }
 
 /* Chart semantics follow Kaya's forest, sand and ink in both themes and on paper. */

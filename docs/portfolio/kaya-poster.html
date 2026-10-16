@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kaya &mdash; Your money, in one calm place.</title>
+  <style>
+    @font-face { font-family: Inter; src: url('../../frontend/app/fonts/Inter.ttf'); font-weight: 100 900; }
+    @font-face { font-family: 'Source Serif 4'; src: url('../../frontend/app/fonts/SourceSerif4.ttf'); font-weight: 200 900; }
+    :root { color-scheme: dark; --night: #0F1712; --paper: #EEE8DB; --quiet: #A2AEA4; --sage: #B4D1B6; --line: #27342C; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--night); color: var(--paper); font-family: Inter, sans-serif; }
+    .poster { position: relative; width: 2400px; height: 1500px; padding: 65px 80px; overflow: hidden; }
+    .header { height: 179px; display: flex; align-items: flex-start; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 24px; }
+    .brand img { width: 86px; height: 86px; }
+    .brand-name { font-family: 'Source Serif 4', serif; font-size: 98px; font-weight: 600; letter-spacing: .04em; line-height: 1; }
+    .intro { padding-top: 5px; text-align: right; }
+    h1 { margin: 0 0 12px; font-family: 'Source Serif 4', serif; font-weight: 400; font-size: 47px; letter-spacing: -.02em; }
+    .intro p { color: var(--quiet); margin: 0; font-size: 24px; }
+    .showcase { display: grid; grid-template-columns: 1440px 768px; gap: 32px; align-items: start; }
+    .main-ui { display: flex; flex-direction: column; gap: 24px; }
+    .capture { display: block; width: 100%; height: auto; }
+    .wallets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+    .insights { display: grid; grid-template-columns: 557px 851px; gap: 32px; }
+    .details { display: flex; flex-direction: column; gap: 30px; }
+    .features { padding: 0 30px; }
+    .feature { display: grid; grid-template-columns: 180px 1fr; gap: 23px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+    .feature:last-child { border: 0; }
+
+    .feature h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-family: 'Source Serif 4', serif; font-weight: 400; font-size: 28px; }
+    .feature p { margin: 0; color: var(--quiet); font-size: 22px; line-height: 1.55; }
+    .footer { position: absolute; left: 80px; right: 80px; bottom: 55px; display: flex; justify-content: space-between; align-items: baseline; color: var(--quiet); font-size: 22px; }
+    .footer strong { font-weight: 500; color: var(--paper); }
+  </style>
+</head>
+<body>
+  <!-- Kaya components with poster-only type and batik scaling; every amount is fictional. -->
+  <main class="poster" aria-label="Kaya dark-mode product showcase">
+    <header class="header">
+      <div class="brand"><img src="../../kaya-logo/svg/kaya-mark-on-dark.svg" alt=""><div class="brand-name">Kaya</div></div>
+      <div class="intro"><h1>Your money, in one calm place.</h1><p>A personal finance tracker for Indonesian Rupiah.</p></div>
+    </header>
+    <div class="showcase">
+      <div class="main-ui">
+        <img class="capture" src="poster-parts/total.png" alt="Total balance Rp 100.000.000 across six wallets: BCA 25%, Superbank 25%, Mandiri 20%, Pluang 15%, Bank Jago 10%, Deposito 5%.">
+        <div class="wallets" aria-label="Four wallet cards from Kaya Home">
+        <img class="capture" src="poster-parts/wallet-bca.png" alt="BCA, Rp 25.000.000">
+        <img class="capture" src="poster-parts/wallet-mandiri.png" alt="Mandiri, Rp 20.000.000">
+        <img class="capture" src="poster-parts/wallet-jago.png" alt="Bank Jago, Rp 10.000.000">
+        <img class="capture" src="poster-parts/wallet-superbank.png" alt="Superbank, Rp 25.000.000">
+      </div>
+        <div class="insights">
+            <img class="capture" src="poster-parts/month.png" alt="October: Rp 10.000.000 income, Rp 4.000.000 spending, Rp 6.000.000 saved, 60% of income.">
+            <img class="capture" src="poster-parts/spending.png" alt="Spending by category, with a donut chart and exact rupiah amounts.">
+          </div>
+      </div>
+      <aside class="details" aria-label="Savings and everyday tools">
+        <img class="capture" src="poster-parts/goals.png" alt="Kaya's savings goals: Emergency fund, A little holiday and Future home, with saved amounts and progress bars.">
+        <div class="features">
+            <section class="feature"><h2>AI assistant</h2><p>Ask about your spending.<br>Answers on your computer.</p></section>
+            <section class="feature"><h2>Import CSV</h2><p>Review your bank statement<br>before adding its entries.</p></section>
+            <section class="feature"><h2>Budgets &amp; reports</h2><p>Monthly guides for spending.<br>A clear report to print or keep.</p></section>
+          </div>
+      </aside>
+    </div>
+    <footer class="footer"><span><strong>Your computer. Your numbers.</strong> &nbsp; Local storage &middot; Optional PIN</span><span>Kaya interface &middot; Fictional demo data</span></footer>
+  </main>
+</body>
+</html>
