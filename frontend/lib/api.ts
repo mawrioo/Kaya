@@ -38,6 +38,7 @@ import type {
   SettleDepositoResult,
   UndoResult,
   WalletChanges,
+  TransactionPreview,
 } from "@/lib/types"
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:4000"
@@ -48,6 +49,8 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:4000"
  */
 export class ApiError extends Error {
   retryAfterSeconds?: number
+  /** A create request lost its acknowledgement; retrying could record it twice. */
+  mayHaveSaved?: boolean
 }
 
 /** Kaya has a PIN and this device hasn't typed it (or its session has run out). */
@@ -65,10 +68,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { "content-type": "application/json", ...init?.headers },
     })
   } catch {
+    if (path === "/api/transactions" && init?.method === "POST") {
+      const error = new ApiError("Couldn't confirm whether this transaction saved. Check Transactions before trying again.")
+      error.mayHaveSaved = true
+      throw error
+    }
     throw new ApiError("Couldn't reach the backend. Is Kaya running?")
   }
 
   const payload: unknown = await response.json().catch(() => undefined)
+  if (response.ok && path === "/api/transactions" && init?.method === "POST" && (!payload || typeof payload !== "object" || !("transaction" in payload))) {
+    const error = new ApiError("Couldn't confirm whether this transaction saved. Check Transactions before trying again.")
+    error.mayHaveSaved = true
+    throw error
+  }
   if (!response.ok) {
     const fields = typeof payload === "object" && payload !== null ? (payload as { error?: unknown; locked?: unknown; retryAfterSeconds?: unknown }) : {}
     const message = typeof fields.error === "string" ? fields.error : `The backend answered with an error (${response.status}).`
@@ -127,6 +140,13 @@ export const undoDelete = (undoId: string) =>
 
 export const createTransaction = (input: NewTransaction) =>
   request<SaveTransactionResult>("/api/transactions", { method: "POST", body: JSON.stringify(input) })
+
+export const previewTransaction = (text: string, defaultWalletId: string, signal: AbortSignal, conversation?: TransactionPreview["conversation"]) => {
+  // Choices are presentation data; send only the bounded current question back.
+  const pending = conversation?.pending
+  const state = conversation ? { ...conversation, pending: pending ? { field: pending.field, reason: pending.reason, message: pending.message, ...(pending.walletId ? { walletId: pending.walletId } : {}) } : undefined } : undefined
+  return request<TransactionPreview>("/api/transactions/preview", { method: "POST", signal, body: JSON.stringify({ text, ...(defaultWalletId ? { defaultWalletId } : {}), ...(state ? { conversation: state } : {}) }) })
+}
 
 /** Saves many income and spending transactions read from a bank's file, all or nothing. The result's id undoes it. */
 export const importTransactions = (transactions: NewTransaction[]) =>

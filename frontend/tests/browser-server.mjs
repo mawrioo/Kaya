@@ -7,6 +7,11 @@ import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 export default async function setup() {
+  const liveAI = process.env.KAYA_BROWSER_REAL_AI === "1"
+  if (liveAI) {
+    const response = await fetch("http://127.0.0.1:11434/api/ps", { signal: AbortSignal.timeout(5000) })
+    if (!response.ok || (await response.json()).models.length) throw new Error("The live model suite requires an idle local Ollama server.")
+  }
   // Refuse occupied test ports before starting either process.
   for (const port of [3200, 4200]) await new Promise((resolve, reject) => {
     const probe = createServer()
@@ -44,6 +49,13 @@ export default async function setup() {
     closeSync(log)
     await new Promise((resolve) => setTimeout(resolve, 500))
     rmSync(run, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+    if (liveAI) {
+      const response = await fetch("http://127.0.0.1:11434/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "qwen3.5:2b", keep_alive: 0 }), signal: AbortSignal.timeout(15000),
+      })
+      if (!response.ok) throw new Error("The live trial finished, but its model could not be unloaded.")
+    }
   }
   try {
     for (const address of ["http://127.0.0.1:4200/api/data", "http://localhost:3200"]) {

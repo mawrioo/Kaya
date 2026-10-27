@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-27",
+  "model": "qwen3.5:2b",
+  "development": [
+    {
+      "type": "expense",
+      "previewMs": 9059,
+      "modelTimings": [
+        8788
+      ]
+    },
+    {
+      "type": "income",
+      "previewMs": 1913,
+      "modelTimings": [
+        8788,
+        1759
+      ]
+    },
+    {
+      "type": "transfer",
+      "previewMs": 132,
+      "modelTimings": [
+        8788,
+        1759
+      ]
+    }
+  ],
+  "production": [
+    {
+      "type": "expense",
+      "previewMs": 7042,
+      "modelTimings": [
+        6518
+      ]
+    },
+    {
+      "type": "income",
+      "previewMs": 1956,
+      "modelTimings": [
+        6518,
+        1733
+      ]
+    },
+    {
+      "type": "transfer",
+      "previewMs": 86,
+      "modelTimings": [
+        6518,
+        1733
+      ]
+    }
+  ],
+  "modelUnloaded": true
+}

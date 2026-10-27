@@ -24,11 +24,23 @@ The latest full validation and its limits are recorded in [ROADMAP.md](../ROADMA
 
 ## Everyday use
 
-### Add an expense quickly
+### Add a transaction quickly
 
-Press the orange **+** coin or **Ctrl+K** (**Cmd+K** on Mac). Type `nasi goreng 25rb BCA`, press **Fill form**, review the details and category, then press **Add transaction**.
+Press the coin at the bottom right or Ctrl+K (Cmd+K on a Mac). Smart entry accepts one expense, income or transfer:
 
-`25rb`, `25k`, `25.000` and `25000` all mean Rp 25.000; `1,5jt` means Rp 1.500.000. Use one amount and one wallet name. Set an optional nickname in **Wallets → Edit details** to write something like `kopi 20rb jago`. Categories can be suggested from earlier notes. Quick add handles expenses; the regular form also handles income and transfers. Nothing saves until you confirm.
+- `paid 35rb for lunch from BCA yesterday`
+- `received Salary 5jt in Bank Jago today`
+- `transfer 500rb from BCA to Bank Jago`
+
+Use the wallet's full name or a nickname you have set. Press Prepare, review the amount, category, wallets and date, then Confirm and save. You can edit every field. Enter prepares the sentence; it does not confirm a smart draft. Save and add another saves and keeps the box open for the next sentence.
+
+For dates, use today/hari ini, yesterday/kemarin, or YYYY-MM-DD. Missing details appear as one question at a time. For example, `Bought lunch from BCA yesterday` asks for the amount; answer `35rb`. The original sentence and other details stay. You can also answer by editing the form's amount, wallet or category.
+
+Use **Reply or correction** to change one detail: `make that 40rb`, `ganti jadi 40rb`, `use BCA`, `category Food`, `note: lunch with friends`, `actually yesterday`, or `this was income`. For transfers, `from BCA` changes the source and `to Bank Jago` changes the destination. `use Bank Jago` asks which end you mean. Invalid corrections keep the previous details. Manual choices survive unrelated corrections.
+
+Enter applies a reply but never saves. Review the form and press Confirm and save. **Start new** clears the unsaved draft for another sentence; closing or locking clears it too. No conversation history is stored. Use form instead switches to manual entry, and Simple expense retains the original fast expense parser. There is no microphone input.
+
+Smart entry uses the installed local Ollama model for category suggestions. Start Ollama if it is unavailable; you do not need a separate terminal chat. Nothing goes to a cloud model. The category is a suggestion, so check it before saving. If the connection drops during a save, use Check Transactions before adding it again.
 
 ### Import a bank CSV
 
@@ -72,3 +84,9 @@ To restore a backup:
 4. Copy the backup into `backend/data/` and name the copy `nabungbego.db`.
 5. Start the app again. A backup taken with a PIN enabled also restores that PIN.
 
+
+## Local assistant configuration
+
+Smart entry is available by default. Set KAYA_AI_ENABLED=false in the backend environment before starting Kaya to turn it off; Simple expense and the ordinary form remain available. KAYA_AI_MODEL selects an already installed local model and defaults to qwen3.5:2b. Keep Ollama's cloud-disabled setting enabled. No model is downloaded automatically.
+
+The preview never saves a transaction. Configuration details, supported sentences and isolated evaluation results are in [the preview service notes](ai-trial/PREVIEW-SERVICE.md).

@@ -757,6 +757,8 @@ Checked: screenshot review in light and dark mode, the phone layout with no hori
 
 ## Next
 
+Smart entry follow-ups and corrections are built and verified (27 Oct 2026): all five next-version steps were authorised together and completed. See [the release report](docs/ai-trial/CONVERSATION.md). Next: owner review on their usual device; no additional assistant feature is selected. Duplicate notices, category learning and broader dates remain possible later work.
+
 ### Portfolio pack ready for review (15 Oct 2026)
 
 Review the screenshots, short video and case study in `docs/portfolio/`. Publishing them is a later choice. The remaining app review items below still stand.
@@ -839,6 +841,8 @@ Quick add was authorized and built on 7 Oct 2026 (Step 8 above), and its keyboar
 The owner asked for the round coin seal (the ring lettering with the K coin) to be taken off the Total balance card and the "in one look" card, so `components/illustrations/seal.tsx` is deleted. Older notes below that mention the seal describe how it used to be. The kawung lattice on the balance card stays.
 
 ### Reminder: finish the rename to Kaya
+
+- **Owner reminder (17 Oct 2026):** rename the local project folder from `NABUNGBEGO` to `Kaya`, and review the current GitHub repository for remaining `nabungbego` names in files, package metadata, documentation and repository settings. Include the internal names, exports, database and backup compatibility listed below when planning the cleanup. This is a reminder only; perform the rename as a separate reviewed step.
 The app's name was changed from NABUNGBEGO to Kaya on 6 Oct 2026 (everything the owner sees, the docs and the code comments). These were left on purpose and the owner asked to be reminded later:
 - **Database file and backups:** still `backend/data/nabungbego.db` and `nabungbego-<date>-<time>.db` (`backend/src/db.ts`, `backend/src/backup.ts`, the README restore steps, their tests). Renaming the file on its own would start the app with an empty database, so do it as a careful step: stop the app, copy the file (and any `-wal`/`-shm`) to the new name, keep the old one aside, and have the backup list still recognise old `nabungbego-` backups.
 - **Internal names:** the project folder (`NABUNGBEGO`), the package names (`nabungbego`, `nabungbego-frontend`, `nabungbego-backend`, and `package-lock.json`), and the test scratch-folder names.
@@ -1023,3 +1027,71 @@ Validation: rendered and visually inspected the PNG; checked bundled font and lo
 - Moved detailed usage, phone access, PIN, backup/restore and development commands to docs/USAGE.md. Updated the current product and roadmap links to the restore guide. The AI assistant remains described as planned, matching its implementation status.
 - Validation: checked local Markdown links, requested section order, media files and whitespace. No app code or data changed; application tests were not run for this documentation-only update.
 - Next: owner review of the shorter README.
+
+### AI assistant implementation plan (27 Oct 2026)
+
+- Read the product, design and AI backlog documentation and prepared [the staged AI assistant plan](docs/AI-ASSISTANT-PLAN.md). This is planning only; chat remains unimplemented.
+- Proposed first release: optional local read-only questions about recorded spending, income, categories, comparisons and budgets, using the existing Ollama setup. Kaya computes every amount; model interpretation is validated and answers link back to records. Proposed placement is a dedicated Assistant page, with tab-only history.
+- Next: owner review of scope and placement, then a synthetic-data model trial before integration. Build each stage separately and stop for review. The historical installation record is not a fresh runtime/performance check.
+- Validation: inspected relevant source interfaces and official Ollama documentation. No inference, app test suites or browser checks run for this plan; no application code or real data changed. PRODUCT.md and DESIGN.md remain descriptions of shipped behaviour.
+### AI assistant direction revised: smarter Quick add (27 Oct 2026)
+
+- Owner clarified the intended assistant: describe a transaction naturally, have Kaya prepare it, then confirm to save. Owner chose typing first; microphone input is deferred. This supersedes the earlier plan to begin with a separate read-only Assistant page.
+- Rewrote [the implementation plan](docs/AI-ASSISTANT-PLAN.md) around the existing Quick add coin, Ctrl+K and review/save form. Proposed scope adds natural dates, expense/income/transfer drafts, visible defaults and focused clarification for missing details. AI prepares only; the existing validated save flow runs after explicit confirmation.
+- Next: trial local model transaction extraction with synthetic data, then build preview and UI as separately reviewed stages. The existing expense parser must not silently discard richer sentence meaning when used as a fallback.
+- Planning only: inspected the current parser, form, validation and save flow. No app code or real data changed; no inference or application tests ran. PRODUCT.md and DESIGN.md remain descriptions of shipped behaviour.
+
+### AI Quick add transaction types confirmed (27 Oct 2026)
+
+- Owner approved income and transfers alongside expenses for the first release of typed AI Quick add. Updated docs/AI-ASSISTANT-PLAN.md from proposed to confirmed scope. Every type still prepares a draft and requires confirmation before saving.
+- Next: the synthetic-data extraction trial, followed by review. Documentation-only change; no app code, inference, tests or real data involved.
+
+### AI Quick add Stage 1: model trial complete (27 Oct 2026)
+
+- Built a repeatable synthetic-only extraction runner and 30 labelled English/Indonesian fixtures in docs/ai-trial/. See [the trial report](docs/ai-trial/REPORT.md) and raw outputs. No application code or real data changed.
+- Ollama 0.40.11 and the installed Qwen3.5 2B Q8_0 ran locally with a 4K context, thinking disabled and CPU execution. Cloud-disabled configuration checked. Median warm request 8.68 seconds; first full-run request 13.67 seconds including load. Memory was tight at startup and varied considerably during the run. Kaya was not running, so combined app/model performance is still untested.
+- Direct extraction matched 19/30 fixtures, including 12/16 ordinary drafts. Two ambiguous examples incorrectly became drafts; an omitted wallet was also guessed. This misses the agreed quality target. Do not integrate the prompt unchanged. Parse amounts, wallets, direction and dates in code, limiting AI to suggestions, then evaluate the combined pipeline with fresh examples.
+- Verified syntax, result JSON, all 30 completed cases, whitespace and model unload. No app typecheck/lint/unit/browser suites run because app source is unchanged. The existing Ollama server remains running; the trial model is unloaded. PRODUCT.md and DESIGN.md still describe shipped behaviour.
+- Next: owner review of Stage 1, then the bounded preview service and repeated evaluation before the Quick add UI stage, following the one-stage-at-a-time instruction. The requested expense/income/transfer feature is not yet available in the app.
+
+### AI Quick add Stage 2: validated preview service (27 Oct 2026)
+
+- Added POST /api/transactions/preview behind the existing PIN protection, with shared response types. It prepares expense/income/transfer drafts without writing transactions or changing balances. It is off unless KAYA_AI_ENABLED=true; the existing Quick add UI is unchanged.
+- Code handles rupiah shorthand, known wallets/nicknames, explicit transfer direction, supported dates in Asia/Jakarta and source-based notes. Missing or ambiguous information requests clarification. The local model receives only the cleaned note and compatible category vocabulary and can only suggest a category. Exact historical note matching stays local. See [service contract and limits](docs/ai-trial/PREVIEW-SERVICE.md).
+- Added bounded local inference, cancellation, single-request concurrency, distinct unavailable/missing-model/timeout errors, request/response limits, and a PIN recheck after inference. No schema change or model download.
+- Combined synthetic evaluation: 41/42 matched in the first run, including all 12 new paraphrases and all 20 ambiguous/unsupported cases. The only miss was electricity categorised as Other instead of Bills. Warm model-assisted requests were around 1.35 seconds median; explicit categories and transfers skip inference. These small fixture results are not a guarantee for arbitrary language.
+- Verification: project typecheck, lint and unit suites passed. Added 36 focused tests; backend typecheck and the preview suite passed again after final validation changes. Tests prove zero database writes during preview. Model trial uses synthetic data only; model unloaded afterwards. No real data, browser/phone tests or actual UI confirmation flow involved. PRODUCT.md and usage notes distinguish this backend-only stage from the unchanged UI; DESIGN.md needs no change.
+- Next: owner review of Stage 2, then connect the existing Quick add dialog and test review/edit/confirmation in isolation. The requested user-facing feature is not yet available.
+
+### AI Quick add Stage 3: Smart entry connected and checked (27 Oct 2026)
+
+- The coin and Ctrl+K now open Smart entry. Supported English/Indonesian expense, income and transfer sentences prepare the existing editable form; only Confirm and save or Save and add another saves. Simple expense retains the original local parser, and Use form instead provides explicit manual recovery.
+- Added visible defaults, clarification/offline messages, Stop, request cancellation and stale-response protection. Editing the sentence invalidates its old review. Enter prepares but cannot implicitly save a smart draft. Prepared categories survive note edits. A lost save acknowledgement blocks retrying and links to Transactions; a synchronous guard prevents double-click saves. PIN locking clears the draft.
+- The preview is now available by default (superseding Stage 2's development default); KAYA_AI_ENABLED=false disables it. No model download, cloud fallback or schema change. Ollama is only needed when category suggestions require inference.
+- Checks: typecheck, lint and all 733 unit tests passed. Fifty existing browser regression cases passed; the first smart-entry pass caught a category-clearing defect, which was fixed, and all ten smart-entry cases passed on the final run. Verified exact balance changes for all three transaction types, no writes before confirmation, edits, ambiguous inputs, duplicate prevention, stale replies, offline recovery and PIN lock during preparation. Final typecheck and targeted lint passed.
+- Browser work used copies of both apps in .nb-test, localhost:3200/4200 and proven sample data (BCA Rp 8.742.300, 41 transactions). Browser category inference was stubbed; the real model was evaluated separately in Stage 2. Desktop/phone screenshots inspected in both themes, including 320px width. Copies and owned servers cleaned up; real data untouched. No production build, real-phone hardware, other browser engines or browser-to-live-Ollama test in this stage.
+- Updated PRODUCT.md, DESIGN.md, README and usage/configuration notes. See [delivery details](docs/ai-trial/SMART-ENTRY.md). Next: owner review of the working flow. Category suggestions still require review, and broader language, voice and spending chat remain separate choices. No commit made.
+
+### AI Quick add Stage 4: live-model and production verification (27 Oct 2026)
+
+- Added an opt-in smart-entry-live browser suite and test-only instrumentation proving actual local model calls. Ordinary browser tests retain their stub. The harness can now build and serve its copied frontend in production mode with KAYA_BROWSER_PRODUCTION=1.
+- Passed the full browser-to-Next-to-Hono-to-Ollama flow in development and production using fictional expense/income/transfer entries. Food and Salary came from two real inference calls; transfers needed none. Preview changed neither transactions nor wallets; confirmation created exactly one record with the correct balance changes, and reload preserved it. No page errors.
+- Production build passed in the isolated app copy. Observed production preview times: 7.04 seconds for the first expense including model load, 1.96 seconds for warm income, 0.09 seconds for a transfer. These are single observations, not guarantees. See [full results and repeat instructions](docs/ai-trial/LIVE-BROWSER.md).
+- Both runs proved sample BCA Rp 8.742.300 and 41 transactions, used copied apps and a throwaway database on localhost:3200/4200, and cleaned up their own processes/copies. Cloud-disabled configuration verified. Model unloaded after each run; the existing Ollama server was left running. Real data untouched.
+- Project typecheck and targeted lint passed. No application source or schema changed, so the previously passing unit/regression suites were not rerun wholesale. Real-phone hardware, Safari and Firefox remain untested. PRODUCT.md and DESIGN.md behaviour is unchanged.
+- Next: owner review of the working feature on their usual device. Automated release verification is complete. Model category suggestions and unsupported sentence forms still require review/manual correction; voice and spending chat remain separate choices. No commit made.
+
+### Assistant next version planned: follow-ups and corrections (27 Oct 2026)
+
+- Owner chose the direction of missing-field questions and plain-language corrections, and asked for build steps plus other feature possibilities. Created [the next-version plan](docs/AI-ASSISTANT-NEXT-STEPS.md), continuing after completed stages 1-4.
+- Build order: Step 5 preserves independent draft fields and their sources; Step 6 handles answers to missing-field questions; Step 7 applies validated field corrections; Step 8 connects the conversation to Quick add; Step 9 evaluates multi-turn flows and releases. Stop for review after each step. Keep one unsaved transaction, tab-memory context and explicit confirmation; no migration is expected for this version.
+- Proposed later features include duplicate notices, improved category learning, broader dates, draft undo, templates, batch entry, split payments, receipts, voice, read-only spending questions, recurring-payment suggestions and reconciliation. These remain ideas, not selected work.
+- Next build: Step 5, draft-state preservation. Planning-only update: no app code, real data or model settings changed; no application/inference tests run. PRODUCT.md and DESIGN.md still describe the delivered Smart entry behaviour.
+
+### Assistant follow-ups and corrections delivered (27 Oct 2026)
+
+- Owner authorised all five planned steps together without intermediate stops. Completed draft preservation/provenance, missing-field replies, atomic corrections, conversation controls in Quick add, and release verification. This supersedes the planning entry above.
+- One unsaved draft stays in dialog memory. Replies and manual edits retain other fields; transfer corrections ask which end. Start new clears context. Explicit confirmation remains mandatory, with stale-response, cancellation, PIN-lock and uncertain-save protection retained. No database migration, persistent transcript, model download or real-data testing.
+- Checks: 782 unit tests, typecheck and lint passed. The fixed 44-case conversation corpus and 5 additional edge-case checks passed. Fifteen smart-entry/conversation browser checks passed, followed by 55 broader checks (including the 5 conversation cases again). Live-model multi-turn expense, income and transfer flows passed in development and an isolated production build, with no extra inference for replies/corrections and exact writes/balances after confirmation.
+- All browser runs used copied apps and proven sample data on localhost:3200/4200; owned copies and processes were cleaned up and the model unloaded. Desktop/light and narrow/dark screenshots inspected. No real phone hardware, Safari or Firefox coverage. See [release report and limitations](docs/ai-trial/CONVERSATION.md). Updated product, design, usage and build-plan documentation; no commit made.
+- Next: owner review on their usual device. Duplicate notices, category learning, broader dates and the other ideas remain unselected. The money pet was left alone.

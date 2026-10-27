@@ -1,0 +1,52 @@
+{
+  "dev": [
+    {
+      "type": "expense",
+      "previewMs": 6517,
+      "modelTimings": [
+        6134
+      ]
+    },
+    {
+      "type": "income",
+      "previewMs": 1908,
+      "modelTimings": [
+        6134,
+        1471
+      ]
+    },
+    {
+      "type": "transfer",
+      "previewMs": 128,
+      "modelTimings": [
+        6134,
+        1471
+      ]
+    }
+  ],
+  "prod": [
+    {
+      "type": "expense",
+      "previewMs": 6504,
+      "modelTimings": [
+        5931
+      ]
+    },
+    {
+      "type": "income",
+      "previewMs": 1936,
+      "modelTimings": [
+        5931,
+        1527
+      ]
+    },
+    {
+      "type": "transfer",
+      "previewMs": 83,
+      "modelTimings": [
+        5931,
+        1527
+      ]
+    }
+  ]
+}

@@ -49,6 +49,8 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 import { AuthError, SESSION_COOKIE } from "./auth.ts"
 import type { Store } from "./store.ts"
 import { ValidationError } from "./validate.ts"
+import { createPreviewModel, PreviewModelError, type SuggestionModel } from "./preview-model.ts"
+import { previewConversation as previewTransaction } from "./preview-conversation.ts"
 
 async function readJson(request: Request): Promise<unknown> {
   try {
@@ -58,10 +60,12 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-export function createApp(store: Store) {
+export function createApp(store: Store, previewOptions: { model?: SuggestionModel; now?: () => Date; enabled?: boolean } = {}) {
   const app = new Hono()
 
   const auth = store.auth
+  const previewEnabled = previewOptions.enabled ?? process.env.KAYA_AI_ENABLED !== "false"
+  const previewModel = previewOptions.model ?? createPreviewModel({ enabled: previewEnabled })
 
   app.get("/api/health", (c) => c.json({ ok: true }))
 
@@ -110,6 +114,37 @@ export function createApp(store: Store) {
 
   // One budget for all spending together in a month, next to the ones for single categories.
   app.put("/api/monthly-budget", async (c) => c.json(store.setMonthlyBudget(await readJson(c.req.raw))))
+
+  // Preview is read-only and uses the same PIN protection as the ledger. No model can invoke save.
+  app.post("/api/transactions/preview", async (c) => {
+    if (!previewEnabled) throw new PreviewModelError("disabled", "AI Quick add is off. You can use the ordinary form.")
+    if (Number(c.req.header("content-length")) > 4096) throw new ValidationError("Keep the preview request short.")
+    const reader = c.req.raw.body?.getReader()
+    if (!reader) throw new ValidationError("Send a sentence as JSON.")
+    const chunks: Uint8Array[] = []
+    let size = 0
+    try {
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        size += value.length
+        if (size > 4096) throw new ValidationError("Keep the preview request short.")
+        chunks.push(value)
+      }
+    } finally { await reader.cancel() }
+    let body: unknown
+    try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")) }
+    catch { throw new ValidationError("Send the data as JSON.") }
+    const data = store.getData()
+    const result = await previewTransaction(body, {
+      wallets: data.wallets.map(({ id, name, nickname, kind }) => ({ id, name, nickname, kind })),
+      categories: data.categories.map(({ id, name, type }) => ({ id, name, type })),
+      transactions: data.transactions.filter(t => t.type !== "transfer").map(t => ({ type: t.type, categoryId: t.categoryId, description: t.description, date: t.date })),
+    }, previewModel, { now: previewOptions.now?.(), signal: c.req.raw.signal })
+    // A device may have been locked while the model was working.
+    if (!auth.isAllowed(getCookie(c, SESSION_COOKIE))) return c.json({ error: "Kaya is locked. Enter your PIN to open it.", locked: true }, 401)
+    return c.json(result)
+  })
 
   app.post("/api/transactions", async (c) => {
     const result = store.createTransaction(await readJson(c.req.raw))
@@ -231,6 +266,7 @@ export function createApp(store: Store) {
   })
 
   app.onError((error, c) => {
+    if (error instanceof PreviewModelError) return c.json({ error: error.message, code: error.code }, error.code === "busy" ? 429 : error.code === "cancelled" ? 408 : 503)
     if (error instanceof ValidationError) return c.json({ error: error.message }, 400)
     if (error instanceof AuthError) {
       if (error.retryAfterSeconds !== undefined) c.header("Retry-After", String(error.retryAfterSeconds))

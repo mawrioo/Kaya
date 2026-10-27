@@ -35,6 +35,7 @@ test("a nickname is saved on a wallet, and Quick add finds the wallet by it", as
 
   // Quick add understands it, in any case, with no change to the transactions until the form is saved.
   await quickAddButton(page).click()
+  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("kopi susu 20rb jago")
   await line.press("Enter")
@@ -107,6 +108,7 @@ test("a new wallet can start with a nickname", async ({ page, request }) => {
   expect(created.nickname).toBe("gopay")
 
   await quickAddButton(page).click()
+  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("gopay 15rb parkir")
   await line.press("Enter")
@@ -129,6 +131,7 @@ test("emptying the box takes the nickname away, and Quick add stops using it", a
   expect((await wallet(request, "Bank Jago")).nickname).toBeUndefined()
 
   await quickAddButton(page).click()
+  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("kopi 20rb jago")
   await line.press("Enter")

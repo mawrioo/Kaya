@@ -205,6 +205,7 @@ test("Quick add can save and add another: it goes back to the one-line box, read
   await page.goto("/")
   await expect(quickAddCoin(page)).toBeEnabled()
   await quickAddCoin(page).click()
+  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
   // Its title changes from "Quick add" to "Add transaction" once the line has filled the form, so it is found as the only dialog.
   const dialog = page.getByRole("dialog")
   const line = dialog.getByRole("textbox", { name: "Your expense" })

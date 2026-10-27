@@ -13,7 +13,22 @@ let testDay
 const { calendarDate } = await fromCopy("time.ts")
 const store = createStore(db, () => testDay ?? calendarDate(new Date()))
 store.reset()
-const app = createApp(store)
+// Ordinary checks stay deterministic. The opt-in live suite calls the real local model.
+const liveAI = process.env.KAYA_BROWSER_REAL_AI === "1"
+const { createPreviewModel } = await fromCopy("preview-model.ts")
+const realModel = createPreviewModel({ enabled: true, model: "qwen3.5:2b" })
+const modelTimings = []
+const app = createApp(store, { enabled: true, model: liveAI ? async (input, signal) => {
+  const start = performance.now()
+  try { return await realModel(input, signal) }
+  finally { modelTimings.push(Math.round(performance.now() - start)) }
+} : async ({ categories }) => ({
+  categoryId: categories.find(c => c.name === "Food")?.id ?? categories.find(c => c.name === "Salary")?.id ?? null,
+}) })
+app.get("/__test/model-stats", (c) => {
+  if (c.req.header("authorization") !== process.env.KAYA_BROWSER_TOKEN) return c.text("Forbidden", 403)
+  return c.json({ liveAI, model: "qwen3.5:2b", modelTimings })
+})
 app.post("/__test/reset", (c) => {
   if (c.req.header("authorization") !== process.env.KAYA_BROWSER_TOKEN) return c.text("Forbidden", 403)
   testDay = undefined

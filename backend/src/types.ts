@@ -558,3 +558,39 @@ export interface RestoreCategoryResult {
   categories: Category[]
   restoredTransactionIds: string[]
 }
+
+/** An AI Quick add preview is not a saved transaction. Dates here are calendar dates. */
+export interface TransactionPreviewDraft {
+  type?: TransactionType
+  amount?: Rupiah
+  walletId?: string
+  toWalletId?: string
+  categoryId?: string
+  date?: string
+  description?: string
+}
+
+export interface TransactionPreview {
+  status: "ready" | "clarify" | "unsupported"
+  draft: TransactionPreviewDraft
+  defaults: ("date" | "wallet" | "category")[]
+  message: string
+  conversation?: PreviewConversation
+}
+
+export type PreviewField = keyof TransactionPreviewDraft
+export type PreviewSource = "sentence" | "reply" | "manual" | "default" | "suggestion"
+export interface PreviewQuestion {
+  field: PreviewField | "transferEnd" | "sentence"
+  reason: "missing" | "invalid" | "ambiguous" | "unsupported"
+  message: string
+  choices?: { id: string; label: string }[]
+  walletId?: string
+}
+/** Ephemeral, untrusted client context. Never persisted or sent to the model. */
+export interface PreviewConversation {
+  revision: number
+  draft: TransactionPreviewDraft
+  sources: Partial<Record<PreviewField, PreviewSource>>
+  pending?: PreviewQuestion
+}

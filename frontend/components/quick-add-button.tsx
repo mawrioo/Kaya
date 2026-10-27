@@ -62,7 +62,7 @@ export function QuickAddButton() {
       const { transaction } = await addTransaction(input)
       setLastWalletId(transaction.type === "transfer" ? transaction.fromWalletId : transaction.walletId)
       toast.success("Transaction added", {
-        description: `${transaction.description || "Expense"} · ${formatRupiah(transaction.type === "expense" ? -transaction.amount : transaction.amount)}`,
+        description: `${transaction.description || (transaction.type === "transfer" ? "Transfer" : transaction.type === "income" ? "Income" : "Expense")} · ${formatRupiah(transaction.type === "expense" ? -transaction.amount : transaction.amount)}`,
       })
     } catch (error) {
       toast.error("Couldn't save that", { description: errorMessage(error) })

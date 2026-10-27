@@ -59,7 +59,7 @@ For phone access, backups, CSV imports and development commands, see the [usage 
 
 ## Roadmap
 
-The core tracker is built. Planned next: a **local AI assistant** for questions about your spending and savings. Automatic backups and recurring transactions are also under consideration.
+Smart entry now prepares expenses, income and transfers from a sentence for review and confirmation. It uses a local model for category suggestions. Read-only spending chat, automatic backups and recurring transactions remain future options.
 
 See the [detailed roadmap](ROADMAP.md) for progress and open decisions.
 

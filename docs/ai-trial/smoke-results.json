@@ -1,0 +1,67 @@
+{
+  "model": "qwen3.5:2b",
+  "referenceDate": "2026-10-27",
+  "startedAt": "2026-10-26T21:19:18.838Z",
+  "freeBytesBefore": 1889148928,
+  "version": {
+    "version": "0.40.11"
+  },
+  "initialModels": {
+    "models": []
+  },
+  "results": [
+    {
+      "input": "paid 35rb for lunch from BCA yesterday",
+      "expected": {
+        "status": "draft",
+        "type": "expense",
+        "amountText": "35rb",
+        "walletId": "bca",
+        "toWalletId": null,
+        "dateText": "yesterday",
+        "categoryId": "food"
+      },
+      "actual": {
+        "status": "draft",
+        "type": "expense",
+        "amountText": "35rb",
+        "walletId": "bca",
+        "toWalletId": null,
+        "dateText": "yesterday",
+        "categoryId": "food"
+      },
+      "mismatches": [],
+      "pass": true,
+      "elapsedMs": 15910,
+      "loadMs": 7046,
+      "evalCount": 68,
+      "freeBytesAfter": 320663552
+    }
+  ],
+  "loadedModels": {
+    "models": [
+      {
+        "name": "qwen3.5:2b",
+        "model": "qwen3.5:2b",
+        "size": 2369666414,
+        "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "1.9B",
+          "quantization_level": "Q8_0"
+        },
+        "expires_at": "2026-10-27T04:24:34.8100841+07:00",
+        "size_vram": 0,
+        "context_length": 4096,
+        "runner": "llamacpp"
+      }
+    ]
+  },
+  "freeBytesAfter": 320696320,
+  "finishedAt": "2026-10-26T21:19:34.826Z"
+}
