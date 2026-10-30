@@ -45,7 +45,7 @@ export function AmountInput({ id, value, onChange, invalid, describedBy, autoFoc
   return (
     <div
       className={cn(
-        "flex h-14 items-center gap-3 rounded-lg border border-input bg-card px-4 shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/40",
+        "flex h-14 w-full min-w-0 items-center gap-3 rounded-lg border border-input bg-card px-4 shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/40",
         invalid && "border-destructive ring-3 ring-destructive/20 focus-within:border-destructive focus-within:ring-destructive/30"
       )}
     >

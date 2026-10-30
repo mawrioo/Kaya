@@ -1,11 +1,13 @@
 import type { Category, Transaction, TransactionPreview, TransactionPreviewDraft, Wallet } from "./types.ts"
 import { MAX_AMOUNT, parseNewTransaction, ValidationError } from "./validate.ts"
 import { PreviewModelError, type SuggestionModel } from "./preview-model.ts"
+import { extractTransactionDate } from "./transaction-dates.ts"
 
 /** Only these read-only fields enter the service. Balances and credentials are not accepted. */
 export interface PreviewContext {
   wallets: Pick<Wallet, "id" | "name" | "nickname" | "kind">[]
   categories: Pick<Category, "id" | "name" | "type">[]
+  categoryRules?: { type: "expense" | "income"; phrase: string; categoryId: string }[]
   transactions: Pick<Extract<Transaction, { type: "expense" | "income" }>, "type" | "categoryId" | "description" | "date">[]
 }
 
@@ -33,10 +35,6 @@ export function amountValue(number: string, unit: string): number | undefined {
   return Number(amount)
 }
 
-export function jakartaDate(now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(now)
-}
-
 /** Bounded grammar: uncertainty is returned as a question, never a guessed ready draft. */
 export async function previewTransaction(
   body: unknown,
@@ -62,26 +60,11 @@ export async function previewTransaction(
   const draft: TransactionPreviewDraft = {}
   const defaults: ("date" | "wallet" | "category")[] = []
   const problems: string[] = []
-  const dateMatches = [...remaining.matchAll(/\b(\d{4}-\d{2}-\d{2}|yesterday|kemarin|today|hari ini)\b/gi)]
-  if (dateMatches.length > 1) problems.push("Use one date for this transaction.")
-  const dateText = dateMatches[0]?.[0]
-  const today = jakartaDate(options.now ?? new Date())
-  if (dateText && /^\d/.test(dateText)) {
-    const parsed = new Date(`${dateText}T00:00:00Z`)
-    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dateText) problems.push("Choose a valid calendar date.")
-    else draft.date = dateText
-  } else if (dateText && /^(yesterday|kemarin)$/i.test(dateText)) {
-    draft.date = new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10)
-  } else {
-    draft.date = today
-    if (!dateText) defaults.push("date")
-  }
-  for (const match of dateMatches) remaining = remaining.replace(match[0], " ")
-  if (dateMatches.length > 1) delete draft.date
-  if (/\d[/-]\d|\b(last|next|ago|tomorrow|besok|lalu|minggu|bulan|senin|selasa|rabu|kamis|jumat|sabtu|minggu|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|maret|mei|juni|juli|agustus|oktober|desember)\b/i.test(remaining)) {
-    problems.push("Use today, yesterday, or an exact date such as 2026-10-27.")
-    delete draft.date
-  }
+  const date = extractTransactionDate(remaining, options.now)
+  remaining = date.remaining
+  if (date.date) draft.date = date.date
+  if (date.defaulted) defaults.push("date")
+  if (date.message) problems.push(date.message)
 
   const mentions: { id: string; start: number; end: number }[] = []
   const labels = context.wallets.flatMap(w => [w.name, w.nickname].filter((s): s is string => !!s).map(label => ({ id: w.id, label })))
@@ -147,9 +130,11 @@ export async function previewTransaction(
   if (draft.type && draft.type !== "transfer" && note.length <= 100) {
     const categories = context.categories.filter(c => c.type === draft.type)
     const explicit = categories.filter(c => new RegExp(`(?<![\\p{L}\\p{N}])${escape(c.name)}(?![\\p{L}\\p{N}])`, "iu").test(note))
-    if (explicit.length > 1) return issue("Choose one category for this transaction.", draft)
+    const remembered = context.categoryRules?.find(rule => rule.type === draft.type && normal(rule.phrase) === normal(note) && categories.some(c => c.id === rule.categoryId))
+    const commanded = categories.filter(c => new RegExp(`\\b(?:category|kategori)\\s+${escape(c.name)}(?![\\p{L}\\p{N}])`, "iu").test(note))
+    if (commanded.length > 1 || (!remembered && explicit.length > 1)) return issue("Choose one category for this transaction.", draft)
     const prior = context.transactions.filter(t => t.type === draft.type && normal(t.description) === normal(note) && normal(note).length >= 3 && categories.some(c => c.id === t.categoryId)).sort((a, b) => b.date.localeCompare(a.date))[0]
-    draft.categoryId = explicit[0]?.id ?? prior?.categoryId
+    draft.categoryId = commanded[0]?.id ?? remembered?.categoryId ?? explicit[0]?.id ?? prior?.categoryId
     if (!draft.categoryId) {
       if (problems.length && !options.suggestIncomplete) return { ...issue(problems[0], draft), defaults }
       if (categories.length > 60 || JSON.stringify(categories).length > 6000) return issue("Choose a category in the form.", draft)

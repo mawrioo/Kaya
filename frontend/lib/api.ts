@@ -48,6 +48,7 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:4000"
  * wait (too many wrong PINs), `retryAfterSeconds` says how long.
  */
 export class ApiError extends Error {
+  status?: number
   retryAfterSeconds?: number
   /** A create request lost its acknowledgement; retrying could record it twice. */
   mayHaveSaved?: boolean
@@ -56,7 +57,7 @@ export class ApiError extends Error {
 /** Kaya has a PIN and this device hasn't typed it (or its session has run out). */
 export class LockedError extends ApiError {}
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // On the server we need the backend's full address; in the browser a relative path is enough.
   const base = typeof window === "undefined" ? BACKEND_URL : ""
 
@@ -95,6 +96,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       throw new LockedError(message)
     }
     const error = new ApiError(message)
+    error.status = response.status
     if (typeof fields.retryAfterSeconds === "number") error.retryAfterSeconds = fields.retryAfterSeconds
     throw error
   }

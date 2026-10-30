@@ -246,7 +246,7 @@
  */
 @utility type-display {
   font-family: var(--font-heading);
-  font-size: 2.25rem;
+  font-size: 1.75rem;
   line-height: 1.1;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -268,7 +268,7 @@
 
 @utility type-amount-hero {
   font-family: var(--font-heading);
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 8.5vw, 2.5rem);
   line-height: 1;
   font-weight: 400;
   letter-spacing: -0.025em;
@@ -854,3 +854,123 @@ main[data-slot="sidebar-inset"] {
 .chart-figures th:first-child { text-align: left; }
 .chart-figures thead { background: var(--muted); }
 .chart-figures tbody tr:last-child > * { border-bottom: 0; }
+
+/* Phone density: keep numeric comparisons aligned and inputs comfortably readable. */
+@media (width < 48rem) {
+  .insight-stats .stat-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.75rem;
+  }
+  .insight-stats .stat-card > div:first-child { gap: 0.5rem; }
+  .insight-stats .stat-card > div:first-child > span:first-child { display: none; }
+  .insight-stats .stat-card > .type-amount { margin-top: 0; font-size: 1.5rem; }
+  .insight-stats .stat-helper { grid-column: 1 / -1; margin-top: 0; }
+  .insight-stats .stat-card .truncate { white-space: normal; }
+  /* Keep inputs at 16px so iOS does not zoom when the keyboard opens. */
+  input, textarea, select { font-size: 1rem; }
+  [data-slot="insight-row"] > span:first-child { width: 1.75rem; height: 1.75rem; }
+}
+
+/* A phone menu ends after its settings row, leaving the current page in view.
+ * The entire panel can scroll on short screens or with enlarged text. */
+[data-sidebar="sidebar"][data-mobile="true"].mobile-menu-panel {
+  top: max(0.5rem, env(safe-area-inset-top));
+  bottom: auto;
+  left: max(0.5rem, env(safe-area-inset-left));
+  width: var(--sidebar-width);
+  height: auto;
+  max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)) - max(0.5rem, env(safe-area-inset-bottom)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 1rem;
+  background-image: none;
+}
+.mobile-menu-panel [data-slot="sidebar-content"] {
+  flex: none;
+  overflow: visible;
+}
+
+/* One shared height keeps page clearance and the More sheet above the bar. */
+:root {
+  --mobile-nav-height: 3.25rem;
+  --mobile-nav-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+  --mobile-nav-accent: #a34d1f;
+}
+.dark { --mobile-nav-accent: #e4a36e; }
+.mobile-navigation {
+  position: fixed; inset: auto 0 0; z-index: 40;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: var(--mobile-nav-bottom);
+  padding: 0.1875rem max(0.375rem, env(safe-area-inset-right)) calc(0.1875rem + env(safe-area-inset-bottom)) max(0.375rem, env(safe-area-inset-left));
+  border-top: 1px solid var(--border); background: var(--card); color: var(--muted-foreground);
+}
+.mobile-navigation-item {
+  position: relative; min-width: 0; min-height: 2.75rem; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.1875rem;
+  padding: 0.125rem 0 0.25rem; font-size: 0.625rem; line-height: 1.2; font-weight: 400;
+}
+.mobile-navigation-item > svg { width: 1.125rem; height: 1.125rem; stroke-width: 1.6; }
+.mobile-navigation-item[aria-current="page"], .mobile-navigation-item[data-active="true"] { color: var(--mobile-nav-accent); font-weight: 600; }
+.mobile-navigation-item[aria-current="page"] > svg, .mobile-navigation-item[data-active="true"] > svg { stroke-width: 2; }
+.mobile-navigation-item[aria-current="page"]::after, .mobile-navigation-item[data-active="true"]::after {
+  content: ""; position: absolute; bottom: 0; width: 0.875rem; height: 2px; border-radius: 1px; background: currentColor;
+}
+.mobile-navigation-item:focus-visible, .mobile-quick-add:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.mobile-quick-add { display: grid; min-width: 2.75rem; min-height: 2.75rem; place-items: center; cursor: pointer; }
+.mobile-quick-add-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; background: #cc854c; color: #23190f; }
+.dark .mobile-quick-add-mark { background: #dda16e; color: #21190f; }
+.mobile-quick-add:active .mobile-quick-add-mark { transform: scale(0.96); }
+.mobile-quick-add:disabled { opacity: 0.6; cursor: default; }
+.mobile-more-panel[data-side="bottom"] {
+  bottom: var(--mobile-nav-bottom);
+  max-height: calc(100dvh - var(--mobile-nav-bottom) - 1rem - env(safe-area-inset-top));
+  overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 1rem 1rem 0 0;
+}
+@media (width >= 48rem) {
+  .mobile-navigation { display: none; }
+  .main-page-content { padding-bottom: 6rem; }
+}
+@media (width < 48rem) {
+  main[data-slot="sidebar-inset"] { background-image: none; }
+  .main-page-content {
+    padding-bottom: calc(var(--mobile-nav-bottom) + 1.5rem);
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  .mobile-brand-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: calc(0.75rem + env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0 max(1rem, env(safe-area-inset-left));
+  }
+  .phone-wordmark { min-height: 2.75rem; }
+  .phone-wordmark-text { font-family: var(--font-source-serif), Georgia, serif; font-size: 1.25rem; line-height: 1.4; letter-spacing: 0.04em; color: var(--foreground); }
+  .phone-home-heading h1 { font-size: 1.4375rem; line-height: 1.25; }
+  .home-total-balance { --phone-balance-surface: #23432f; background: var(--phone-balance-surface); color: #f7f2e7; border: 0; box-shadow: none; padding: 1.125rem; border-radius: 1rem; }
+  .dark .home-total-balance { --phone-balance-surface: #294b35; }
+  .home-total-balance h2 { font-size: 0.75rem; color: #e1e9db; }
+  .home-total-balance > p { font-size: 0.75rem; color: #d4dfcf; }
+  .phone-total-value { container-type: inline-size; display: flex; align-items: center; justify-content: space-between; gap: 0.25rem; margin-top: 0.875rem; margin-bottom: 0.4375rem; }
+  .phone-total-money { font-family: var(--font-inter), sans-serif; font-style: normal; font-weight: 500; font-size: clamp(1.125rem, calc((100cqi - 3rem) / var(--balance-length) * 1.6), 2.125rem); line-height: 1.2; letter-spacing: -0.035em; font-variant-numeric: lining-nums tabular-nums; }
+  /* A hidden amount uses fixed-size dots, regardless of its digit count. */
+  .phone-total-money:has(.sr-only) { font-size: 2.125rem; }
+  .phone-total-value button, .phone-total-value .text-muted-foreground { color: #d4dfcf; }
+  .phone-balance-pattern {
+    position: absolute; z-index: -1; pointer-events: none; inset: 0 0 0 auto; width: 70%;
+    background-image: linear-gradient(to right, var(--phone-balance-surface), transparent 86%), url("/patterns/kawung-phone.svg");
+    background-size: auto, 2.25rem 2.25rem;
+  }
+  .home-total-balance [data-slot="overdrawn-list"], .home-total-balance [data-slot="overdrawn-list"] .text-foreground { color: #d4dfcf; }
+  .home-total-balance [data-slot="overdrawn-list"] .text-negative { color: #f0b99b; }
+  .home-wallet-list { gap: 0.4375rem; }
+  .home-wallet-card { min-height: 3.4375rem; padding-top: 0.3125rem; padding-bottom: 0.3125rem; }
+  .home-wallet-card > p:first-of-type { font-size: 0.8125rem; }
+  .home-wallet-card > p:first-of-type a { overflow-wrap: anywhere; }
+}
+@media (width < 22.5rem) {
+  .home-wallet-card { grid-template-columns: minmax(0, 1fr) auto; }
+  .home-wallet-card > div > button { grid-column: 2; }
+  .home-wallet-card .home-wallet-amount { grid-column: 1 / -1; grid-row: 2; text-align: left; padding-left: 2rem; padding-bottom: 0.25rem; }
+}

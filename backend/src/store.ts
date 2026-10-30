@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto"
 import type { DatabaseSync } from "node:sqlite"
 
 import { createAuth } from "./auth.ts"
+import { createAssistantStore } from "./assistant-store.ts"
 import { lastBackup, makeBackup } from "./backup.ts"
 import { OTHER_CATEGORY_ID } from "./category-look.ts"
 import { depositoState } from "./deposito.ts"
@@ -507,6 +508,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
     return transact(() => {
       const transaction: Transaction = { ...input, id: `tx-${randomUUID()}` }
       insertTransaction(transaction)
+      assistant.rememberCategory(input, body && typeof body === "object" && "rememberCategory" in body ? body.rememberCategory : undefined)
       return { transaction, wallets: getWallets() }
     })
   }
@@ -1516,7 +1518,7 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
   function reset() {
     undoable.clear()
     transact(() => {
-      for (const table of ["transactions", "goal_movements", "goals", "wallet_value_updates", "categories", "wallets", "app_user"]) {
+      for (const table of ["assistant_batch_requests", "assistant_templates", "assistant_subscriptions", "assistant_category_rules", "transactions", "goal_movements", "goals", "wallet_value_updates", "categories", "wallets", "app_user"]) {
         db.exec(`DELETE FROM ${table}`)
       }
       seedSample()
@@ -1534,7 +1536,10 @@ export function createStore(db: DatabaseSync, today: () => string = () => calend
     })
   }
 
+  const assistant = createAssistantStore(db, { transact, getData, references, insertTransaction, getWallets })
+
   return {
+    assistant,
     auth,
     getData,
     updateUser,

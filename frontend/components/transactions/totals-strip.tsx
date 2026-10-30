@@ -1,3 +1,4 @@
+import { MobileDetails } from "@/components/mobile-details"
 import { formatRupiah } from "@/lib/format"
 import type { Totals } from "@/lib/transaction-totals"
 import { cn } from "@/lib/utils"
@@ -22,23 +23,25 @@ export function TotalsStrip({ summary, totals, notes = [] }: TotalsStripProps) {
     <div className="@container">
       <section
         aria-label="Totals"
-        className="flex flex-col gap-3 rounded-xl border bg-card px-5 py-4 shadow-sm @[50rem]:flex-row @[50rem]:items-center @[50rem]:justify-between @[50rem]:gap-8 md:px-6"
+        className="flex flex-col gap-0 md:gap-3 rounded-xl border bg-card px-3 py-2 md:px-5 md:py-4 shadow-sm @[50rem]:flex-row @[50rem]:items-center @[50rem]:justify-between @[50rem]:gap-8 md:px-6"
       >
         <div className="min-w-0 text-sm text-muted-foreground">
           <p aria-live="polite">{summary}</p>
-          {notes.length > 0 ? <p className="mt-0.5 wrap-anywhere">{notes.join(" · ")}</p> : null}
         </div>
 
         {/* Narrow, the three sit one under another like a receipt; with room for them they are three columns with a hairline between. */}
-        <dl className="grid grid-cols-1 gap-y-1.5 @[34rem]:grid-cols-3 @[34rem]:gap-y-0 @[34rem]:divide-x @[34rem]:divide-border">
-          <Figure label="Money in" className="text-positive">
-            {formatRupiah(totals.income, { sign: "always" })}
-          </Figure>
-          <Figure label="Money out" className="text-negative">
-            {formatRupiah(-totals.spending)}
-          </Figure>
-          <Figure label="Net">{formatRupiah(totals.net, { sign: "always" })}</Figure>
-        </dl>
+        <MobileDetails label={`Net ${formatRupiah(totals.net, { sign: "always" })} · Totals`}>
+          {notes.length > 0 ? <p className="mb-2 text-sm wrap-anywhere text-muted-foreground">{notes.join(" · ")}</p> : null}
+          <dl className="grid grid-cols-1 gap-y-1.5 @[34rem]:grid-cols-3 @[34rem]:gap-y-0 @[34rem]:divide-x @[34rem]:divide-border">
+            <Figure label="Money in" className="text-positive">
+              {formatRupiah(totals.income, { sign: "always" })}
+            </Figure>
+            <Figure label="Money out" className="text-negative">
+              {formatRupiah(-totals.spending)}
+            </Figure>
+            <Figure label="Net">{formatRupiah(totals.net, { sign: "always" })}</Figure>
+          </dl>
+        </MobileDetails>
       </section>
     </div>
   )

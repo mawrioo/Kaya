@@ -169,6 +169,30 @@ CREATE TABLE IF NOT EXISTS app_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS transactions_by_date ON transactions (date);
+
+-- Assistant settings share this file and its backups; money stays in the ordinary ledger.
+CREATE TABLE IF NOT EXISTS assistant_category_rules (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
+  phrase TEXT NOT NULL CHECK (length(phrase) BETWEEN 1 AND 100),
+  category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  UNIQUE (type, phrase)
+);
+CREATE TABLE IF NOT EXISTS assistant_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (length(name) BETWEEN 1 AND 40),
+  draft_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS assistant_subscriptions (
+  key TEXT PRIMARY KEY CHECK (length(key) BETWEEN 1 AND 300),
+  status TEXT NOT NULL CHECK (status IN ('tracked', 'dismissed')),
+  name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100)
+);
+CREATE TABLE IF NOT EXISTS assistant_batch_requests (
+  request_id TEXT PRIMARY KEY,
+  payload_json TEXT NOT NULL,
+  transactions_json TEXT NOT NULL
+);
 `
 
 function columnsOf(db: DatabaseSync, table: string): string[] {

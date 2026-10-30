@@ -21,6 +21,47 @@ Kaya/
 
 ## Done
 
+### Phone batik design implemented (30 Oct 2026)
+
+- Applied the approved New batik phone design: desktop Source Serif 4 lettering at 20px and a static fading kawung background on the forest total card. Removed the unused Jakarta font from app loading. Full figures, privacy, separate wallets and centre plus remain. No backend/schema or pet implementation changes.
+- Typecheck/lint, all 916 unit cases and all 20 isolated production browser cases passed. Reviewed both phone themes and desktop. [Screenshots, verification and limits](docs/mobile-compact/BATIK-PHONE-DELIVERY.md). Test copies/processes cleaned up; real data untouched. Next: owner phone review. No commit.
+
+### Desktop lettering and batik phone mockup (30 Oct 2026)
+
+- Refined the comparison into matching Current/New phone frames, with Compare/Current/New views, a shared light/dark switch, and linked scrolling/privacy/tabs. Current now uses the built app's SVG leaf geometry and font metrics. Both themes and narrow layouts verified; [interactive comparison and evidence](docs/home-concepts/phone-batik/README.md). Next: owner design review.
+
+- Prepared a standalone light/dark phone mockup using the desktop serif wordmark and kawung balance pattern, keeping compact wallets and centre plus. [Preview and checks](docs/home-concepts/phone-batik/README.md). Runtime design unchanged; next: owner review.
+- Read-only logs show another distinct LiveKernelEvent 117 dump from 30 October, without screenshotting. Chrome saved graphics acceleration remains enabled. [Evidence and diagnostic next step](docs/mobile-compact/BLACKSCREEN-2026-10-30.md). Root cause remains unresolved.
+
+### Selected phone design implemented (29 Oct 2026)
+
+- Delivered the selected Plus Jakarta Sans phone wordmark, open date/header, forest balance with upright digits and no mobile Breakdown, separate wallet cards, and 52px five-position navigation with a larger icon-only centre plus. A shared provider retains one Quick add dialog/shortcut across mobile and desktop and restores focus after responsive changes. Below-zero information and privacy remain; no backend/schema or pet implementation change.
+- Final typecheck/lint and 916 unit cases passed. Isolated production builds and 101 distinct affected browser cases passed across the broad/affected runs, ending with an all-green 33-case production confirmation. Fixed a small wordmark touch target; adjusted obsolete layout assertions and new test fixtures. [Delivery, real-app captures, exact run counts and limits](docs/mobile-compact/SELECTED-HOME-DELIVERY.md).
+- Tests used copied apps and proven sample data on localhost:3200/4200 with GPU disabled. Owned test copies/processes cleaned up; real data, owner ports, Chrome/driver settings and model runtime untouched. Physical phones/Safari and actual-model execution were not tested in this UI change. No commit. Next: owner review on the usual phone.
+
+### Three Home and slimmer navigation concepts (29 Oct 2026)
+
+- Owner chose Plus Jakarta Sans; [latest mockup puts Quick add in the centre of the bottom bar](docs/home-concepts/quick-add-centre/README.md), retaining the lighter selected-tab style and upright amounts. Follow-up removes the label under the plus and enlarges its orange surface to 40px. Both themes checked; no running-app changes.
+- Typography/navigation review: [Manrope, Outfit and Plus Jakarta Sans mockups](docs/home-concepts/type-navigation/README.md), upright lining/tabular balance figures and a lighter selected tab (accent outline/label/underline, no filled tile). Bundled licensed fonts; light/dark and interactions checked. Mockups only; awaiting owner choice.
+- Current mockup: [Kaya wordmark restored, Record removed](docs/home-concepts/kaya-header/README.md). Small open header/date, signature balance, individual wallets and four-item 52px navigation; light/dark checked. App unchanged; awaiting owner review.
+- Banking-reference follow-up: [two Record action mockups](docs/home-concepts/record-actions/README.md), inside the balance card or in the centre of the 52px navigation, replacing the disliked + Add. Light/dark previews verified; mockups only, awaiting owner choice.
+- Latest refinement: [logo-free phone mockup in light/dark](docs/home-concepts/no-logo/README.md), with greeting/date and labelled Add, signature balance, separate wallets and no Breakdown. Mockup only; awaiting owner review.
+- Follow-up: owner chose Compact Kaya with the signature balance, smaller Kaya, separate wallet cards and no mobile Breakdown. Delivered [three header alternatives in light/dark](docs/home-concepts/compact-refinement/README.md); A uses an open header, B prioritises the greeting, C puts the greeting in the card. Mockups only; owner review before implementation.
+- Owner requested visual mockups of Compact Kaya, Personal ledger and Signature balance. Delivered self-contained interactive previews and light/dark comparisons with the same illustrative balances, six visible wallets and a 52px bottom bar. [Open concepts and verification](docs/home-concepts/README.md).
+- Standalone files only; running app and real data unchanged. Headless rendering used GPU disabled, with no F12 or Windows screen-capture reproduction. Next: owner chooses a direction before implementation.
+
+### Bottom navigation and simpler Quick add (29 Oct 2026)
+
+- Owner selected option 2 and authorised the detailed plan. Delivered a smaller 60px phone bar with Home, Transactions, Wallets and More, a compact More/Settings sheet, and a 44px Quick add pill above the bar. Three ordinary goal cards still fit clear of it. Desktop keeps its sidebar.
+- Quick add now uses sentence -> compact review -> Save, with explicit Edit details, one-question clarification, optional tools under More and favourites/rules management in Settings > Entry preferences. Successful saves offer Done or Add another. The existing validation, duplicate protection, draft revisions/undo and uncertain-save handling are reused; no backend/schema change. The pet implementation was left alone.
+- Typecheck/lint, 916 unit cases, production builds and 159 distinct browser cases passed across the full pass and the final all-green 52-case affected run. The two actual-model opt-in cases were not run. Fixed a missing accessible dialog name, clarification title, menu focus and a view-only action creating Undo history. See [screenshots, exact verification and limitations](docs/mobile-compact/SIMPLE-NAV-ENTRY.md).
+- All browser work used copied apps, proven sample data and localhost:3200/4200. Owned copies/processes cleaned up; real data and ports untouched. No commit. Next: owner review on a physical phone; no further build selected.
+
+
+### Compact phone layouts (28 Oct 2026)
+
+Delivered the owner's seven-step mobile plan across the main finance pages and completed the available graphics investigation. [Delivery, tests, sample captures and limits](docs/mobile-compact/VERIFICATION.md). The two Windows graphics-timeout reports do not establish Kaya as the trigger; the UI release is not presented as a graphics-driver fix.
+
 ### Setup (29 Sep 2026)
 - Next.js 16 + TypeScript, Tailwind v4, shadcn/ui, Recharts, lucide-react, next-themes
 - Theme tokens for light and dark (`app/globals.css`), Source Serif 4 + Inter
@@ -757,7 +798,26 @@ Checked: screenshot review in light and dark mode, the phone layout with no hori
 
 ## Next
 
-Smart entry follow-ups and corrections are built and verified (27 Oct 2026): all five next-version steps were authorised together and completed. See [the release report](docs/ai-trial/CONVERSATION.md). Next: owner review on their usual device; no additional assistant feature is selected. Duplicate notices, category learning and broader dates remain possible later work.
+### Phone batik design ready for owner review (30 Oct 2026)
+
+The selected design, including the approved desktop serif lettering and kawung phone card, is implemented and verified. Review the [latest working-app captures and delivery](docs/mobile-compact/BATIK-PHONE-DELIVERY.md), especially readability of the balance and phone header. This supersedes the earlier phone appearance below. The physical display timeout remains unresolved; physical phone/Safari verification is still needed. No further feature is selected.
+
+### Bottom navigation and simple Quick add ready for review (29 Oct 2026)
+
+The selected smaller bottom bar and simplified assistant flow are delivered. Review the [latest screenshots and checks](docs/mobile-compact/SIMPLE-NAV-ENTRY.md) on the usual phone, especially More/Settings, Edit details, confirmation and Add another. This supersedes the earlier phone drawer below. Physical phone/Safari and actual-model execution remain untested in this UI change. No further feature is selected.
+
+
+### Phone goals and menu ready for review (29 Oct 2026)
+
+The further Goals/menu refinement is delivered. Three typical goals fit at 390 by 844; the narrower phone menu ends after Settings. Typecheck, lint, units and 20 distinct browser cases passed across isolated production runs, including a fix for hidden tooltips intercepting Escape. Next: owner review on their physical phone. See [previews and verification](docs/mobile-compact/GOALS-MENU.md).
+
+### Compact phone layouts ready for owner review (28 Oct 2026)
+
+The owner authorised steps 1–7 together. Shared phone headers/spacing, Home wallet rows, compact Wallets, transaction filters/totals, Categories, Goals, Insights and the bottom Quick add area are implemented. Typecheck, lint, unit tests, production builds and 146 distinct browser cases passed across the full sweep and focused reruns; two opt-in live-model cases were skipped. See [verification and sample previews](docs/mobile-compact/VERIFICATION.md). No real data, schema, Chrome/driver settings or pet implementation changed.
+
+Next: owner review on a physical phone, especially balance comparison, the wallet-details menu and the bottom action area. The Windows graphics timeout's exact trigger remains unresolved: ASUS currently lists the installed driver version, Chrome acceleration is enabled, and protected dump analysis / an owner-side acceleration-off capture comparison remain unperformed. No further feature is selected for this task.
+
+Smart entry, duplicate notices, draft undo and broader dates are delivered. On 28 Oct the owner asked to build the remaining items 4-8 from the reviewed order: category learning, favourites, several transactions, spending questions and subscription detection. Stages D-H are now implemented and verified; see [delivery, migration and limits](docs/ai-trial/ASSISTANT-EXPANSION.md). Next: owner review on their usual device. Reconciliation is the next separate proposed stage; receipt/screenshot entry and voice remain future updates.
 
 ### Portfolio pack ready for review (15 Oct 2026)
 
@@ -1095,3 +1155,34 @@ Validation: rendered and visually inspected the PNG; checked bundled font and lo
 - Checks: 782 unit tests, typecheck and lint passed. The fixed 44-case conversation corpus and 5 additional edge-case checks passed. Fifteen smart-entry/conversation browser checks passed, followed by 55 broader checks (including the 5 conversation cases again). Live-model multi-turn expense, income and transfer flows passed in development and an isolated production build, with no extra inference for replies/corrections and exact writes/balances after confirmation.
 - All browser runs used copied apps and proven sample data on localhost:3200/4200; owned copies and processes were cleaned up and the model unloaded. Desktop/light and narrow/dark screenshots inspected. No real phone hardware, Safari or Firefox coverage. See [release report and limitations](docs/ai-trial/CONVERSATION.md). Updated product, design, usage and build-plan documentation; no commit made.
 - Next: owner review on their usual device. Duplicate notices, category learning, broader dates and the other ideas remain unselected. The money pet was left alone.
+
+### Duplicate notices, draft undo and broader dates (28 Oct 2026)
+
+- Owner requested items 1-3 from the reviewed build order. Delivered advisory duplicate notices (also in the shared transaction form), memory-only Smart entry undo, and deterministic English/Indonesian weekday/days-ago/previous-month dates. Category learning remains the following proposed stage, not part of this build. The money pet was left alone.
+- Duplicate checks use exact amount/type/wallet/Jakarta day and transfer direction, refresh with draft edits, exclude an edited row itself and recheck fresh data at confirmation. A new match requires another review; a double-click cannot skip it. Offline checks preserve the draft and make no save request. Legitimate repeats remain saveable; warnings are advisory, not a uniqueness guarantee.
+- Undo restores a full draft, category provenance and pending question, groups manual typing into one edit, caps history at 20 changes and advances the revision to reject stale replies. Save/reset/mode/close/lock paths clear history. Dates include last Friday/Jumat lalu, two days ago/dua hari lalu and the 25th of last month/tanggal 25 bulan lalu, with exact calendar days shown. Bare weekdays/numeric dates and ambiguous Minggu lalu ask rather than guess.
+- Final checks: 822 unit tests passed (566 backend/256 frontend), typecheck, lint and whitespace passed. Browser runs passed 24 initial cases, 60 broader cases, 28 final affected development cases, then 11 final production cases including the last history-reset regression and actual local model. Development live-model checks passed separately. Exact dates, no writes before confirmation, one confirmed record and balance effects verified for all three types. See [release report and raw measurements](docs/ai-trial/ENTRY-IMPROVEMENTS.md).
+- All browser tests used copied apps under .nb-test, proven sample data and localhost:3200/4200. No schema change or real-data testing. Owned copies/processes cleaned up; model unloaded. Desktop/narrow light/dark screenshots inspected; real phone hardware, Safari and Firefox remain untested. Updated product, design and usage documentation; no commit made.
+- Next: owner review of these three improvements. Category learning, templates, batches, spending questions, subscriptions and reconciliation remain roadmap directions; images and voice remain future updates. No further build selected in this turn.
+
+### Assistant stages D-H delivered (28 Oct 2026)
+
+- Owner authorised the rest of the reviewed items 4-8 in one build. Added explicit persisted category rules, named optional-amount templates, up to five independent drafts with atomic durable-retry batch saving, read-only spending questions with exact evidence links, and recurring-payment detection with saved tracking/dismissal choices. Reconciliation, images and voice remain outside this build. The pet was left alone.
+- All database work was built in isolated frontend/backend copies. Rehearsed the additive four-table upgrade on a copy of the owner's database; all existing table contents stayed identical, integrity passed, no new foreign-key issues and new lists empty. Persistence tests cover older schema, backup/reopen, atomic opt-in learning, rollback, category deletion, reset and durable replay. The real file was never opened by the test app or written by tests.
+- Financial fields and amounts remain code-validated. Rules learn only after confirmed opt-in; templates never create transactions by themselves; batches use exact frozen keys/payloads after uncertain acknowledgements. Questions reject unsupported/ambiguous filters, calculate totals in code and link matching records; old answers clear after record changes. Recurring patterns show their evidence and never auto-create a future transaction.
+- Final checks: 900 unit tests passed (644 backend, 256 frontend), typecheck/lint/whitespace passed; 58 legacy/import browser cases passed, all 18 new feature browser cases passed and the final isolated production build passed 43 acceptance cases including the existing Smart entry suites. The expanded actual-Ollama scenario passed in development and production, with three inference calls, learned-rule reuse without inference and two batch attempts creating exactly three records. See [release report](docs/ai-trial/ASSISTANT-EXPANSION.md).
+- All browsers used copied apps and proven sample data on localhost:3200/4200. Owned copies/processes/rehearsal data cleaned up and model unloaded. Desktop and narrow light/dark screenshots inspected. Real-phone hardware, Safari and Firefox remain untested. Updated product/design/usage/review docs; no commit or model download/config change.
+- Next: owner review, then separately select reconciliation or another update. No further implementation is authorised by this turn.
+
+### Final assistant testing (28 Oct 2026)
+
+- Owner requested a final verification pass. Full checks now pass 916 unit cases (660 backend, 256 frontend), typecheck, lint and whitespace. The full production Chromium suite passed 137 regular cases; both normally skipped live-model suites were separately opted in and passed (9 latest-source Insights/single-entry cases, then the expanded batch scenario). The corrected development dynamic suite passed all seven cases.
+- Final review fixed two spending-parser issues: requested highest-expense counts could fall back to five, and words inside wallet names/nicknames could leak into category/date filters. Added 16 regressions, including ambiguous shared labels and competing/signed counts. The first full development pass found one outdated expense-only/stale-poll test setup; its assertions were preserved and setup updated. A clock-sensitive backup fixture now controls file timestamps explicitly. No schema or production backup behaviour changed.
+- Production live tests prove actual local category calls, learned-rule reuse without inference, exact single/batch balance changes, no writes before confirmation and durable lost-ack retry without duplicate rows. See [final report](docs/ai-trial/FINAL-TESTING.md) and its raw result JSON.
+- Every browser run copied both apps and proved sample data on localhost:3200/4200; no real-data or real-port testing. Owned servers/copies cleaned up, model unloaded, existing Ollama service preserved. Real phones/Safari/Firefox remain untested. No commit or push. Next: owner review; no new feature selected.
+
+### Phone goals and menu refinement (29 Oct 2026)
+
+- Owner requested a further reduction in Goals and the phone sidebar. Goals now use shorter comparison cards with saved/target amounts together, compact icons, progress and directly accessible Add money. Details holds the remaining amount and full saving plan. Phone navigation is a narrower, content-sized panel with an explicit close button, safe-area offsets and scrolling on short screens.
+- No backend or database changes. Existing uncommitted work preserved; the pet implementation was left alone. Browser verification uses the existing copied-app harness and proven sample data on localhost:3200/4200.
+- Next: owner review of the new Goals and menu on their phone. See docs/mobile-compact/GOALS-MENU.md for previews, checks and hardware limits.

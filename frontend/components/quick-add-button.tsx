@@ -1,118 +1,40 @@
 "use client"
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { Plus } from "lucide-react"
-import { toast } from "sonner"
 
-import { useData } from "@/components/data-provider"
-import { TransactionDialog } from "@/components/transactions/transaction-dialog"
+import { useQuickAdd } from "@/components/quick-add-provider"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { errorMessage } from "@/lib/api"
-import { formatRupiah } from "@/lib/format"
-import { opensQuickAdd } from "@/lib/quick-add-shortcut"
-import type { NewTransaction } from "@/lib/types"
 
-const subscribe = () => () => {}
-const clientReady = () => true
-const serverReady = () => false
-
-/** Anything that is already on top of the page and has the keyboard. */
-const OPEN_WINDOW = "[role='dialog'], [role='alertdialog'], [role='menu'], [role='listbox']"
-
-/** "Ctrl+K", or "Cmd+K" on a Mac. Only used inside the tooltip, which is never part of the page the server sends. */
 function shortcutName() {
   return /Mac|iPhone|iPad/.test(navigator.userAgent) ? "Cmd+K" : "Ctrl+K"
 }
 
-/**
- * One entry point on every page: a round orange coin with a plus, bottom right.
- * Parsing fills the existing form; only its Save submits.
- */
-export function QuickAddButton() {
-  const { wallets, addTransaction } = useData()
-  const [open, setOpen] = useState(false)
-  const [lastWalletId, setLastWalletId] = useState<string>()
-  const [tipOpen, setTipOpen] = useState(false)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  // Handing the keyboard back to the coin is not a visit: it must not pop the tooltip open.
-  const shortcutOrigin = useRef<HTMLElement | null>(null)
-  const quietTip = useRef(false)
-  // The server-drawn button must wait for its click handler to be ready.
-  const ready = useSyncExternalStore(subscribe, clientReady, serverReady)
-  // Never a deposito: nothing can be recorded in one.
-  const spendable = wallets.filter((wallet) => wallet.kind !== "deposito")
-  const defaultWalletId = spendable.find((wallet) => wallet.id === lastWalletId)?.id ?? spendable[0]?.id ?? ""
-
-  // Ctrl+K (Cmd+K) from anywhere.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const windowOpen = !!document.querySelector(OPEN_WINDOW)
-      if (!opensQuickAdd(event, { windowOpen })) return
-      shortcutOrigin.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null
-      event.preventDefault()
-      setTipOpen(false)
-      setOpen(true)
-    }
-    document.addEventListener("keydown", onKeyDown)
-    return () => document.removeEventListener("keydown", onKeyDown)
-  }, [])
-
-  async function save(input: NewTransaction) {
-    try {
-      const { transaction } = await addTransaction(input)
-      setLastWalletId(transaction.type === "transfer" ? transaction.fromWalletId : transaction.walletId)
-      toast.success("Transaction added", {
-        description: `${transaction.description || (transaction.type === "transfer" ? "Transfer" : transaction.type === "income" ? "Income" : "Expense")} · ${formatRupiah(transaction.type === "expense" ? -transaction.amount : transaction.amount)}`,
-      })
-    } catch (error) {
-      toast.error("Couldn't save that", { description: errorMessage(error) })
-      throw error
-    }
-  }
-
+/** Presentation only: both placements open the same shared draft. */
+export function QuickAddButton({ placement = "floating" }: { placement?: "floating" | "navigation" }) {
+  const control = useQuickAdd()
+  const button = (
+    <button
+      type="button"
+      aria-label="Quick add"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Control+K Meta+K"
+      data-quick-add-trigger={placement}
+      disabled={!control.ready}
+      onClick={event => control.openFrom(event.currentTarget)}
+      className={placement === "navigation" ? "mobile-quick-add" : "quick-add-control print-hidden group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-[3px] disabled:cursor-default max-md:hidden"}
+    >
+      <span aria-hidden className={placement === "navigation" ? "mobile-quick-add-mark" : "coin-rim grid size-11 place-items-center rounded-full bg-[color-mix(in_oklch,var(--kaya-accent)_92%,var(--muted-foreground))] text-white dark:text-highlight-foreground"}>
+        <Plus className={placement === "navigation" ? "size-[1.375rem]" : "size-5"} strokeWidth={placement === "navigation" ? 1.8 : 2.25} />
+      </span>
+    </button>
+  )
+  if (placement === "navigation") return button
   return (
-    <>
-      <Tooltip open={tipOpen} onOpenChange={(next) => setTipOpen(next && !quietTip.current)}>
-        <TooltipTrigger asChild>
-          <button
-            ref={buttonRef}
-            type="button"
-            aria-label="Quick add"
-            aria-haspopup="dialog"
-            aria-keyshortcuts="Control+K Meta+K"
-            disabled={!ready}
-            onClick={() => { shortcutOrigin.current = null; setOpen(true) }}
-            className="print-hidden group/coin fixed right-[max(1.5rem,env(safe-area-inset-right))] bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 grid size-11 cursor-pointer place-items-center rounded-full shadow-md transition-[box-shadow,scale,translate] duration-200 hover:shadow-lg active:scale-[0.94] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-[3px] disabled:cursor-default"
-          >
-            {/* Pointing at the coin lifts it a little (on the button, so the shadow lifts with it). */}
-            <span
-              aria-hidden
-              className="coin-rim grid size-11 place-items-center rounded-full bg-[color-mix(in_oklch,var(--kaya-accent)_92%,var(--muted-foreground))] text-white dark:text-highlight-foreground"
-            >
-              <Plus className="size-5" strokeWidth={2.25} />
-            </span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="left" sideOffset={10}>
-          Quick add <span className="text-background/70">{shortcutName()}</span>
-        </TooltipContent>
-      </Tooltip>
-      <TransactionDialog
-        open={open}
-        onOpenChange={setOpen}
-        quickAdd
-        defaultWalletId={defaultWalletId}
-        onSave={save}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault()
-          const back = shortcutOrigin.current?.isConnected ? shortcutOrigin.current : buttonRef.current
-          quietTip.current = true
-          back?.focus({ preventScroll: true })
-          requestAnimationFrame(() => {
-            quietTip.current = false
-          })
-        }}
-      />
-    </>
+    <Tooltip open={control.tipOpen} onOpenChange={control.changeTip}>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="left" sideOffset={10}>
+        Quick add <span className="text-background/70">{shortcutName()}</span>
+      </TooltipContent>
+    </Tooltip>
   )
 }

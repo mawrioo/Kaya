@@ -1,5 +1,11 @@
 # Smart entry: real-model browser verification
 
+Final verification, 28 Oct: [916 unit tests, the full 137-case production browser suite and both live-model flows passed](FINAL-TESTING.md). This is the latest check; historical release measurements remain below.
+
+Latest expansion, 28 Oct: [learning, favourites, batches, questions and recurring payments](ASSISTANT-EXPANSION.md) passed 43 production acceptance cases and the expanded live-model flow in development/production. Use that report and its new opt-in suite for current results.
+
+Latest release, 28 Oct: [duplicate notices, draft undo and broader dates](ENTRY-IMPROVEMENTS.md) passed the expanded live test and production acceptance suite. Use that report for current results; the earlier measurements below are historical.
+
 Update: the live suite now covers missing-field replies and corrections as well. See [the multi-turn release report](CONVERSATION.md) for the latest development/production results. The Stage 4 results below remain the historical baseline; the repeat commands run the expanded suite.
 
 Completed 27 Oct 2026. This closes the browser-to-live-Ollama and production-build gaps recorded in Stage 3.

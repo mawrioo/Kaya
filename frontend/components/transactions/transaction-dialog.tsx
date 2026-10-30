@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleAlert, Plus } from "lucide-react"
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleAlert, Plus, Undo2, ChevronDown, Check } from "lucide-react"
 import { toast } from "sonner"
 
 import { useIsBalanceHidden } from "@/components/balance-visibility"
@@ -11,6 +11,10 @@ import { DatePicker } from "@/components/date-picker"
 import { AmountInput } from "@/components/amount-input"
 import { Field } from "@/components/form-field"
 import { CategoryOption, WalletOption, selectTriggerClasses } from "@/components/transactions/options"
+import { AssistantBatchEntry } from "@/components/transactions/assistant-batch-entry"
+import { AssistantEntryTools } from "@/components/transactions/assistant-entry-tools"
+import { QuickEntryReview } from "@/components/transactions/quick-entry-review"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -29,10 +33,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ApiError, errorMessage, previewTransaction } from "@/lib/api"
+import { ApiError, errorMessage, loadData, previewTransaction } from "@/lib/api"
+import type { FavouriteTemplate } from "@/lib/assistant-api"
 import { formToNewCategory, type CategoryForm } from "@/lib/category-form"
 import { suggestCategory, type CategorySuggestion } from "@/lib/category-suggestion"
 import { toDateInput } from "@/lib/dates"
+import { formatDate, formatRupiah } from "@/lib/format"
+import { duplicateSignature, findTransactionDuplicates, type DuplicateMatch } from "@/lib/transaction-duplicates"
 import { prepareQuickExpense } from "@/lib/quick-add"
 import { describeTransaction } from "@/lib/stats"
 import {
@@ -78,7 +85,7 @@ export function TransactionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[calc(100svh-2rem)] grid-cols-1 gap-5 overflow-y-auto sm:max-w-lg"
+        className="max-h-[calc(100svh-2rem)] grid-cols-1 gap-5 overflow-y-auto sm:max-w-lg [&>[data-slot=dialog-close]]:size-11 [&>[data-slot=dialog-close]]:top-2 [&>[data-slot=dialog-close]]:right-2"
         onCloseAutoFocus={onCloseAutoFocus}
       >
         {/* The form is mounted only while the dialog is open, so it starts fresh every time. */}
@@ -118,6 +125,14 @@ interface BodyProps {
   onSave: (input: NewTransaction, another: boolean) => Promise<void>
 }
 
+interface DraftSnapshot {
+  form: TransactionForm
+  conversation?: PreviewConversation
+  chosenByHand: boolean
+  suggestion?: CategorySuggestion
+  reviewing: boolean
+}
+
 function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, onCancel, onSave }: BodyProps) {
   const { wallets: allWallets, categories, transactions, addCategory } = useData()
   // A deposito's balance follows its rate and dates, so no transaction can be recorded in it.
@@ -136,14 +151,27 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
   const [quickLine, setQuickLine] = useState("")
   const [quickError, setQuickError] = useState("")
   const [quickStatus, setQuickStatus] = useState("")
+  const compactQuick = quickAdd && !editing
+  const [editingDetails, setEditingDetails] = useState(false)
+  const [toolMode, setToolMode] = useState<"pick" | "save">()
+  const [savedReceipt, setSavedReceipt] = useState<{ amount: number; note: string }>()
   const [smartEntry, setSmartEntry] = useState(true)
+  const [batchEntry, setBatchEntry] = useState(false)
+  const [rememberCategory, setRememberCategory] = useState(false)
+  const [assistantRefresh, setAssistantRefresh] = useState(0)
   const [preparing, setPreparing] = useState(false)
   const [uncertainSave, setUncertainSave] = useState(false)
   const [conversation, setConversation] = useState<PreviewConversation>()
   const [reply, setReply] = useState("")
+  const [draftHistory, setDraftHistory] = useState<DraftSnapshot[]>([])
+  const manualGroup = useRef<string | undefined>(undefined)
+  const [duplicateReview, setDuplicateReview] = useState<{ formKey: string; baseline: Transaction[]; matches: DuplicateMatch[] }>()
+  const [saveCheckError, setSaveCheckError] = useState("")
+  const saveCheckRequest = useRef<AbortController | null>(null)
   const revision = useRef(0)
   const previewRequest = useRef<AbortController | null>(null)
   const saveInFlight = useRef(false)
+  const entryMenuFocus = useRef<string | undefined>(undefined)
   const [reviewing, setReviewing] = useState(!quickAdd || !!editing)
   const formRef = useRef<HTMLFormElement>(null)
   // A category suggested from what the note says, and whether the owner has picked one by hand. From then on
@@ -165,21 +193,23 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
   const belowZero = goingBelow && !isHidden(goingBelow.id) ? goingBelow : undefined
   const categoryChoices = categories.filter((category) => category.type === form.type)
 
-  useEffect(() => () => { previewRequest.current?.abort() }, [])
+  useEffect(() => () => { previewRequest.current?.abort(); saveCheckRequest.current?.abort() }, [])
 
   function stopPreparing() {
     revision.current++
     previewRequest.current?.abort()
     previewRequest.current = null
     setPreparing(false)
+    saveCheckRequest.current?.abort()
   }
 
   function useManualForm() {
     stopPreparing()
-    setConversation(undefined)
     setReply("")
     setReviewing(true)
-    setQuickStatus("Check each field below. Nothing is saved until you confirm.")
+    setEditingDetails(true)
+    setToolMode(undefined)
+    setQuickStatus("")
     requestAnimationFrame(() => document.getElementById("tx-amount")?.focus())
   }
 
@@ -209,9 +239,56 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
   }
   const activeConversation = currentConversation()
   const pendingQuestion = activeConversation?.pending
-  const smartInvalid = quickAdd && smartEntry && (!!pendingQuestion || Object.keys(validateForm(form)).length > 0)
+  const smartInvalid = quickAdd && (!!pendingQuestion || Object.keys(validateForm(form)).length > 0)
+  const formKey = JSON.stringify(form)
+  const duplicateMatches = duplicateReview?.formKey === formKey && duplicateReview.baseline === transactions
+    ? duplicateReview.matches : findTransactionDuplicates(form, transactions, editing?.id)
+
+  function snapshotDraft(): DraftSnapshot {
+    return structuredClone({ form, conversation: currentConversation(), chosenByHand, suggestion, reviewing })
+  }
+
+  function rememberDraft(field?: string) {
+    if (!quickAdd || !smartEntry || !reviewing || editing) return
+    if (field && manualGroup.current === field) return
+    manualGroup.current = field
+    const snapshot = snapshotDraft()
+    setDraftHistory(history => [...history.slice(-19), snapshot])
+  }
+
+  function undoDraftChange() {
+    if (saving || uncertainSave || !draftHistory.length) return
+    stopPreparing()
+    manualGroup.current = undefined
+    const snapshot = structuredClone(draftHistory[draftHistory.length - 1])
+    const next = snapshot.form
+    if (!wallets.some(w => w.id === next.walletId)) next.walletId = ""
+    if (!wallets.some(w => w.id === next.toWalletId)) next.toWalletId = ""
+    if (!categories.some(c => c.id === next.categoryId && c.type === next.type)) next.categoryId = ""
+    if (snapshot.conversation) {
+      snapshot.conversation.revision = revision.current
+      // Deleted references cannot be resurrected by undo.
+      for (const field of ["walletId", "toWalletId", "categoryId"] as const) if (!next[field]) delete snapshot.conversation.draft[field]
+      if (snapshot.conversation.pending?.walletId && !wallets.some(w => w.id === snapshot.conversation!.pending?.walletId)) delete snapshot.conversation.pending
+    }
+    setForm(next)
+    setConversation(snapshot.conversation)
+    setChosenByHand(snapshot.chosenByHand)
+    setSuggestion(snapshot.suggestion && categories.some(c => c.id === snapshot.suggestion!.category.id) ? snapshot.suggestion : undefined)
+    setReviewing(snapshot.reviewing)
+    setDraftHistory(history => history.slice(0, -1))
+    setReply("")
+    setErrors({})
+    setQuickError("")
+    setSaveCheckError("")
+    setRememberCategory(false)
+    setQuickStatus("Last draft change undone. Review the restored details.")
+    requestAnimationFrame(() => document.getElementById(snapshot.conversation?.pending ? "tx-reply" : editingDetails ? "tx-amount" : "tx-review-heading")?.focus())
+  }
 
   function startNewDraft() {
+    entryMenuFocus.current = "tx-quick-add"
+    setRememberCategory(false)
     stopPreparing()
     setConversation(undefined)
     setReply("")
@@ -219,20 +296,29 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
     setQuickError("")
     setQuickStatus("")
     setReviewing(false)
+    setEditingDetails(false)
+    setToolMode(undefined)
+    setSavedReceipt(undefined)
     setForm(emptyForm(form.walletId, new Date()))
     setChosenByHand(false)
-    requestAnimationFrame(() => document.getElementById("tx-quick-add")?.focus())
+    setDraftHistory([])
+    manualGroup.current = undefined
+    setDuplicateReview(undefined)
+    setSaveCheckError("")
   }
 
   async function prepareSmartEntry(answer?: string) {
     const text = answer ?? quickLine
     if (saveInFlight.current || previewRequest.current || uncertainSave || !text.trim()) return
     const base = answer === undefined ? undefined : currentConversation()
+    const before = base ? snapshotDraft() : undefined
+    manualGroup.current = undefined
     if (base) base.revision = revision.current
     const requestRevision = revision.current
     const controller = new AbortController()
     previewRequest.current = controller
     setPreparing(true)
+    setToolMode(undefined)
     if (!base) setReviewing(false)
     setQuickError("")
     setQuickStatus("Preparing on this computer…")
@@ -250,6 +336,12 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
         date: draft.date ?? "",
         note: draft.description ?? "",
       }
+      if (!base || next.note !== form.note || next.type !== form.type || next.categoryId !== form.categoryId) setRememberCategory(false)
+      const questionKey = (state?: PreviewConversation) => state?.pending ? [state.pending.field, state.pending.reason, state.pending.walletId] : null
+      if (before && (JSON.stringify(before.form) !== JSON.stringify(next) || JSON.stringify(questionKey(before.conversation)) !== JSON.stringify(questionKey(result.conversation)))) {
+        setDraftHistory(history => [...history.slice(-19), before])
+      }
+      if (!base) setDraftHistory([])
       setConversation(result.conversation)
       revision.current = result.conversation?.revision ?? revision.current + 1
       setReply("")
@@ -266,11 +358,12 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
         return
       }
       setReviewing(true)
+      if (!base) setEditingDetails(false)
       const defaults = result.defaults.map(field => field === "wallet"
         ? `Default wallet: ${wallets.find(w => w.id === next.walletId)?.name ?? "choose below"}.`
-        : field === "date" ? "Date defaults to today." : "Category defaults to Other.")
+        : field === "date" ? `Default date: ${formatDate(next.date)}.` : "Category defaults to Other.")
       setQuickStatus([...defaults, result.message].join(" "))
-      requestAnimationFrame(() => document.getElementById(base ? "tx-reply" : "tx-amount")?.focus())
+      requestAnimationFrame(() => document.getElementById(base && editingDetails ? "tx-reply" : "tx-review-heading")?.focus())
     } catch (error) {
       if (controller.signal.aborted || previewRequest.current !== controller) return
       setQuickError(errorMessage(error))
@@ -295,12 +388,17 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
   }
 
   function update<K extends keyof TransactionForm>(field: K, value: TransactionForm[K]) {
+    if (form[field] === value) return
+    rememberDraft(field)
     stopPreparing()
     setForm((current) => ({ ...current, [field]: value }))
     clearError(field as FormField)
   }
 
   function changeType(type: TransactionType) {
+    setRememberCategory(false)
+    if (form.type === type && conversation?.draft.type) return
+    rememberDraft()
     stopPreparing()
     setQuickError("")
     setQuickStatus("")
@@ -322,6 +420,9 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
 
   /** Typing a note suggests the category it was filed under before, until the owner picks one themselves. */
   function changeNote(note: string) {
+    setRememberCategory(false)
+    if (note === form.note) return
+    rememberDraft("note")
     stopPreparing()
     const suggesting = !editing && !chosenByHand && form.type !== "transfer"
     const found = suggesting ? suggestCategory(note, form.type, transactions, categories) : undefined
@@ -342,6 +443,9 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
       setAddingCategory(true)
       return
     }
+    // Capture the category's previous provenance before marking the selection manual.
+    rememberDraft("categoryId")
+    setRememberCategory(false)
     setChosenByHand(true)
     setSuggestion(undefined)
     update("categoryId", value)
@@ -361,10 +465,11 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
     setErrors({})
     setQuickError("")
     setReviewing(true)
+    setEditingDetails(false)
     const wallet = wallets.find((entry) => entry.id === result.form.walletId)
     setQuickStatus(`Form filled. ${result.walletMatched ? "Wallet" : "Kept wallet"}: ${wallet?.name ?? "choose below"}. ${result.form.categoryId ? "Review the details, then add the transaction." : "Choose a category below, then add the transaction."}`)
     // Leave the text available to correct; put the keyboard on the filled amount for review.
-    requestAnimationFrame(() => document.getElementById("tx-amount")?.focus())
+    requestAnimationFrame(() => document.getElementById("tx-review-heading")?.focus())
   }
 
   /** Saves a category made from inside this form, and picks it for the transaction. */
@@ -389,7 +494,7 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
       return
     }
     // Smart entry saves only through a deliberate footer button, never an implicit Enter submission.
-    if (!(quickAdd && smartEntry)) await save(false)
+    if (!compactQuick) await save(false)
   }
 
   useEffect(() => {
@@ -401,7 +506,7 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
 
   /** Checks the form and saves it. With `another`, the box stays open and starts over for the next one. */
   async function save(another: boolean) {
-    if (saveInFlight.current || preparing || uncertainSave || smartInvalid) return
+    if (saveInFlight.current || preparing || uncertainSave || smartInvalid || (compactQuick && (editingDetails || !!toolMode || !reviewing || !!savedReceipt))) return
     const found = validateForm(form)
     setErrors(found)
     if (Object.keys(found).length > 0) {
@@ -411,13 +516,39 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
     }
     saveInFlight.current = true
     setSaving(true)
+    setSaveCheckError("")
+    const check = new AbortController()
+    saveCheckRequest.current = check
+    const input = { ...formToTransaction(form, new Date(), editing), ...(rememberCategory && form.type !== "transfer" && form.note.trim() ? { rememberCategory: true } : {}) }
+    let checking = true
     try {
-      await onSave(formToTransaction(form, new Date(), editing), another)
-      if (another) startNext()
+      // Read current data at confirmation too: another device may have just added a match.
+      const latest = await loadData(undefined, check.signal)
+      if (check.signal.aborted) return
+      const matches = findTransactionDuplicates(form, latest.transactions, editing?.id)
+      if (matches.length && duplicateSignature(matches) !== duplicateSignature(duplicateMatches)) {
+        setDuplicateReview({ formKey, baseline: transactions, matches })
+        setSaveCheckError("A similar entry appeared since your last review. Check it below, then confirm again if this is another payment.")
+        requestAnimationFrame(() => document.getElementById("tx-duplicates")?.scrollIntoView({ block: "nearest" }))
+        return
+      }
+      checking = false
+      saveCheckRequest.current = null
+      await onSave(input, compactQuick || another)
+      if (rememberCategory) setAssistantRefresh(value => value + 1)
+      if (compactQuick) {
+        stopPreparing()
+        setDraftHistory([])
+        setRememberCategory(false)
+        setSavedReceipt({ amount: input.amount, note: form.note })
+        requestAnimationFrame(() => document.getElementById("tx-add-another")?.focus())
+      } else if (another) startNext()
     } catch (error) {
+      if (checking && !check.signal.aborted) setSaveCheckError(`Could not check for similar entries. ${errorMessage(error)} Try saving again when connected.`)
       if (error instanceof ApiError && error.mayHaveSaved) setUncertainSave(true)
       // The page has already explained what went wrong. Stay open so nothing typed is lost.
     } finally {
+      if (saveCheckRequest.current === check) saveCheckRequest.current = null
       saveInFlight.current = false
       setSaving(false)
     }
@@ -429,6 +560,14 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
    * back to the one-line box.
    */
   function startNext() {
+    setSavedReceipt(undefined)
+    setEditingDetails(false)
+    setToolMode(undefined)
+    setRememberCategory(false)
+    setDraftHistory([])
+    manualGroup.current = undefined
+    setDuplicateReview(undefined)
+    setSaveCheckError("")
     setConversation(undefined)
     setReply("")
     revision.current++
@@ -454,13 +593,83 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
     }
   }
 
+  function useTemplate(template: FavouriteTemplate) {
+    if (saving || uncertainSave) return
+    stopPreparing()
+    setSmartEntry(true)
+    const draft = template.draft
+    const type = draft.type ?? "expense"
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+    const next: TransactionForm = { ...emptyForm("", new Date()), type, amount: draft.amount === undefined ? "" : String(draft.amount), walletId: wallets.some(wallet => wallet.id === draft.walletId) ? draft.walletId! : "", toWalletId: type === "transfer" && wallets.some(wallet => wallet.id === draft.toWalletId) && draft.toWalletId !== draft.walletId ? draft.toWalletId! : "", categoryId: type !== "transfer" && categories.some(category => category.id === draft.categoryId && category.type === type) ? draft.categoryId! : "", date: today, note: draft.description ?? "" }
+    const context: PreviewConversation = { revision: revision.current, draft: { type, ...(next.amount ? { amount: Number(next.amount) } : {}), ...(next.walletId ? { walletId: next.walletId } : {}), ...(next.toWalletId ? { toWalletId: next.toWalletId } : {}), ...(next.categoryId ? { categoryId: next.categoryId } : {}), date: today, description: next.note }, sources: { type: "manual", amount: "manual", walletId: "manual", toWalletId: "manual", categoryId: "manual", date: "default", description: "manual" } }
+    setForm(next)
+    setToolMode(undefined)
+    setEditingDetails(false)
+    setConversation(context)
+    setReviewing(true)
+    setQuickLine(`Template: ${template.name}`)
+    setReply("")
+    setErrors({})
+    setDraftHistory([])
+    manualGroup.current = undefined
+    setQuickError("")
+    setQuickStatus(`Template ${template.name} opened for ${formatDate(today)}. Review its fields before saving.`)
+    setSaveCheckError("")
+    setDuplicateReview(undefined)
+    setChosenByHand(!!next.categoryId)
+    setSuggestion(undefined)
+    setRememberCategory(false)
+    requestAnimationFrame(() => document.getElementById(validateForm(next).amount ? "tx-reply" : "tx-review-heading")?.focus())
+  }
+
+  function reviewDetails() {
+    const found = validateForm(form)
+    setErrors(found)
+    if (Object.keys(found).length || pendingQuestion) {
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus())
+      return
+    }
+    setEditingDetails(false)
+    setQuickError("")
+    setQuickStatus("")
+    requestAnimationFrame(() => document.getElementById("tx-review-heading")?.focus())
+  }
+
+  function openTools(mode: "pick" | "save") {
+    entryMenuFocus.current = "tx-review-heading"
+    stopPreparing()
+    setToolMode(mode)
+  }
+
+  function switchEntryMode(smart: boolean) {
+    entryMenuFocus.current = "tx-quick-add"
+    stopPreparing()
+    setSmartEntry(smart)
+    setRememberCategory(false)
+    setDraftHistory([])
+    manualGroup.current = undefined
+    setDuplicateReview(undefined)
+    setSaveCheckError("")
+    setConversation(undefined)
+    setReply("")
+    setReviewing(false)
+    setEditingDetails(false)
+    setToolMode(undefined)
+    setQuickError("")
+    setQuickStatus("")
+    setForm(emptyForm(form.walletId, new Date()))
+    setChosenByHand(false)
+  }
+
+  if (batchEntry) return <AssistantBatchEntry defaultWalletId={form.walletId || defaultWalletId} onBack={() => setBatchEntry(false)} onDone={onCancel} />
+
   return (
     <>
-      <form ref={formRef} onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-5">
+      <form ref={formRef} onSubmit={handleSubmit} onBlurCapture={() => { manualGroup.current = undefined }} noValidate className="grid grid-cols-1 gap-5">
         <DialogHeader>
-          <DialogTitle className="type-title">
-            {editing ? "Edit transaction" : duplicateOf ? "Duplicate transaction" : quickAdd && smartEntry && reviewing ? "Review transaction" : reviewing ? "Add transaction" : "Quick add"}
-          </DialogTitle>
+          <DialogTitle className="type-title pr-8"><span id="tx-review-heading" tabIndex={-1} className="outline-none">
+            {savedReceipt ? "Transaction added" : toolMode === "pick" ? "Favourites" : toolMode === "save" ? "Save as favourite" : compactQuick && editingDetails ? "Edit details" : compactQuick && pendingQuestion ? "Quick add" : editing ? "Edit transaction" : duplicateOf ? "Duplicate transaction" : compactQuick && reviewing && !pendingQuestion ? `Review ${form.type}` : reviewing ? "Add transaction" : "Quick add"}
+          </span></DialogTitle>
           {duplicateOf && !editing ? (
             <DialogDescription>
               A copy of &ldquo;{describeTransaction(duplicateOf, allWallets, categories).title}&rdquo;, dated today. Change what you
@@ -473,84 +682,56 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
           )}
         </DialogHeader>
 
-        {quickAdd && !editing ? (
-          <div className="grid gap-2 rounded-xl border border-border bg-muted/40 p-3 sm:p-4">
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Entry method">
-              {[true, false].map(smart => <Button key={String(smart)} type="button" size="sm" variant={smartEntry === smart ? "secondary" : "ghost"} aria-pressed={smartEntry === smart} disabled={saving || uncertainSave} onClick={() => {
-                stopPreparing()
-                setSmartEntry(smart)
-                setConversation(undefined)
-                setReply("")
-                setReviewing(false)
-                setQuickError("")
-                setQuickStatus("")
-                setForm(emptyForm(form.walletId, new Date()))
-                setChosenByHand(false)
-                requestAnimationFrame(() => document.getElementById("tx-quick-add")?.focus())
-              }}>{smart ? "Smart entry" : "Simple expense"}</Button>)}
-            </div>
-            <Field label={smartEntry ? "Your transaction" : "Your expense"} htmlFor="tx-quick-add" error={conversation ? undefined : quickError}>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="tx-quick-add"
-                  value={quickLine}
-                  maxLength={smartEntry ? 500 : 240}
-                  autoComplete="off"
-                  autoFocus={!reviewing}
-                  placeholder={smartEntry ? "paid 35rb for lunch from BCA yesterday" : "nasi goreng 25rb BCA"}
-                  aria-invalid={quickError ? true : undefined}
-                  aria-describedby={`tx-quick-help${quickError ? " tx-quick-add-error" : ""}`}
-                  disabled={saving || uncertainSave}
-                  readOnly={smartEntry && !!conversation}
-                  onChange={(event) => {
-                    stopPreparing()
-                    setQuickLine(event.target.value)
-                    setQuickError("")
-                    setQuickStatus("")
-                    if (smartEntry) {
-                      setReviewing(false)
-                      setForm(emptyForm(form.walletId, new Date()))
-                      setChosenByHand(false)
-                    }
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter") return
-                    event.preventDefault()
-                    if (!conversation && !event.nativeEvent.isComposing && !event.repeat) fillFromQuickLine()
-                  }}
-                  className="h-10 min-w-0 flex-1 bg-card dark:bg-card"
-                />
-                {!conversation ? <Button type="button" variant="secondary" size="lg" disabled={saving || preparing || uncertainSave || !quickLine.trim()} onClick={fillFromQuickLine}>
-                  {preparing ? "Preparing…" : smartEntry ? "Prepare" : "Fill form"}
-                </Button> : null}
-              </div>
-            </Field>
-            <p id="tx-quick-help" className="text-sm text-muted-foreground">
-              {smartEntry ? "Expense, income or transfer. English or Indonesian. Runs on this computer; you confirm every save." : "An expense in one line. Try 25rb, 25k or 1,5jt. Fill, check, then save."}
-            </p>
-            {smartEntry && conversation ? <div className="grid gap-2">
-              <p id="tx-question" role="status" aria-live="polite" className="text-sm wrap-anywhere">{pendingQuestion?.message ?? "Anything to change? Try make that 40rb or use BCA."}</p>
-              <Field label="Reply or correction" htmlFor="tx-reply" error={quickError && !pendingQuestion ? quickError : undefined}>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input id="tx-reply" value={reply} maxLength={500} autoComplete="off" disabled={saving || uncertainSave} aria-describedby="tx-question" placeholder={pendingQuestion?.field === "amount" ? "e.g. 35rb" : "One answer or correction"} className="h-10 min-w-0 flex-1 bg-card dark:bg-card" onChange={event => { stopPreparing(); setReply(event.target.value); setQuickError("") }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); if (!event.nativeEvent.isComposing && !event.repeat) void prepareSmartEntry(reply) } }} />
-                  <Button type="button" variant="secondary" disabled={saving || preparing || uncertainSave || !reply.trim()} onClick={() => void prepareSmartEntry(reply)}>Apply</Button>
-                </div>
+        {savedReceipt ? <div className="grid gap-5">
+          <div className="flex items-center gap-3"><Check className="size-6 text-positive" aria-hidden /><p role="status" className="text-lg font-medium tabular-nums">{formatRupiah(savedReceipt.amount)} saved</p></div>
+          {savedReceipt.note ? <p className="text-sm text-muted-foreground wrap-anywhere">{savedReceipt.note}</p> : null}
+          <div className="flex justify-end gap-2"><Button type="button" variant="ghost" size="lg" onClick={onCancel}>Done</Button><Button id="tx-add-another" type="button" size="lg" onClick={() => { startNext(); requestAnimationFrame(() => document.getElementById("tx-quick-add")?.focus()) }}>Add another</Button></div>
+        </div> : null}
+
+        {compactQuick && !savedReceipt ? <>
+          {toolMode ? <div className="grid gap-4">
+            <AssistantEntryTools mode={toolMode} form={form} disabled={saving || preparing || uncertainSave} canSaveTemplate={reviewing && !smartInvalid} refreshKey={assistantRefresh} onUse={useTemplate} />
+            <Button type="button" variant="ghost" size="lg" className="justify-self-start" onClick={() => { setToolMode(undefined); requestAnimationFrame(() => document.getElementById(reviewing ? "tx-review-heading" : "tx-quick-add")?.focus()) }}>Back</Button>
+          </div> : <>
+            {!reviewing && !conversation ? <div className="grid gap-3">
+              <Field label={smartEntry ? "What happened?" : "Your expense"} htmlFor="tx-quick-add" error={quickError}>
+                <Input id="tx-quick-add" value={quickLine} maxLength={smartEntry ? 500 : 240} autoComplete="off" autoFocus placeholder={smartEntry ? "e.g. kopi hitam 10rb dari BCA" : "nasi goreng 25rb BCA"} aria-invalid={quickError ? true : undefined} aria-describedby="tx-quick-help" disabled={saving || uncertainSave} onChange={event => { stopPreparing(); setQuickLine(event.target.value); setQuickError(""); setQuickStatus("") }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); if (!event.nativeEvent.isComposing && !event.repeat) fillFromQuickLine() } }} className="min-h-11 bg-card" />
+              </Field>
+              <p id="tx-quick-help" className="text-xs text-muted-foreground">{smartEntry ? "English or Indonesian. Review before saving." : "An expense in one line, without the assistant."}</p>
+              <Button type="button" size="lg" disabled={saving || preparing || uncertainSave || !quickLine.trim()} onClick={fillFromQuickLine}>{preparing ? "Preparing..." : "Review"}</Button>
+            </div> : null}
+
+            {conversation && (pendingQuestion || editingDetails) ? <div className="grid gap-3">
+              <p id="tx-question" role="status" aria-live="polite" className="text-sm font-medium wrap-anywhere">{pendingQuestion?.message ?? "Describe a change, or edit the fields below."}</p>
+              <Field label={pendingQuestion ? "Your answer" : "Describe a change"} htmlFor="tx-reply" error={quickError && !pendingQuestion ? quickError : undefined}>
+                <div className="flex gap-2"><Input id="tx-reply" aria-label="Reply or correction" value={reply} maxLength={500} autoComplete="off" disabled={saving || uncertainSave} aria-describedby="tx-question" placeholder={pendingQuestion?.field === "amount" ? "e.g. 35rb" : "e.g. use Bank Jago"} className="min-h-11 min-w-0 flex-1 bg-card" onChange={event => { stopPreparing(); setReply(event.target.value); setQuickError("") }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); if (!event.nativeEvent.isComposing && !event.repeat) void prepareSmartEntry(reply) } }} /><Button type="button" variant="secondary" size="lg" disabled={saving || preparing || uncertainSave || !reply.trim()} onClick={() => void prepareSmartEntry(reply)}>Apply</Button></div>
               </Field>
               {pendingQuestion && quickError && quickError !== pendingQuestion.message ? <p role="alert" className="text-sm text-muted-foreground">{quickError}</p> : null}
-              {pendingQuestion?.field === "transferEnd" ? <div className="flex gap-2">{["Source", "Destination"].map(label => <Button key={label} type="button" variant="secondary" size="sm" disabled={preparing || saving || uncertainSave} onClick={() => void prepareSmartEntry(label)}>{label}</Button>)}</div> : null}
-              <Button type="button" variant="ghost" size="sm" className="justify-self-start" disabled={saving || uncertainSave} onClick={startNewDraft}>Start new</Button>
+              {pendingQuestion?.field === "transferEnd" ? <div className="flex gap-2">{["Source", "Destination"].map(label => <Button key={label} type="button" variant="secondary" size="lg" disabled={preparing || saving || uncertainSave} onClick={() => void prepareSmartEntry(label)}>{label}</Button>)}</div> : null}
             </div> : null}
-            {smartEntry && (!reviewing || conversation) ? <div className="flex flex-wrap gap-2">
-              {preparing ? <Button type="button" variant="ghost" size="sm" onClick={() => { stopPreparing(); setQuickStatus("Preparation stopped. Your sentence is still here.") }}>Stop</Button> : null}
-              <Button type="button" variant="ghost" size="sm" disabled={saving || uncertainSave} onClick={useManualForm}>Use form instead</Button>
-            </div> : null}
-            <p role="status" aria-live="polite" aria-atomic="true" className={cn("text-sm text-muted-foreground wrap-anywhere", !quickStatus && "sr-only")}>
-              {quickStatus}
-            </p>
-          </div>
-        ) : null}
 
-        {reviewing ? <>
+            {reviewing && !editingDetails && !pendingQuestion ? <QuickEntryReview form={form} wallets={wallets} categories={categories} conversation={activeConversation} /> : null}
+            {reviewing && !editingDetails && belowZero ? <p role="status" className="flex items-start gap-1.5 text-sm text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0 text-negative" aria-hidden />This takes {belowZero.name} below zero. You can still save it.</p> : null}
+            {preparing ? <Button type="button" variant="ghost" size="lg" className="justify-self-start" onClick={() => { stopPreparing(); setQuickStatus("Preparation stopped. Your sentence is still here.") }}>Stop</Button> : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {reviewing && !editingDetails && !pendingQuestion ? <Button type="button" variant="ghost" size="lg" onClick={() => { setEditingDetails(true); requestAnimationFrame(() => document.getElementById("tx-amount")?.focus()) }}>Edit details</Button> : !editingDetails ? <Button type="button" variant="ghost" size="lg" disabled={saving || uncertainSave} onClick={useManualForm}>Enter manually</Button> : null}
+              {draftHistory.length > 0 ? <Button type="button" variant="ghost" size="lg" disabled={saving || uncertainSave} onClick={undoDraftChange} aria-label="Undo last change"><Undo2 className="size-4" aria-hidden />Undo</Button> : null}
+              <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="lg" disabled={saving || preparing || uncertainSave} aria-label="More entry options">More<ChevronDown className="size-4" aria-hidden /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="[&_[role=menuitem]]:min-h-11" onCloseAutoFocus={event => {
+                if (!entryMenuFocus.current) return
+                event.preventDefault()
+                const id = entryMenuFocus.current
+                entryMenuFocus.current = undefined
+                requestAnimationFrame(() => document.getElementById(id)?.focus())
+              }}>
+                {!reviewing ? <><DropdownMenuItem onSelect={() => { entryMenuFocus.current = "assistant-batch-text"; stopPreparing(); setBatchEntry(true) }}>Several transactions</DropdownMenuItem><DropdownMenuItem onSelect={() => openTools("pick")}>Use a favourite</DropdownMenuItem><DropdownMenuItem onSelect={() => switchEntryMode(!smartEntry)}>{smartEntry ? "Simple expense" : "Smart entry"}</DropdownMenuItem></> : <><DropdownMenuItem disabled={smartInvalid} onSelect={() => openTools("save")}>Save as favourite</DropdownMenuItem><DropdownMenuItem onSelect={startNewDraft}>Start new</DropdownMenuItem><DropdownMenuItem onSelect={() => switchEntryMode(!smartEntry)}>{smartEntry ? "Simple expense" : "Smart entry"}</DropdownMenuItem></>}
+              </DropdownMenuContent></DropdownMenu>
+            </div>
+            <p role="status" aria-live="polite" aria-atomic="true" className={cn("text-sm text-muted-foreground wrap-anywhere", (!quickStatus || (!preparing && reviewing && !editingDetails && !pendingQuestion)) && "sr-only")}>{quickStatus}</p>
+          </>}
+        </> : null}
+
+        {reviewing && !savedReceipt && !toolMode ? <>
+        <div className={cn("grid gap-5", compactQuick && !editingDetails && "hidden")}>
         <fieldset>
           <legend className="sr-only">Type of transaction</legend>
           <div className="grid grid-cols-3 gap-1 rounded-full bg-muted p-1">
@@ -715,18 +896,33 @@ function TransactionFormBody({ editing, duplicateOf, defaultWalletId, quickAdd, 
           {savedStatus}
         </p>
 
-        <DialogFooter className="mt-1">
-          <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
-            Cancel
-          </Button>
-          {editing ? null : (
-            <Button type="button" variant="secondary" size="lg" disabled={saving || preparing || uncertainSave || smartInvalid} onClick={() => void save(true)}>
-              Save and add another
-            </Button>
-          )}
-          <Button type={quickAdd && smartEntry ? "button" : "submit"} onClick={quickAdd && smartEntry ? () => void save(false) : undefined} size="lg" disabled={saving || preparing || uncertainSave || smartInvalid}>
-            {saving ? "Saving..." : editing ? "Save changes" : quickAdd && smartEntry ? "Confirm and save" : "Add transaction"}
-          </Button>
+        {quickAdd && smartEntry && !editing && form.type !== "transfer" && form.note.trim().length >= 3 && form.categoryId ? <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={rememberCategory} disabled={saving || uncertainSave} onChange={event => setRememberCategory(event.target.checked)} /><span className="wrap-anywhere">Remember this category for &ldquo;{form.note.trim()}&rdquo;<span className="mt-1 block text-xs text-muted-foreground">For this exact note and type, after saving.</span></span></label> : null}
+
+        </div>
+
+        {duplicateMatches.length ? <div id="tx-duplicates" role="status" aria-live="polite" aria-atomic="true" className="grid gap-2 rounded-xl bg-muted/60 p-3 text-sm wrap-anywhere">
+          <p className="font-medium">{duplicateMatches.length === 1 ? "A similar entry is already in Kaya." : `${duplicateMatches.length} similar entries are already in Kaya.`}</p>
+          <p className="text-muted-foreground">Same amount, {isTransfer ? "transfer direction" : "wallet"} and date. You can still confirm if this is another payment.</p>
+          <ul className="grid gap-2">
+            {duplicateMatches.slice(0, 3).map(({ transaction: tx, sameNote }) => <li key={tx.id} className="grid gap-0.5">
+              <span>{tx.description || (tx.type === "transfer" ? "Transfer" : "Transaction")} · {formatRupiah(tx.amount)} · {formatDate(form.date)}</span>
+              {sameNote ? <span className="text-muted-foreground">The note matches too.</span> : null}
+            </li>)}
+          </ul>
+          {duplicateMatches.length > 3 ? <p className="text-muted-foreground">And {duplicateMatches.length - 3} more matching entries.</p> : null}
+          <a className="justify-self-start underline underline-offset-4" target="_blank" rel="noopener noreferrer" href={`/transactions?month=${encodeURIComponent(form.date.slice(0, 7))}&wallet=${encodeURIComponent(form.walletId)}&type=${form.type}`}>View this wallet in Transactions (new tab)</a>
+        </div> : null}
+        {saveCheckError ? <p role="alert" className="text-sm text-muted-foreground">{saveCheckError}</p> : null}
+
+        <DialogFooter className="mt-1 flex-row justify-end gap-2">
+          {compactQuick ? <>
+            <Button type="button" variant="ghost" size="lg" onClick={onCancel}>Cancel</Button>
+            {editingDetails ? <Button type="button" size="lg" disabled={saving || preparing || uncertainSave || smartInvalid} onClick={reviewDetails}>Review</Button> : <Button type="button" size="lg" disabled={saving || preparing || uncertainSave || smartInvalid} onKeyDown={event => { if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault() }} onClick={event => { if (event.detail < 2) void save(false) }}>{saving ? "Saving..." : "Save"}</Button>}
+          </> : <>
+            <Button type="button" variant="ghost" size="lg" onClick={onCancel}>Cancel</Button>
+            {editing ? null : <Button type="button" variant="secondary" size="lg" disabled={saving || preparing || uncertainSave} onClick={() => void save(true)}>Save and add another</Button>}
+            <Button type="submit" size="lg" disabled={saving || preparing || uncertainSave}>{saving ? "Saving..." : editing ? "Save changes" : "Add transaction"}</Button>
+          </>}
         </DialogFooter>
         {uncertainSave ? <p role="alert" className="text-sm text-muted-foreground">The save could not be confirmed. <a href="/transactions" className="underline underline-offset-4">Check Transactions</a> before adding it again.</p> : null}
         </> : null}

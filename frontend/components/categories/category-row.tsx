@@ -62,19 +62,19 @@ export function CategoryRow({ category, month, amount, isNew, onEdit, onBudget, 
     <li
       id={categoryRowId(category.id)}
       className={cn(
-        "group @container relative flex items-start gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4",
+        "group @container relative flex items-start gap-2 py-2 md:gap-3 md:py-3 first:pt-0 last:pb-0 sm:gap-4",
         isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3"
       )}
     >
-      <span className={cn("coin-rim grid size-10 shrink-0 place-items-center rounded-full", palette.soft, palette.icon)}>
+      <span className={cn("coin-rim grid size-7 md:size-10 shrink-0 place-items-center rounded-full", palette.soft, palette.icon)}>
         <Icon className="size-[1.125rem]" aria-hidden />
       </span>
 
       {/* The top padding puts the first line level with the middle of the badge. */}
-      <div className="min-w-0 flex-1 pt-2">
+      <div className="min-w-0 flex-1 pt-1 md:pt-2">
         {/* The amount sits at the right of the name when the row is wide enough for both, and under it when it isn't (a phone, or a narrow card), so a name never breaks in the middle of a word. */}
-        <div className="flex flex-col @md:flex-row @md:items-baseline @md:justify-between @md:gap-4">
-          <p data-slot="category-name" className="min-w-0 font-medium break-words">
+        <div className="flex flex-row items-baseline justify-between gap-2 md:flex-col md:items-stretch @md:flex-row @md:items-baseline @md:justify-between @md:gap-4">
+          <p data-slot="category-name" className="min-w-0 font-medium wrap-anywhere">
             <Link
               href={`/transactions?category=${encodeURIComponent(category.id)}&month=${month}`}
               className="underline-offset-4 outline-none group-hover:underline after:absolute after:inset-0 after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-offset-4 focus-visible:after:outline-ring"
@@ -97,7 +97,7 @@ export function CategoryRow({ category, month, amount, isNew, onEdit, onBudget, 
       </div>
 
       {/* The slot is always 40px wide, so amounts line up whether a row has a menu or not. Negative margins let the round button bleed into the padding. */}
-      <div className="relative z-10 -mr-2 size-10 shrink-0">
+      <div className="relative z-10 -mr-2 size-11 md:size-10 shrink-0">
         {hasMenu ? <CategoryMenu category={category} onEdit={onEdit} onBudget={onBudget} onDelete={onDelete} /> : null}
       </div>
     </li>

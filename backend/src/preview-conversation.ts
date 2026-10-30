@@ -1,4 +1,5 @@
-import { amountValue, jakartaDate, previewTransaction as extract, type PreviewContext } from "./transaction-preview.ts"
+import { amountValue, previewTransaction as extract, type PreviewContext } from "./transaction-preview.ts"
+import { DATE_HELP, resolveTransactionDate } from "./transaction-dates.ts"
 import { PreviewModelError, type SuggestionModel } from "./preview-model.ts"
 import type { PreviewConversation, PreviewField, PreviewQuestion, PreviewSource, TransactionPreview, TransactionPreviewDraft } from "./types.ts"
 import { MAX_AMOUNT, parseNewTransaction, ValidationError } from "./validate.ts"
@@ -42,7 +43,7 @@ function question(d: TransactionPreviewDraft, context: PreviewContext): PreviewQ
   const wallets = context.wallets.filter(w => w.kind !== "deposito").map(w => ({ id: w.id, label: w.name }))
   if (!d.walletId) return missing("walletId", d.type === "transfer" ? "Which wallet does the money leave?" : "Which wallet should this use?", wallets)
   if (d.type === "transfer" && !d.toWalletId) return missing("toWalletId", "Which wallet receives the money?", wallets.filter(w => w.id !== d.walletId))
-  if (!d.date) return missing("date", "Which date? Use today, yesterday or YYYY-MM-DD.")
+  if (!d.date) return missing("date", `Which date? ${DATE_HELP}`)
   if (d.type !== "transfer" && !d.categoryId) return missing("categoryId", "Which category should this use?", context.categories.filter(c => c.type === d.type).map(c => ({ id: c.id, label: c.name })))
 }
 
@@ -72,10 +73,13 @@ export async function previewConversation(body: unknown, context: PreviewContext
     state.pending = question(state.draft, context)
     if (result.status !== "ready" && (!state.pending || !Object.keys(state.draft).length)) state.pending = { field: "sentence", reason: result.status === "unsupported" ? "unsupported" : "ambiguous", message: result.message }
     if (state.pending && result.status !== "ready") {
-      if (/one |different|matches more|kind of/.test(result.message)) state.pending.reason = "ambiguous"
-      else if (/valid|whole-rupiah|exact date|named|Check/.test(result.message)) state.pending.reason = "invalid"
+      if (/one |different|matches more|kind of/.test(result.message) || (state.pending.field === "date" && /unclear|Do you mean/.test(result.message))) state.pending.reason = "ambiguous"
+      else if (/valid|whole-rupiah|exact date|named|Check/.test(result.message) || (state.pending.field === "date" && /does not fit|between 1 and 365/.test(result.message))) state.pending.reason = "invalid"
     }
-    return { ...finish(state, context), ...(result.status === "unsupported" ? { status: "unsupported" as const, message: result.message } : {}) }
+    const prepared = finish(state, context)
+    const remembered = context.categoryRules?.find(rule => rule.type === state.draft.type && rule.categoryId === state.draft.categoryId && rule.phrase === (state.draft.description ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim())
+    if (remembered && !/\b(?:category|kategori)\s/iu.test(state.draft.description ?? "")) { state.sources.categoryId = "suggestion"; prepared.message = `Category remembered for "${remembered.phrase}". ${prepared.message}` }
+    return { ...prepared, ...(result.status === "unsupported" ? { status: "unsupported" as const, message: result.message } : {}) }
   }
   const state = validateContext(body.conversation, context)
   if (typeof body.text !== "string" || !body.text.trim() || body.text.length > 500) throw new ValidationError("Write a reply in 500 characters or fewer.")
@@ -103,7 +107,7 @@ export async function previewConversation(body: unknown, context: PreviewContext
   else if ((match = text.match(/^(?:note|catatan):\s*(.*)$/i))) { field = "description"; value = match[1] }
   else if ((match = text.match(/^(?:this was|ini|type)\s+(.+)$/i))) { field = "type"; value = match[1] }
   else if ((match = text.match(/^(?:tanggalnya|date)\s+(.+)$/i))) { field = "date"; value = match[1] }
-  else if (/^(today|yesterday|hari ini|kemarin|\d{4}-\d{2}-\d{2})$/i.test(text)) field = "date"
+  else if (resolveTransactionDate(text, options.now).recognized) field = "date"
   else if (pending?.field === "transferEnd" && /^(source|destination|from|to|asal|tujuan)$/i.test(text)) { field = /^(source|from|asal)$/i.test(text) ? "walletId" : "toWalletId"; value = pending.walletId! }
   else if (pending && fields.includes(pending.field as PreviewField)) field = pending.field as PreviewField
   if (!field) return reject("Reply with one correction, or choose Start new for another transaction. Saving needs the confirmation button.")
@@ -120,10 +124,9 @@ export async function previewConversation(body: unknown, context: PreviewContext
     draft[field] = found[0].id
     if (draft.type === "transfer" && draft.walletId === draft.toWalletId) return reject("Choose two different wallets for the transfer.")
   } else if (field === "date") {
-    const today = jakartaDate(options.now ?? new Date())
-    const date = /^(today|hari ini)$/i.test(value) ? today : /^(yesterday|kemarin)$/i.test(value) ? new Date(Date.parse(today) - 86_400_000).toISOString().slice(0, 10) : value
-    if (!validDate(date)) return reject("Use today, yesterday or a valid YYYY-MM-DD date.")
-    draft.date = date
+    const date = resolveTransactionDate(value, options.now)
+    if (!date.date) return reject(date.message ?? DATE_HELP)
+    draft.date = date.date
   } else if (field === "type") {
     const types: Record<string, "expense" | "income" | "transfer"> = { expense: "expense", income: "income", transfer: "transfer", pengeluaran: "expense", pendapatan: "income", pemasukan: "income" }
     const type = Object.hasOwn(types, normal(value)) ? types[normal(value)] : undefined

@@ -18,7 +18,7 @@ const liveAI = process.env.KAYA_BROWSER_REAL_AI === "1"
 const { createPreviewModel } = await fromCopy("preview-model.ts")
 const realModel = createPreviewModel({ enabled: true, model: "qwen3.5:2b" })
 const modelTimings = []
-const app = createApp(store, { enabled: true, model: liveAI ? async (input, signal) => {
+const app = createApp(store, { enabled: true, now: () => testDay ? new Date(`${testDay}T12:00:00+07:00`) : new Date(), model: liveAI ? async (input, signal) => {
   const start = performance.now()
   try { return await realModel(input, signal) }
   finally { modelTimings.push(Math.round(performance.now() - start)) }

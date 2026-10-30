@@ -35,7 +35,7 @@ typography:
     letterSpacing: "-0.012em"
   display-mobile:
     fontFamily: "Source Serif 4, Georgia, serif"
-    fontSize: "2.25rem"
+    fontSize: "1.75rem"
     fontWeight: 400
     lineHeight: 1.1
     letterSpacing: "-0.02em"
@@ -47,7 +47,7 @@ typography:
     letterSpacing: "-0.025em"
   amount-hero-mobile:
     fontFamily: "Source Serif 4, Georgia, serif"
-    fontSize: "2.5rem"
+    fontSize: "clamp(1.5rem, 8.5vw, 2.5rem)"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "-0.025em"
@@ -221,9 +221,9 @@ Charts use `chart-1` to `chart-5` (moss, marigold, sage, sand, clay) or, for cat
 
 | Utility | Face | Size | Use |
 |---|---|---|---|
-| `type-display` | Serif 400 | 44px, 36px under 768px | Page title or greeting |
+| `type-display` | Serif 400 | 44px, 28px under 768px | Page title or greeting |
 | `type-title` | Serif 500 | 22px | Card and section titles |
-| `type-amount-hero` | Serif 400 | 64px, 40px under 768px | The one headline balance (Home total) |
+| `type-amount-hero` | Serif 400 | 64px; 24–40px fluid size under 768px | The one headline balance (Home total) |
 | `type-amount` | Serif 500 | 28px | Stat card numbers |
 | `type-figure` | Serif 500 | 20px | A figure in the middle of a page: the totals strip, 9 Oct 2026 |
 | `text-base` | Inter 400 | 16px / 1.5 | Body |
@@ -244,7 +244,7 @@ The serif roles are `type-*` utilities, not `text-*`, so `cn()` never mistakes t
 ## Layout
 
 - The sidebar is 224px wide from 768px up, and a button beside the name folds it down to a 48px strip of icons (and opens it again); the choice is kept in the `sidebar_state` cookie, so the page arrives already folded or open, and Ctrl+B does the same. Below 768px it becomes a sheet, opened from a forest-green top bar (18rem wide, no fold button).
-- Content sits in a column up to 1200px wide, with 20px side padding on phones, 32px from 768px and 48px from 1280px.
+- Content sits in a column up to 1200px wide, with 16px side padding on phones, 32px from 768px and 48px from 1280px.
 - Every page opens with the same header. On Home the title is a time-of-day greeting with the owner's name ("Good morning, Mario"). The greeting word changes language by itself (see Rotating greeting). Serif title on the left, date pill on the right from 1024px. Below that the pill sits above the title, so a two-word title never wraps.
 - Spacing runs on a 4px base. Cards use 20–32px padding and grid gaps are 16px. Sections are separated by 40–56px, always with more space above a heading than below it.
 - Grids step down rather than squeeze: wallet cards go 4 → 2 → 1 columns, and fact grids go 3 → 2 → 1.
@@ -661,6 +661,8 @@ A ready smart draft is titled Review transaction. It uses the existing type swit
 
 A lost save acknowledgement leaves a quiet message and a Check Transactions link, disabling both save buttons to prevent an immediate duplicate retry. The modes and form use existing tokens, no added ornament or automatic animation. On phones the controls wrap and the dialog scrolls within the viewport; the final confirmation remains reachable in both themes.
 
+Updated 28 Oct 2026: Undo last change sits above the type switch in Smart entry, with a small undo icon and a disabled state before any edit. Undo announces the restored draft and focuses its pending question or amount. Duplicate notices sit before the footer in a muted rounded surface, with up to three matching entries, exact formatted dates/amounts, the reason for the match and a link opening that wallet's monthly Transactions in a new tab. The copy explicitly allows another payment. A newly discovered match at confirmation keeps the form open for another review; repeated clicks cannot confirm past it. No alarm colours or additional confirmation dialog. Broader date phrases always resolve to the exact date displayed in the existing date picker.
+
 ### Transaction form: suggestions and "Add new category"
 
 Typing a note suggests a category. The category box fills itself in and a quiet line under it says where the suggestion comes from (it reads: Suggested from your earlier "Kopi Kenangan".). It only ever repeats the owner's own choices for the same kind of money: the very same note, then the start of an earlier note (from three letters, so it works as you type), then a word in common; the category used most often wins, and on a tie the most recent. It never replaces a category picked by hand, it is taken back when the note stops matching, and it isn't offered when editing a transaction or for a transfer. A "Choose a category" complaint goes as soon as a suggestion fills the box.
@@ -771,3 +773,46 @@ Removed the temporary Compare options button, its colour picker and its CSS over
 ### README landscape poster (17 Oct 2026)
 
 The README uses the 2880 x 1800 (16:10) dark poster in docs/portfolio/kaya-poster.png, with editable HTML and a repeatable capture/render workflow beside it. The owner chose the previous two-column composition: total and wallets on the left, insights below, goals and feature copy on the right. Card boxes keep their original dimensions. Presentation-only capture styles enlarge text and amounts by 25% in every panel, and kawung motifs by 35% (36px to 48.6px); spacing tightens inside the cards to accommodate the type. This supersedes the full-width 4:3 experiment. Kaya's mark, fonts, palette, icons and fictional 100m / six-wallet fixture remain. AI assistant replaces Quick add without an Upcoming badge as requested; that is poster copy only, and AI chat remains unimplemented. App source and live UI are unchanged.
+
+### Assistant expansion (28 Oct 2026)
+
+Quick add retains its existing single-entry form. A small Several transactions action opens a bounded list inside the same dialog, and a collapsed Favourites and remembered categories panel houses reusable drafts and rule management. A labelled checkbox below a smart draft explicitly opts into category learning after save. Favourite use starts an editable draft; the stored date is never reused. The batch list uses numbered entries, native type/wallet/category pickers, the established amount and date controls, per-row questions and undo, duplicate notices and a calm wallet-effect summary. Each entry can be unticked. Confirmation names the selected count. An uncertain save freezes edits and offers a same-batch retry and a new-tab records link.
+
+Insights adds Ask about your records before its existing views: one labelled question field, an answer with computed amounts and evidence links, and a collapsed Recurring payments section. Possible patterns show wallet, cadence, latest amount, estimate and matching records; Track/Dismiss are deliberate actions and Manage saved choices allows removal. Empty, loading, cancellation, clarification, offline and stale-record states use plain text. Evidence links use exact date/filter scopes; a record-limited Transactions view visibly offers Show all records in this period. Existing visual tokens, English interface copy, keyboard focus and reduced-motion behaviour remain in use. No standalone chat page, transcript bubbles or decorative animation.
+
+
+### Compact phone layouts (28 Oct 2026)
+
+Below 768px, the top bar is 56px and titles are 28px. Home uses a static English greeting and a short date; other page headers omit today's date. The header starts 20px below the bar, page content follows after 16px, ordinary sections use 16px gaps, and panels use 16px padding. Inputs retain 16px text and primary touch controls are 44px; desktop sizes remain as before. Display amounts keep the documented contrast floor; compact wallet amounts use full-contrast plain rupiah formatting and tabular digits.
+
+Home wallets form one divided list with badge/name left, balance right and an independent eye button. The six-wallet sample fits above the bottom action area at 390 × 844. Wallet management rows show name, full balance, eye and menu; Show wallet details in that menu expands notes, goal reservations, investment history/value actions and deposito details. A matured deposito retains a visible status. Total balance uses smaller phone spacing and folds its shares behind Balance breakdown; hiding the total removes the breakdown.
+
+Transactions keeps search, the selected period, Filters, Add and More transaction actions above the records. A full calendar month uses its short month/year on a phone; custom ranges retain their dates. Type/category/wallet controls fold together; the count and chosen scope remain visible, and Clear filters is reachable. Import CSV is in More transaction actions. The compact totals strip shows the count and a Net/Totals disclosure; income, spending, net and transfer explanations expand together. Rows have smaller decorative badges and tighter padding. Desktop filters and totals remain visible.
+
+Category names and amounts share a row on phones; badges and gaps are smaller, menus stay tappable and budget bars remain underneath. Goal cards use tighter spacing, retain saved/target/progress and pace, and fold the saving plan beside Add money. Insights folds questions/recurring payments, puts compact summary figures first, then the optional overview/note, and retains charts and comparison tables. Ranked rows can expand their comparison explanations. Desktop disclosures remain open without a toggle.
+
+Phones now use the selected 52px bottom navigation described in the latest refinement below. Quick add is the centre plus within that bar, with page padding to scroll the final record clear. On desktop it remains a floating coin. Reduced-motion preferences remain respected; phone greeting typing is disabled. The pet's implementation is unchanged.
+
+### Phone goals and menu refinement (29 Oct 2026)
+
+- Phone goals use compact cards with 12px padding, a 32px icon, 14px name, and 16px tabular saved amount. The target sits beside the saved amount, followed by a calm progress bar and percentage. Cards are separated by 8px; three typical goals fit at 390 by 844.
+- Details keeps the remaining amount, pace explanation, monthly plan and target date available without repeating them on every collapsed card. When there is a pace status, it appears in the disclosure label. Add money remains visible with a 44px tap target. Completed goals retain their reached date and Take money out action. Desktop cards retain their larger amounts and visible plans.
+- The phone menu is a content-sized forest panel, inset 8px with safe-area handling, at most 256px wide at default text size. It ends after Settings, has an explicit Close menu button and uses 44px navigation rows. It scrolls within the viewport in landscape or with enlarged text. The decorative lattice stays on the desktop sidebar; the phone panel uses plain forest. The modal focus trap, Escape, outside dismissal, active-page indication and return focus remain.
+
+### Bottom navigation and simple Quick add (29 Oct 2026)
+
+This supersedes the earlier phone drawer; its navigation appearance is further refined below. Home, Transactions, centre Quick add, Wallets and More share a 52px bar plus the device's safe area, with 18px destination icons, 10px labels and at least 44px tap targets. The active page uses an accent outline icon, label and short underline; Goals, Categories, Insights and Pet activate More. More opens a short forest sheet above the bar with four page links in two columns and Settings. Settings reuses the name, appearance, backup and PIN controls and adds Entry preferences. The panel scrolls on short screens and returns focus to More on dismissal. The modal sheet blocks interaction with the navigation behind it.
+
+Quick add has one sentence input, one Review button, Enter manually and a small More menu. It accepts English/Indonesian expense, income and transfer entries. A missing detail is asked as one question. The compact review shows a full rupiah amount and note, wallet/category or both transfer wallets, exact date and default markers. Edit details reveals the existing form and natural-language correction input. Review returns from editing before Save. Undo is absent until an actual draft change. Duplicate and save-failure notices remain visible; below-zero information respects balance privacy.
+
+A successful Quick add shows a receipt with Done and Add another. Enter never saves an unsaved Quick add draft. The ordinary Add/Edit transaction forms keep their existing controls. More contains batch entry, favourite loading and Simple expense on entry, or Save as favourite and Start new on review. Optional category remembering lives inside editing; management of rules and favourites lives in Settings > Entry preferences. Both phone and desktop use the simpler assistant flow. No new animation or decoration was introduced.
+
+### Selected phone header, balance and centre action (29 Oct 2026)
+
+The selected mockup is implemented below 768px. The open wordmark/date row scrolls with the page and has no separate forest strip. Updated 30 Oct: Kaya uses the desktop Source Serif 4 lettering at 20px / 600, tracking 0.04em and line-height 1.4, with at least a 44px clickable height. The Home greeting is static Source Serif 4 at 23px, and the phone date pill is removed in favour of the shared header date.
+
+Home's total is a compact forest card (#23432f in light mode, #294b35 in dark), with cream text and the desktop four-petal kawung motif fading in across the right 70% of the card. The phone uses a static 36px SVG background tile with .2 stroke opacity and a theme-matched colour fade, without a mask, blur or animation. Phone numbers use Inter, normal style, lining/tabular figures, up to 34px and responsive to the complete amount's length. The eye sits beside the total. Hidden dots have a fixed size independent of the amount length. The mobile chart/disclosure is omitted; desktop keeps its chart. Below-zero information remains with total/wallet visibility guards. Phone backgrounds omit the SVG grain; desktop backgrounds retain their treatment. This rendering simplification is not a confirmed fix for the reported graphics timeout.
+
+Home wallet rows are separate rounded cards, about 55px minimum height with 7px gaps. Badge/name, full amount and eye are aligned; privacy targets remain 44px. Names wrap and the amount moves to a second row below 360px. Manage links to Wallets. Content can grow rather than clipping money or enlarged text.
+
+The centre Quick add has a 40px orange rounded square, 12px radius, 22px plus and a hit area of at least 44px. There is no visible label, and the accessible name is Quick add. It has no selected-page state. The shared bar is 52px at normal settings plus safe-area padding; rem-based sizes allow larger text. Active navigation has no filled tile; accent icon/label/short underline identifies the page. Shared CSS height variables position the More sheet and bottom content padding. One provider owns the existing assistant dialog, last-used wallet, keyboard shortcut and focus restoration across responsive triggers.

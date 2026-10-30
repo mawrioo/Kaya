@@ -15,7 +15,7 @@ interface StatCardProps {
 
 export function StatCard({ icon: Icon, label, value, helper, helperTone = "positive", className }: StatCardProps) {
   return (
-    <div className={cn("flex flex-col rounded-xl border bg-card p-5 shadow-sm", className)}>
+    <div className={cn("stat-card flex flex-col rounded-xl border bg-card p-5 shadow-sm", className)}>
       <div className="flex items-center gap-3">
         <span className="coin-rim grid size-10 shrink-0 place-items-center rounded-full bg-sage text-sage-foreground">
           <Icon className="size-[1.125rem]" aria-hidden />
@@ -24,7 +24,7 @@ export function StatCard({ icon: Icon, label, value, helper, helperTone = "posit
       </div>
       <div className="mt-5 type-amount">{value}</div>
       {helper ? (
-        <p className={cn("mt-2 text-sm", helperTone === "positive" ? "text-positive" : "text-muted-foreground")}>
+        <p className={cn("stat-helper mt-2 text-sm", helperTone === "positive" ? "text-positive" : "text-muted-foreground")}>
           {helper}
         </p>
       ) : null}

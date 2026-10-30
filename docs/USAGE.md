@@ -26,21 +26,57 @@ The latest full validation and its limits are recorded in [ROADMAP.md](../ROADMA
 
 ### Add a transaction quickly
 
-Press the coin at the bottom right or Ctrl+K (Cmd+K on a Mac). Smart entry accepts one expense, income or transfer:
+Press the orange + in the centre of the phone navigation, the coin on desktop, or Ctrl+K (Cmd+K on a Mac). Enter one expense, income or transfer:
 
 - `paid 35rb for lunch from BCA yesterday`
 - `received Salary 5jt in Bank Jago today`
 - `transfer 500rb from BCA to Bank Jago`
 
-Use the wallet's full name or a nickname you have set. Press Prepare, review the amount, category, wallets and date, then Confirm and save. You can edit every field. Enter prepares the sentence; it does not confirm a smart draft. Save and add another saves and keeps the box open for the next sentence.
+Use the wallet's full name or a nickname you have set. Press Review, check the compact summary and press Save. Edit details opens the fields; press Review again after changes. Enter prepares a sentence or applies a correction, and never saves a Quick add draft. After saving, choose Done or Add another.
 
-For dates, use today/hari ini, yesterday/kemarin, or YYYY-MM-DD. Missing details appear as one question at a time. For example, `Bought lunch from BCA yesterday` asks for the amount; answer `35rb`. The original sentence and other details stay. You can also answer by editing the form's amount, wallet or category.
+For dates, use today/hari ini, yesterday/kemarin, YYYY-MM-DD, `last Friday`/`Jumat lalu`, `two days ago`/`dua hari lalu`, or `the 25th of last month`/`tanggal 25 bulan lalu`. "Last Friday" means the most recent Friday strictly before today; on a Friday it means seven days earlier. A bare weekday or `03/04` asks for clarification. `Minggu lalu` is ambiguous between last week and Sunday; use `hari Minggu lalu` for last Sunday. Check the exact date in the form. Numeric days ago support 1-365; English/Indonesian number words support one through ten.
 
-Use **Reply or correction** to change one detail: `make that 40rb`, `ganti jadi 40rb`, `use BCA`, `category Food`, `note: lunch with friends`, `actually yesterday`, or `this was income`. For transfers, `from BCA` changes the source and `to Bank Jago` changes the destination. `use Bank Jago` asks which end you mean. Invalid corrections keep the previous details. Manual choices survive unrelated corrections.
+Missing details appear as one question at a time. For example, `Bought lunch from BCA yesterday` asks for the amount; answer `35rb`. The original sentence and other details stay. You can also answer by editing the form's amount, wallet or category.
 
-Enter applies a reply but never saves. Review the form and press Confirm and save. **Start new** clears the unsaved draft for another sentence; closing or locking clears it too. No conversation history is stored. Use form instead switches to manual entry, and Simple expense retains the original fast expense parser. There is no microphone input.
+Open **Edit details** and use **Describe a change** to change one detail: `make that 40rb`, `ganti jadi 40rb`, `use BCA`, `category Food`, `note: lunch with friends`, `actually yesterday`, or `this was income`. For transfers, `from BCA` changes the source and `to Bank Jago` changes the destination. `use Bank Jago` asks which end you mean. Invalid corrections keep the previous details. Manual choices survive unrelated corrections.
+
+**Undo last change** restores a correction or one completed manual field edit, including the earlier category and any missing-field question. Up to 20 changes are kept only while the draft is open. Start new, closing, locking, switching entry mode or saving the draft clears this history. Undo affects the unsaved draft only.
+
+Before saving, a quiet notice lists entries with the same amount, wallet and Jakarta date. Transfers must also match direction. A matching note is highlighted, but another note or category does not hide a possible duplicate. The notice shows up to three entries and links to that wallet's monthly Transactions in a new tab. You can still confirm a legitimate repeat payment. Saving checks fresh data too; a newly found match asks you to review and confirm again. If the check cannot reach Kaya, the draft stays open and nothing saves. This is an advisory check, not a guarantee against concurrent entries.
+
+Enter applies a reply but never saves. Return to Review and press Save. **More > Start new** clears the unsaved draft for another sentence; closing or locking clears it too. No conversation history is stored. **Enter manually** opens the fields. **More > Simple expense** retains the original expense parser. There is no microphone input.
 
 Smart entry uses the installed local Ollama model for category suggestions. Start Ollama if it is unavailable; you do not need a separate terminal chat. Nothing goes to a cloud model. The category is a suggestion, so check it before saving. If the connection drops during a save, use Check Transactions before adding it again.
+
+### Remembered categories and favourites
+
+In Quick add, open Edit details, choose the correct category and tick **Remember this category** before returning to Review and saving. Kaya remembers the exact normalized note and transaction type only after that transaction saves. Cancelling teaches nothing. On the next matching Smart entry, the remembered rule takes priority over history/model suggestions; an explicit category command or manual choice still wins. A prepared draft explains when a rule supplied its category.
+
+Open **Settings > Entry preferences** to inspect rules, change their category or matching note, or forget them. On a phone, Settings is inside More; on desktop it is under your name. These are explicit rules, not automatic promotion from repeated corrections. Existing history-based suggestions remain available without creating rules. Deleting a category removes its rules; Undo of that category deletion does not recreate the removed rules.
+
+In Quick add, **Review > More > Save as favourite** saves a named favourite from the current draft. **More > Use a favourite** opens one from the entry screen. Leave **Keep this amount** unticked to ask for an amount each time. Templates keep the transaction type, available wallets, category and note; opening one uses today's Jakarta date and creates an unsaved draft. Use its edit/delete controls to manage it. A deleted wallet/category asks for a replacement. Saving a template does not save a transaction.
+
+### Several transactions in one message
+
+Choose **More > Several transactions** in Quick add. Enter up to five entries, separated by semicolons or new lines, for example:
+
+```text
+Food 35rb BCA;
+Salary 5jt Bank Jago;
+transfer 500rb from BCA to Bank Jago
+```
+
+Each entry has its own fields, reply box, missing-field checks and undo. Name the wallet/date in each entry when they differ; an omitted non-transfer wallet uses the visible default rather than another entry's wallet. An unspecified date defaults to today. Untick an entry to leave it out. Review duplicate notices and each wallet's displayed balance change, then confirm the selected entries together. Hidden balances stay hidden. Enter in a reply never saves.
+
+Selected rows save atomically: all succeed or none do. If acknowledgement is lost or malformed, editing is frozen and **Retry same batch safely** resends the exact confirmed request with its original key. It cannot insert that batch again. **Check Transactions** opens records in a new tab. Closing an uncertain batch discards the browser's retry controls, so inspect Transactions before preparing the same entries again. This is several separate transactions, not a category split of one payment.
+
+### Spending questions and recurring payments
+
+On **Insights**, use **Ask about your records** for English or Indonesian questions, such as `How much did I spend on Food last month?`, `Compare spending September 2026 with August 2026`, or `Show my 3 largest expenses this year`. Code calculates every amount, excludes transfers/balance adjustments from income and spending, and links to matching records. Whole-month comparisons have a separate link for each period. Largest-expense and recurring-payment links can scope Transactions to exact records; **Show all records in this period** clears that record scope. Unknown filters, exclusions, unsupported wording and ambiguous dates ask for clarification. If records change, an old answer is cleared so its figures do not silently disagree with the linked list.
+
+Expand **Recurring payments** to review patterns backed by at least three recorded expenses with the same normalized note and wallet. Candidates can be weekly, monthly or annual; amounts may vary. The displayed next date estimates the occurrence after the latest recorded payment, so it can be in the past when records are missing. **Track payment** and **Dismiss** are saved choices, manageable under **Manage saved choices**. Tracking never creates a future payment. Sparse annual history, inconsistent descriptions, missed records or multiple same-day payments may prevent detection; a pattern is not proof of a subscription contract.
+
+Rules, templates, subscription choices and durable batch keys are stored locally in Kaya's database and included in its existing whole-file backups. These additions do not upload data or download models. Receipt/screenshot entry, voice and reconciliation remain future work.
 
 ### Import a bank CSV
 
@@ -59,6 +95,8 @@ A deposito is funded from another wallet. It shows simple daily interest before 
 On **Insights**, choose a month and **Report → Print or save as PDF**. The report includes spending, budgets, goals and transactions, with no wallet balances. **Export** saves a month or year as CSV.
 
 ## Use it on your phone
+
+Home, Transactions, the orange +, Wallets and More stay in the compact bottom bar. The + opens Quick add; More opens the other pages and Settings. The current page keeps its selected state when you open or close Quick add. Home shows a compact total and separate wallet cards; its eye controls remember which balances you hide.
 
 Keep Kaya running on your laptop and open the **Network** address printed by `npm run dev` (for example `http://192.168.1.3:3000`) on a phone connected to the same Wi-Fi. If Windows asks, allow Node.js on private networks.
 

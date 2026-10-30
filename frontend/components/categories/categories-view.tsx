@@ -217,7 +217,7 @@ export function CategoriesView({ nowIso }: { nowIso: string }) {
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-6 md:mt-10">
+    <div className="mt-4 flex flex-col gap-4 md:mt-10 md:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         {/* The same quiet line, now at the left of the buttons, since the month switcher moved to Insights. */}
         <p className="min-w-0 flex-1 basis-64 text-sm text-muted-foreground">
@@ -242,7 +242,7 @@ export function CategoriesView({ nowIso }: { nowIso: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 md:gap-6 xl:grid-cols-2">
         <CategorySection
           title="Expense categories"
           verb="Spent"

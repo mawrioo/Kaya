@@ -1,3 +1,4 @@
+import { editQuickDraft, entryOption, saveQuickDraft, finishQuickDraft } from "./quick-entry-helpers"
 import { expect, test, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
@@ -35,16 +36,18 @@ test("a nickname is saved on a wallet, and Quick add finds the wallet by it", as
 
   // Quick add understands it, in any case, with no change to the transactions until the form is saved.
   await quickAddButton(page).click()
-  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
+  await entryOption(page, "Simple expense")
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("kopi susu 20rb jago")
   await line.press("Enter")
+  await editQuickDraft(page)
   await expect(page.locator("#tx-wallet")).toContainText("Bank Jago")
   await expect(page.getByRole("status").filter({ hasText: "Form filled" })).toContainText("Wallet: Bank Jago")
   await expect(page.getByLabel("Note (optional)")).toHaveValue("kopi susu")
   expect(((await (await request.get("/api/data")).json()) as AppData).transactions).toHaveLength(transactions)
 
-  await page.getByRole("button", { name: "Add transaction", exact: true }).click()
+  await saveQuickDraft(page)
+  await finishQuickDraft(page)
   await expect(page.getByRole("dialog")).toHaveCount(0)
   const after = (await (await request.get("/api/data")).json()) as AppData
   expect(after.transactions).toHaveLength(transactions + 1)
@@ -108,10 +111,11 @@ test("a new wallet can start with a nickname", async ({ page, request }) => {
   expect(created.nickname).toBe("gopay")
 
   await quickAddButton(page).click()
-  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
+  await entryOption(page, "Simple expense")
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("gopay 15rb parkir")
   await line.press("Enter")
+  await editQuickDraft(page)
   await expect(page.locator("#tx-wallet")).toContainText("GoPay Wallet")
   await page.getByRole("button", { name: "Cancel", exact: true }).click()
 })
@@ -131,10 +135,11 @@ test("emptying the box takes the nickname away, and Quick add stops using it", a
   expect((await wallet(request, "Bank Jago")).nickname).toBeUndefined()
 
   await quickAddButton(page).click()
-  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
+  await entryOption(page, "Simple expense")
   const line = page.getByRole("textbox", { name: "Your expense" })
   await line.fill("kopi 20rb jago")
   await line.press("Enter")
+  await editQuickDraft(page)
   await expect(page.getByRole("status").filter({ hasText: "Form filled" })).toContainText("Kept wallet")
   await expect(page.getByLabel("Note (optional)")).toHaveValue("kopi jago")
   await page.getByRole("button", { name: "Cancel", exact: true }).click()

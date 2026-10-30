@@ -1,11 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 
 import { useData } from "@/components/data-provider"
 import { GREETING_LANGUAGES, greetingAt, type DayPart } from "@/lib/greetings"
 import { START, letters, stepTypewriter, visibleCount, type Typewriter } from "@/lib/typewriter"
 import { cn } from "@/lib/utils"
+
+const phoneQuery = "(max-width: 767px)"
+const subscribePhone = (notify: () => void) => {
+  const query = window.matchMedia(phoneQuery)
+  query.addEventListener("change", notify)
+  return () => query.removeEventListener("change", notify)
+}
+const isPhone = () => window.matchMedia(phoneQuery).matches
 
 /**
  * The greeting on Home, name included ("Good morning, Mario"). It opens whole, in English, so the first paint matches
@@ -15,17 +23,20 @@ import { cn } from "@/lib/utils"
  */
 export function RotatingGreeting({ part }: { part: DayPart }) {
   const { user } = useData()
+  const phone = useSyncExternalStore(subscribePhone, isPhone, () => false)
   const [state, setState] = useState<Typewriter>(START)
   const { lang, text } = greetingAt(state.index, part)
   const line = letters(`${text}, ${user.name}`)
   const length = line.length
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    if (phone || window.matchMedia(phoneQuery).matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
     const { next, wait } = stepTypewriter(state, length, GREETING_LANGUAGES.length)
     const timer = setTimeout(() => setState(next), wait)
     return () => clearTimeout(timer)
-  }, [state, length])
+  }, [state, length, phone])
+
+  if (phone) return <>{greetingAt(0, part).text}, {user.name}</>
 
   return (
     <>

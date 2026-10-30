@@ -35,6 +35,8 @@ import type {
  * new wallet balances and sends them back, so the two never disagree.
  */
 interface DataStore extends AppData {
+  /** Re-read after an assistant batch without overwriting a newer local action. */
+  refreshData: () => Promise<void>
   /** Changes the name the greeting on Home uses. */
   updateUserName: (name: string) => Promise<User>
   /** Sets the budget for all spending together in a month, or takes it away with null. */
@@ -155,7 +157,17 @@ export function DataProvider({ initial, children }: { initial: AppData; children
     }
   }, [])
 
-  const value: DataStore = {
+  async function refreshData() {
+    // An assistant write happened outside this provider: retire earlier polling reads.
+    guard.current.begin()
+    guard.current.end()
+    const ticket = guard.current.ticket()
+    if (ticket === undefined) return
+    const incoming = await api.loadData()
+    if (guard.current.accepts(ticket)) setData(incoming)
+  }
+
+  const value: Omit<DataStore, "refreshData"> = {
     ...data,
     updateUserName: async (name) => {
       const { user } = await api.updateUser(name)
@@ -376,10 +388,10 @@ export function DataProvider({ initial, children }: { initial: AppData; children
   const guarded = Object.fromEntries(Object.entries(value).map(([key, action]) => [key,
     typeof action !== "function" ? action : async (...args: unknown[]) => {
       guard.current.begin()
-      try { return await action(...args) }
+      try { return await (action as (...input: unknown[]) => unknown)(...args) }
       finally { guard.current.end() }
     },
-  ])) as DataStore
+  ])) as Omit<DataStore, "refreshData">
 
-  return <DataContext value={guarded}>{children}</DataContext>
+  return <DataContext value={{ ...guarded, refreshData }}>{children}</DataContext>
 }

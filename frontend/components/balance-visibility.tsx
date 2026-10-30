@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react"
 import { Money } from "@/components/money"
 import { hiddenBalancesCookie } from "@/lib/balance-visibility"
 import type { Rupiah } from "@/lib/types"
+import { formatRupiah } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 interface BalanceVisibility {
@@ -72,7 +73,7 @@ export function BalanceToggle({ id, label, className }: BalanceToggleProps) {
       }}
       aria-label={`${hidden ? "Show" : "Hide"} ${label} balance`}
       className={cn(
-        "grid size-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-foreground/[0.07] hover:text-foreground active:scale-90 active:bg-foreground/[0.12]",
+        "grid size-11 md:size-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-foreground/[0.07] hover:text-foreground active:scale-90 active:bg-foreground/[0.12]",
         className
       )}
     >
@@ -101,16 +102,23 @@ export function ShowWhenVisible({ id, children }: { id: string; children: React.
   return isHidden(id) ? null : children
 }
 
+export function HideableBalance({ id, amount, className }: { id: string; amount: Rupiah; className?: string }) {
+  const hidden = useBalanceHidden(id)
+  return <span className={cn("whitespace-nowrap tabular-nums", className)}>{hidden ? <><span aria-hidden>••••••</span><span className="sr-only">Balance hidden</span></> : formatRupiah(amount)}</span>
+}
+
 /** A <Money> that turns into dots when its balance is hidden. `sign="always"` puts a "+" on gains. */
 export function HideableMoney({
   id,
   amount,
   sign,
   className,
+  roll = true,
 }: {
   id: string
   amount: Rupiah
   sign?: "auto" | "always" | "never"
+  roll?: boolean
   className?: string
 }) {
   const { isHidden } = useBalanceVisibility()
@@ -124,7 +132,7 @@ export function HideableMoney({
   }
   return (
     <span key={swaps} className={cn(swaps > 0 && "animate-in duration-200 fade-in-0")}>
-      <Money amount={amount} sign={sign} hidden={hidden} roll className={className} />
+      <Money amount={amount} sign={sign} hidden={hidden} roll={roll} className={className} />
     </span>
   )
 }

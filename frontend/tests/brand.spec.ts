@@ -14,11 +14,14 @@ async function expectTheNewMark(page: Page) {
   const facts = await link.locator("span").first().evaluate((word) => ({
     spacing: getComputedStyle(word).letterSpacing,
     size: getComputedStyle(word).fontSize,
+    family: getComputedStyle(word).fontFamily,
+    serif: getComputedStyle(document.documentElement).getPropertyValue("--font-source-serif"),
     color: getComputedStyle(word).color,
     expected: getComputedStyle(document.documentElement).getPropertyValue("--sidebar-primary"),
   }))
   expect(parseFloat(facts.spacing)).toBeCloseTo(0.8, 1)
   expect(facts.size).toBe("20px")
+  expect(facts.family.replaceAll('"', "")).toContain(facts.serif.trim().replaceAll('"', ""))
   expect(facts.color).toBeTruthy()
   await expect(link.locator(".coin-rim")).toHaveCount(0)
 }
@@ -39,7 +42,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(errors).toEqual([])
   })
 
-  test(`the phone's top bar shows the same wordmark (${theme} mode)`, async ({ page }, testInfo) => {
+  test(`the phone header shares the desktop serif wordmark (${theme} mode)`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.addInitScript((value) => localStorage.setItem("theme", value), theme)
     await page.goto("/")
@@ -48,7 +51,7 @@ for (const theme of ["light", "dark"] as const) {
     await expectTheNewMark(page)
     const bar = (await page.locator("header", { has: page.getByRole("link", { name: "Kaya, home" }) }).boundingBox())!
     const mark = (await link.boundingBox())!
-    expect(bar.height).toBe(64)
+    expect(bar.height).toBe(56)
     expect(mark.y).toBeGreaterThanOrEqual(bar.y)
     expect(mark.y + mark.height).toBeLessThanOrEqual(bar.y + bar.height)
     await page.screenshot({ path: testInfo.outputPath("topbar.png"), clip: { x: 0, y: 0, width: 390, height: 64 }, animations: "disabled" })

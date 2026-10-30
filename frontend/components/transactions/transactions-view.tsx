@@ -52,6 +52,9 @@ export function TransactionsView({
   initialType,
   initialMonth,
   initialYear,
+  initialFrom,
+  initialTo,
+  initialTransactionIds,
 }: {
   nowIso: string
   initialWalletId?: string
@@ -63,6 +66,10 @@ export function TransactionsView({
   initialMonth?: string
   /** Or of a whole year, "2026" (from the Year view on Insights). A month wins if both are given. */
   initialYear?: string
+  /** An exact evidence range from a recorded-spending answer. */
+  initialFrom?: string
+  initialTo?: string
+  initialTransactionIds?: string[]
 }) {
   const liveDate = useLiveDate(nowIso)
   const { wallets, categories, transactions, addTransaction, updateTransaction, deleteTransaction, importTransactions, undoDelete } = useData()
@@ -73,9 +80,10 @@ export function TransactionsView({
     walletId: initialWalletId && wallets.some((wallet) => wallet.id === initialWalletId) ? initialWalletId : "all",
     categoryId: initialCategoryId && categories.some((category) => category.id === initialCategoryId) ? initialCategoryId : "all",
     type: initialType ?? "all",
-    ...(initialMonth ? monthDates(initialMonth) : initialYear ? yearDates(initialYear) : monthDates(toDateInput(new Date(liveDate)).slice(0, 7))),
+    ...(initialFrom && initialTo ? { from: initialFrom, to: initialTo } : initialMonth ? monthDates(initialMonth) : initialYear ? yearDates(initialYear) : monthDates(toDateInput(new Date(liveDate)).slice(0, 7))),
   }))
-  const [followMonth, setFollowMonth] = useState(!initialMonth && !initialYear)
+  const [followMonth, setFollowMonth] = useState(!initialFrom && !initialTo && !initialMonth && !initialYear)
+  const [recordScope, setRecordScope] = useState(initialTransactionIds)
   const filters = followMonth ? { ...storedFilters, ...monthDates(toDateInput(new Date(liveDate)).slice(0, 7)) } : storedFilters
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Transaction>()
@@ -103,11 +111,11 @@ export function TransactionsView({
     setSeenIds(new Set(currentIds))
   }
 
-  const matching = sortNewestFirst(filterTransactions(transactions, filters, wallets, categories))
+  const matching = sortNewestFirst(filterTransactions(transactions, filters, wallets, categories).filter(tx => !recordScope || recordScope.includes(tx.id)))
   const revealIndex = revealId ? matching.findIndex((tx) => tx.id === revealId) : -1
   const shownCount = Math.min(matching.length, Math.max(limit, revealIndex + 1))
   const groups = groupByDay(matching.slice(0, shownCount))
-  const filtered = hasActiveFilters(filters)
+  const filtered = hasActiveFilters(filters) || !!recordScope
   const total = transactions.length
 
   // What every matching transaction adds up to (not only the ones showing), with a note saying so when the list is paged.
@@ -127,6 +135,7 @@ export function TransactionsView({
 
   /** Every change to the filters starts the list again from the newest. */
   function updateFilters(next: TransactionFilters) {
+    setRecordScope(undefined)
     if (next.from !== filters.from || next.to !== filters.to || next === NO_FILTERS) setFollowMonth(false)
     setFreshIds(new Set())
     setFilters(next)
@@ -267,7 +276,8 @@ export function TransactionsView({
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-6 md:mt-10">
+    <div className="mt-4 flex flex-col gap-4 md:mt-10 md:gap-6">
+      {recordScope ? <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">Showing only the referenced records.<Button type="button" variant="ghost" size="sm" onClick={() => setRecordScope(undefined)}>Show all records in this period</Button></p> : null}
       <TransactionFiltersBar
         filters={filters}
         onChange={updateFilters}

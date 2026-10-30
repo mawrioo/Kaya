@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ChevronUp, KeyRound, Lock, Pencil, Sprout } from "lucide-react"
+import { ChevronUp, KeyRound, Lock, Pencil, Sprout, SlidersHorizontal } from "lucide-react"
 
 import { useData } from "@/components/data-provider"
 import { SidebarBackup } from "@/components/sidebar-backup"
@@ -22,13 +22,15 @@ export function SidebarUser({
   onChangeName,
   onBackupStart,
   onPinSettings,
+  onEntryPreferences,
 }: {
   onChangeName: () => void
   onBackupStart?: () => void
   /** Opens the box for the PIN (set one, change it, or turn it off). The menu has closed by then. */
   onPinSettings: () => void
+  onEntryPreferences: () => void
 }) {
-  const { user, pinSet, lockNow } = useData()
+  const { user } = useData()
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   // The first letter (a whole character, so an emoji isn't cut in half).
@@ -69,13 +71,35 @@ export function SidebarUser({
         sideOffset={8}
         className="w-(--radix-popover-trigger-width) min-w-60 gap-0 border-0 bg-sidebar p-2 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-foreground/20"
       >
+        <SidebarSettings
+          onChangeName={() => { trigger.current?.focus({ preventScroll: true }); onChangeName() }}
+          onPinSettings={() => { trigger.current?.focus({ preventScroll: true }); onPinSettings() }}
+          onEntryPreferences={() => { trigger.current?.focus({ preventScroll: true }); onEntryPreferences() }}
+          onBackupStart={onBackupStart}
+          onClose={() => setOpen(false)}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/** Shared by the desktop account popover and the phone's Settings panel. */
+export function SidebarSettings({ onChangeName, onPinSettings, onEntryPreferences, onBackupStart, onClose }: {
+  onChangeName: () => void
+  onPinSettings: () => void
+  onEntryPreferences: () => void
+  onBackupStart?: () => void
+  onClose: () => void
+}) {
+  const { pinSet, lockNow } = useData()
+  return <div className="grid gap-1">
         <button
           type="button"
           className={MENU_ROW}
           onClick={() => {
             // Focus goes back to this row when the name box closes, so it is remembered before the menu goes.
-            trigger.current?.focus({ preventScroll: true })
-            setOpen(false)
+
+            onClose()
             onChangeName()
           }}
         >
@@ -92,7 +116,7 @@ export function SidebarUser({
 
         <SidebarBackup
           onStart={() => {
-            setOpen(false)
+            onClose()
             onBackupStart?.()
           }}
         />
@@ -104,7 +128,7 @@ export function SidebarUser({
             id="sidebar-lock-button"
             className={MENU_ROW}
             onClick={() => {
-              setOpen(false)
+              onClose()
               void lockNow()
             }}
           >
@@ -125,8 +149,8 @@ export function SidebarUser({
           className={MENU_ROW}
           onClick={() => {
             // Focus goes back to this row when the box closes, so it is remembered before the menu goes.
-            trigger.current?.focus({ preventScroll: true })
-            setOpen(false)
+
+            onClose()
             onPinSettings()
           }}
         >
@@ -141,6 +165,11 @@ export function SidebarUser({
           </span>
         </button>
 
+        <button type="button" className={MENU_ROW} onClick={() => { onClose(); onEntryPreferences() }}>
+          <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-sidebar-foreground/15"><SlidersHorizontal className="size-4" /></span>
+          <span className="text-[0.9375rem] font-medium">Entry preferences</span>
+        </button>
+
         <div className="mt-2 border-t border-sidebar-border px-1 pt-3">
           <p className="mb-2 px-1 text-[0.8125rem] font-medium text-sidebar-muted">Appearance</p>
           <ThemeToggle />
@@ -150,7 +179,5 @@ export function SidebarUser({
           <Sprout className="mt-0.5 size-4 shrink-0 group-hover/calm:animate-sprout-sway" aria-hidden />
           <p>Runs on this computer. Your numbers stay here.</p>
         </div>
-      </PopoverContent>
-    </Popover>
-  )
+  </div>
 }

@@ -1,0 +1,30 @@
+{
+  "development": {
+    "elapsedMs": 21986,
+    "inferenceCalls": 3,
+    "modelTimings": [
+      9260,
+      2154,
+      1776
+    ],
+    "retries": 2,
+    "batchRecords": 3
+  },
+  "production": {
+    "elapsedMs": 14771,
+    "inferenceCalls": 3,
+    "modelTimings": [
+      6552,
+      2134,
+      1783
+    ],
+    "retries": 2,
+    "batchRecords": 3
+  },
+  "migration": {
+    "ledgerUnchanged": true,
+    "integrity": true,
+    "noNewForeignKeyIssues": true,
+    "assistantEmpty": true
+  }
+}

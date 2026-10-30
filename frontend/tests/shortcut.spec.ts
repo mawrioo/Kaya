@@ -1,3 +1,4 @@
+import { saveQuickDraft, finishQuickDraft } from "./quick-entry-helpers"
 import { expect, test, type Page } from "./browser-fixtures"
 import type { AppData } from "../lib/types"
 
@@ -16,8 +17,9 @@ const coinIsUncovered = (page: Page) =>
     const box = button.getBoundingClientRect()
     const cx = box.x + box.width / 2
     const cy = box.y + box.height / 2
-    const radius = box.width / 2 - 8
-    const points = [[0, 0], ...Array.from({ length: 8 }, (_, i) => [Math.cos((i * Math.PI) / 4) * radius, Math.sin((i * Math.PI) / 4) * radius])]
+    const radiusX = box.width / 2 - 8
+    const radiusY = box.height / 2 - 8
+    const points = [[0, 0], ...Array.from({ length: 8 }, (_, i) => [Math.cos((i * Math.PI) / 4) * radiusX, Math.sin((i * Math.PI) / 4) * radiusY])]
     return points.every(([dx, dy]) => {
       const top = document.elementFromPoint(cx + dx, cy + dy)
       return !!top && button.contains(top)
@@ -37,7 +39,7 @@ for (const path of ["/", "/transactions", "/wallets", "/insights", "/categories"
 
     await page.keyboard.press("Control+k")
     await expect(quickAddDialog(page)).toBeVisible()
-    await expect(page.getByRole("textbox", { name: "Your transaction" })).toBeFocused()
+    await expect(page.getByRole("textbox", { name: "What happened?" })).toBeFocused()
     await page.keyboard.press("Escape")
     await expect(page.getByRole("dialog")).toHaveCount(0)
     await expect(coin(page)).toBeFocused()
@@ -50,7 +52,7 @@ test("Ctrl+K leads straight into the one-line flow, and nothing is saved until A
   await page.goto("/")
   await expect(coin(page)).toBeEnabled()
   await page.keyboard.press("Control+k")
-  await page.getByRole("textbox", { name: "Your transaction" }).fill("kopi 20rb BCA")
+  await page.getByRole("textbox", { name: "What happened?" }).fill("kopi 20rb BCA")
   await page.keyboard.press("Enter")
   await expect(page.getByLabel("Amount", { exact: true })).toHaveValue("20.000")
   await expect(page.locator("#tx-wallet")).toContainText("BCA")
@@ -168,16 +170,24 @@ test("pointing at the coin names it and its shortcut, and closing the box never 
 
 for (const [width, height] of [[320, 700], [390, 844], [768, 900], [1440, 900]] as const) {
   for (const theme of ["light", "dark"] as const) {
-    test(`the coin sits bottom right at ${width}px in ${theme} mode, uncovered, and the page clears it`, async ({ page }, testInfo) => {
+    test(`Quick add stays reachable at ${width}px in ${theme} mode, uncovered, and the page clears it`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height })
       await page.addInitScript((value) => localStorage.setItem("theme", value), theme)
       await page.goto("/transactions")
       const button = coin(page)
       await expect(button).toBeVisible()
       const box = (await button.boundingBox())!
-      expect(box).toMatchObject({ width: 44, height: 44 })
-      expect(width - (box.x + box.width)).toBeCloseTo(24, 0)
-      expect(height - (box.y + box.height)).toBeCloseTo(24, 0)
+      if (width < 768) {
+        const bar = (await page.getByRole("navigation", { name: "Phone navigation" }).boundingBox())!
+        expect(box.height).toBeGreaterThanOrEqual(44)
+        expect(box.x + box.width / 2).toBeCloseTo(width / 2, 0)
+        expect(box.y).toBeGreaterThanOrEqual(bar.y)
+        expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height)
+      } else {
+        expect(box).toMatchObject({ width: 44, height: 44 })
+        expect(width - (box.x + box.width)).toBeCloseTo(24, 0)
+        expect(height - (box.y + box.height)).toBeCloseTo(24, 0)
+      }
       // Anything that drops in a moment after the page loads (the Next.js dev badge used to) has had time to appear.
       await page.waitForTimeout(2000)
       expect(await coinIsUncovered(page)).toBe(true)
@@ -215,10 +225,11 @@ for (const [width, height] of [[390, 844], [1440, 900]] as const) {
     await page.goto("/")
     await expect(coin(page)).toBeEnabled()
     await coin(page).click()
-    const line = page.getByRole("textbox", { name: "Your transaction" })
+    const line = page.getByRole("textbox", { name: "What happened?" })
     await line.fill("teh botol 15rb BCA")
     await line.press("Enter")
-    await page.getByRole("button", { name: "Confirm and save", exact: true }).click()
+    await saveQuickDraft(page)
+    await finishQuickDraft(page)
     const toast = page.locator("[data-sonner-toast]").first()
     await expect(toast).toBeVisible()
     await expect(toast).toContainText("Transaction added")

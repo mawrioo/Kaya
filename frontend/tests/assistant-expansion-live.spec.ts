@@ -1,0 +1,85 @@
+import { editQuickDraft, entryOption, saveQuickDraft, finishQuickDraft } from "./quick-entry-helpers"
+import { expect, test } from "./browser-fixtures"
+import type { AppData } from "../lib/types"
+
+test.skip(process.env.KAYA_BROWSER_REAL_AI !== "1", "Opt in to the real local model.")
+test("local model, remembered category, independent batch replies and durable retry work together", async ({ page, request }, info) => {
+  test.setTimeout(180000)
+  const stats = async () => {
+    const response = await fetch("http://127.0.0.1:4200/__test/model-stats", { headers: { authorization: process.env.KAYA_BROWSER_TOKEN! } })
+    expect(response.ok).toBe(true)
+    return response.json() as Promise<{ liveAI: boolean; modelTimings: number[] }>
+  }
+  await fetch("http://127.0.0.1:4200/__test/date", { method: "POST", headers: { authorization: process.env.KAYA_BROWSER_TOKEN!, "content-type": "application/json" }, body: JSON.stringify({ date: "2026-10-28" }) })
+  const initial = await stats()
+  expect(initial.liveAI).toBe(true)
+  const errors: string[] = []
+  page.on("pageerror", e => errors.push(e.message))
+  const started = Date.now()
+  await page.goto("/transactions")
+  await page.getByRole("button", { name: "Quick add", exact: true }).click()
+  await page.getByLabel("What happened?").fill("paid 35rb for mango noodles from BCA")
+  await page.getByLabel("What happened?").press("Enter")
+  await expect(page.getByRole("heading", { name: /^Review / })).toBeVisible({ timeout: 35000 })
+  await editQuickDraft(page)
+  expect((await stats()).modelTimings).toHaveLength(initial.modelTimings.length + 1)
+  await page.locator("#tx-category").click()
+  await page.getByRole("option", { name: "Shopping", exact: true }).click()
+  await page.getByRole("checkbox", { name: /Remember this category for/ }).check()
+  await saveQuickDraft(page)
+  await finishQuickDraft(page)
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  expect((await (await request.get("/api/assistant")).json()).rules).toContainEqual(expect.objectContaining({ phrase: "mango noodles", categoryId: "cat-shopping" }))
+  await page.getByRole("button", { name: "Quick add", exact: true }).click()
+  await page.getByLabel("What happened?").fill("paid 36rb for mango noodles from BCA")
+  await page.getByLabel("What happened?").press("Enter")
+  await expect(page.locator("#tx-category")).toContainText("Shopping")
+  await expect(page.getByText(/Category remembered for/)).toBeVisible()
+  expect((await stats()).modelTimings).toHaveLength(initial.modelTimings.length + 1)
+  await page.getByRole("button", { name: "Cancel", exact: true }).click()
+  const before: AppData = await (await request.get("/api/data")).json()
+  await page.getByRole("button", { name: "Quick add", exact: true }).click()
+  await entryOption(page, "Several transactions")
+  await page.getByLabel("Your transactions", { exact: true }).fill("paid 25rb for noodles from BCA; gaji 5jt masuk Bank Jago; transfer from BCA to Bank Jago")
+  await page.getByRole("button", { name: "Prepare entries", exact: true }).click()
+  await expect(page.getByTestId("assistant-batch-3")).toBeVisible({ timeout: 65000 })
+  await expect(page.getByLabel("Category for entry 1", { exact: true })).toHaveValue("cat-food")
+  await expect(page.getByLabel("Category for entry 2", { exact: true })).toHaveValue("cat-salary")
+  expect((await stats()).modelTimings).toHaveLength(initial.modelTimings.length + 3)
+  await page.getByLabel("Reply for entry 3", { exact: true }).fill("500rb")
+  await page.getByLabel("Reply for entry 3", { exact: true }).press("Enter")
+  await expect(page.getByLabel("Reply for entry 3", { exact: true })).toHaveValue("")
+  await page.getByLabel("Reply for entry 1", { exact: true }).fill("make that 30rb")
+  await page.getByLabel("Reply for entry 1", { exact: true }).press("Enter")
+  await expect(page.getByLabel("Reply for entry 1", { exact: true })).toHaveValue("")
+  await page.getByRole("button", { name: "Undo entry 1 change", exact: true }).click()
+  await expect(page.getByTestId("assistant-batch-1").getByLabel("Amount", { exact: true })).toHaveValue("25.000")
+  expect((await stats()).modelTimings).toHaveLength(initial.modelTimings.length + 3)
+  expect((await (await request.get("/api/data")).json()).transactions).toEqual(before.transactions)
+  let attempts = 0
+  let body = ""
+  await page.route("**/api/assistant/batch", async route => {
+    attempts++
+    if (attempts === 1) { body = route.request().postData()!; await route.fetch(); await route.abort("failed") }
+    else { expect(route.request().postData()).toBe(body); await route.continue() }
+  })
+  await page.getByRole("button", { name: "Confirm and save 3 entries", exact: true }).click()
+  await expect(page.getByRole("button", { name: "Retry same batch safely", exact: true })).toBeEnabled()
+  await page.getByRole("button", { name: "Retry same batch safely", exact: true }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  const after: AppData = await (await request.get("/api/data")).json()
+  expect(after.transactions).toHaveLength(before.transactions.length + 3)
+  expect(after.wallets.find(w => w.id === "wallet-bca")!.balance).toBe(before.wallets.find(w => w.id === "wallet-bca")!.balance - 525000)
+  expect(after.wallets.find(w => w.id === "wallet-jago")!.balance).toBe(before.wallets.find(w => w.id === "wallet-jago")!.balance + 5500000)
+  expect(attempts).toBe(2)
+  await page.goto("/insights")
+  await page.getByLabel("Your spending question").fill("Total spending from 2026-10-01 to 2026-10-31")
+  await page.getByRole("button", { name: "Ask", exact: true }).click()
+  await expect(page.getByRole("region", { name: "Ask about your records" }).getByRole("link").first()).toBeVisible()
+  expect((await stats()).modelTimings).toHaveLength(initial.modelTimings.length + 3)
+  expect((await (await request.get("/api/data")).json()).transactions).toEqual(after.transactions)
+  expect(errors).toEqual([])
+  const result = { elapsedMs: Date.now() - started, inferenceCalls: 3, modelTimings: (await stats()).modelTimings.slice(initial.modelTimings.length), retries: attempts, batchRecords: 3 }
+  console.log(`ASSISTANT_EXPANSION_LIVE ${JSON.stringify(result)}`)
+  await info.attach("assistant-expansion-live", { body: JSON.stringify(result, null, 2), contentType: "application/json" })
+})

@@ -178,7 +178,7 @@ export function WalletsView({ nowIso }: { nowIso: string }) {
   }
 
   return (
-    <div className="mt-8 flex flex-col gap-8 md:mt-10">
+    <div className="mt-4 flex flex-col gap-4 md:mt-10 md:gap-8">
       <TotalBalanceCard wallets={wallets} />
 
       {/* The columns follow the room the cards really have (a container query), not the window: with the menu open a 768px tablet leaves them about 480px. */}
@@ -201,7 +201,7 @@ export function WalletsView({ nowIso }: { nowIso: string }) {
           </div>
         </div>
 
-        <ul className="grid grid-cols-1 gap-4 @[44rem]:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-2 md:gap-4 @[44rem]:grid-cols-2">
           {wallets.map((wallet) => (
             <WalletCard
               key={wallet.id}

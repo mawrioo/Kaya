@@ -35,12 +35,18 @@ Saldo Awal : 8,742,300.00
 `
 
 const file = (name: string, content: string | Buffer) => ({ name, mimeType: "text/csv", buffer: Buffer.isBuffer(content) ? content : Buffer.from(content) })
-const importButton = (page: Page) => page.getByRole("button", { name: "Import CSV" })
+async function openImport(page: Page) {
+  const more = page.getByRole("button", { name: "More transaction actions", exact: true })
+  if (await more.isVisible()) {
+    await more.click()
+    await page.getByRole("menuitem", { name: "Import CSV", exact: true }).click()
+  } else await page.getByRole("button", { name: "Import CSV", exact: true }).click()
+}
 const text = async (locator: ReturnType<Page["locator"]>) => (await locator.innerText()).split(String.fromCharCode(0xa0)).join(" ")
 
 async function openAt(page: Page, wallet: string) {
   await page.goto("/transactions")
-  await importButton(page).click()
+  await openImport(page)
   const dialog = page.getByRole("dialog")
   await expect(dialog.getByRole("heading", { name: "Import from a bank's file" })).toBeVisible()
   await dialog.locator("#import-wallet").click()
@@ -210,7 +216,7 @@ test("on a phone the import fits the screen from the first step to the list", as
   const context = await browser.newContext({ baseURL: BASE, viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   await page.goto("/transactions")
-  await importButton(page).click()
+  await openImport(page)
   const dialog = page.getByRole("dialog")
   await dialog.locator("#import-file").setInputFiles(file("bca-like.csv", BCA_LIKE))
   await expect(dialog.getByRole("heading", { name: "Check the lines" })).toBeVisible()

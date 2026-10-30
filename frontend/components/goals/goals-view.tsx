@@ -237,7 +237,7 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
   })
 
   return (
-    <div className="mt-8 flex flex-col gap-5 md:mt-10">
+    <div className="mt-4 flex flex-col gap-4 md:mt-10 md:gap-5">
       {goals.length === 0 ? (
         <EmptyState onAdd={() => openDialog("form")} />
       ) : (
@@ -261,7 +261,7 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
           </div>
 
           {inProgress.length > 0 ? (
-            <ul className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-2 md:gap-4 xl:grid-cols-2">
               {inProgress.map((goal) => (
                 <GoalCard key={goal.id} {...cardProps(goal)} />
               ))}
@@ -292,7 +292,7 @@ export function GoalsView({ nowIso }: { nowIso: string }) {
                 </button>
               </h2>
               {showDone ? (
-                <ul id="completed-goals-list" className="grid animate-in grid-cols-1 gap-4 duration-200 fade-in-0 slide-in-from-top-1 xl:grid-cols-2">
+                <ul id="completed-goals-list" className="grid animate-in grid-cols-1 gap-2 md:gap-4 duration-200 fade-in-0 slide-in-from-top-1 xl:grid-cols-2">
                   {reached.map((goal) => (
                     <GoalCard key={goal.id} {...cardProps(goal)} />
                   ))}

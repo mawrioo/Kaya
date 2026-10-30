@@ -51,10 +51,27 @@ import type { Store } from "./store.ts"
 import { ValidationError } from "./validate.ts"
 import { createPreviewModel, PreviewModelError, type SuggestionModel } from "./preview-model.ts"
 import { previewConversation as previewTransaction } from "./preview-conversation.ts"
+import { previewBatch } from "./batch-preview.ts"
+import { answerSpendingQuestion } from "./spending-questions.ts"
+import { detectSubscriptions } from "./subscription-detection.ts"
 
-async function readJson(request: Request): Promise<unknown> {
+async function readJson(request: Request, limit = 5 * 1024 * 1024): Promise<unknown> {
+  if (Number(request.headers.get("content-length")) > limit) throw new ValidationError("Keep the request short.")
+  const reader = request.body?.getReader()
+  if (!reader) throw new ValidationError("Send the data as JSON.")
+  const chunks: Uint8Array[] = []
+  let size = 0
   try {
-    return await request.json()
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      size += value.length
+      if (size > limit) throw new ValidationError("Keep the request short.")
+      chunks.push(value)
+    }
+  } finally { await reader.cancel() }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"))
   } catch {
     throw new ValidationError("Send the data as JSON.")
   }
@@ -137,6 +154,7 @@ export function createApp(store: Store, previewOptions: { model?: SuggestionMode
     catch { throw new ValidationError("Send the data as JSON.") }
     const data = store.getData()
     const result = await previewTransaction(body, {
+      categoryRules: store.assistant.getData().rules,
       wallets: data.wallets.map(({ id, name, nickname, kind }) => ({ id, name, nickname, kind })),
       categories: data.categories.map(({ id, name, type }) => ({ id, name, type })),
       transactions: data.transactions.filter(t => t.type !== "transfer").map(t => ({ type: t.type, categoryId: t.categoryId, description: t.description, date: t.date })),
@@ -144,6 +162,36 @@ export function createApp(store: Store, previewOptions: { model?: SuggestionMode
     // A device may have been locked while the model was working.
     if (!auth.isAllowed(getCookie(c, SESSION_COOKIE))) return c.json({ error: "Kaya is locked. Enter your PIN to open it.", locked: true }, 401)
     return c.json(result)
+  })
+
+  app.get("/api/assistant", c => c.json(store.assistant.getData()))
+  app.put("/api/assistant/rules", async c => c.json(store.assistant.saveRule(await readJson(c.req.raw, 4096))))
+  app.delete("/api/assistant/rules/:id", c => { store.assistant.deleteRule(c.req.param("id")); return c.json(store.assistant.getData()) })
+  app.put("/api/assistant/templates", async c => c.json(store.assistant.saveTemplate(await readJson(c.req.raw, 4096))))
+  app.delete("/api/assistant/templates/:id", c => { store.assistant.deleteTemplate(c.req.param("id")); return c.json(store.assistant.getData()) })
+  app.post("/api/assistant/batch", async c => c.json(store.assistant.saveBatch(await readJson(c.req.raw, 16384)), 201))
+  app.post("/api/assistant/preview-batch", async c => {
+    if (!previewEnabled) throw new PreviewModelError("disabled", "AI Quick add is off. You can use the ordinary form.")
+    const body = await readJson(c.req.raw, 16384)
+    const data = store.getData()
+    const result = await previewBatch(body, { wallets: data.wallets, categories: data.categories, categoryRules: store.assistant.getData().rules,
+      transactions: data.transactions.filter(t => t.type !== "transfer") }, previewModel, { now: previewOptions.now?.(), signal: c.req.raw.signal })
+    if (!auth.isAllowed(getCookie(c, SESSION_COOKIE))) return c.json({ error: "Kaya is locked. Enter your PIN to open it.", locked: true }, 401)
+    return c.json(result)
+  })
+  app.post("/api/assistant/questions", async c => {
+    const body = await readJson(c.req.raw, 4096)
+    const text = body && typeof body === "object" && "text" in body ? body.text : undefined
+    return c.json(answerSpendingQuestion(text, store.getData(), previewOptions.now?.()))
+  })
+  app.get("/api/assistant/subscriptions", c => c.json(detectSubscriptions(store.getData(), store.assistant.getData().subscriptions, previewOptions.now?.())))
+  app.put("/api/assistant/subscriptions", async c => {
+    const body = await readJson(c.req.raw, 4096)
+    if (!body || typeof body !== "object" || !("key" in body)) throw new ValidationError("Choose a recurring payment.")
+    const known = detectSubscriptions(store.getData(), store.assistant.getData().subscriptions, previewOptions.now?.()).some(candidate => candidate.key === body.key)
+      || store.assistant.getData().subscriptions.some(preference => preference.key === body.key)
+    if (!known) throw new ValidationError("That recurring payment is no longer available. Refresh the suggestions.")
+    return c.json(store.assistant.setSubscription(body))
   })
 
   app.post("/api/transactions", async (c) => {

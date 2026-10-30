@@ -1,3 +1,4 @@
+import { MobileDetails } from "@/components/mobile-details"
 import { formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -24,12 +25,12 @@ interface RankedRowProps {
  */
 export function RankedRow({ badge, name, amount, share, meta, barClass }: RankedRowProps) {
   return (
-    <li data-slot="insight-row" className="group @container relative flex items-start gap-3 py-3 first:pt-0 last:pb-0 sm:gap-4">
+    <li data-slot="insight-row" className="group @container relative flex items-start gap-2 py-2 md:gap-3 md:py-3 first:pt-0 last:pb-0 sm:gap-4">
       {badge}
 
       {/* The top padding puts the first line level with the middle of the badge. */}
       <div className="min-w-0 flex-1 pt-2">
-        <div className="flex flex-col @md:flex-row @md:items-baseline @md:justify-between @md:gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 @md:gap-4">
           <p data-slot="insight-name" className="min-w-0 font-medium break-words">
             {name}
           </p>
@@ -42,9 +43,9 @@ export function RankedRow({ badge, name, amount, share, meta, barClass }: Ranked
         </div>
 
         {meta ? (
-          <p data-slot="insight-meta" className="mt-0.5 text-sm text-muted-foreground">
+          <MobileDetails label="Comparison details"><p data-slot="insight-meta" className="mt-0.5 text-sm text-muted-foreground">
             {meta}
-          </p>
+          </p></MobileDetails>
         ) : null}
 
         <div aria-hidden className="mt-2.5 h-2 rounded-full bg-track">

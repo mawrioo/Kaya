@@ -88,7 +88,8 @@ test("CSV review stays usable on a narrow phone in dark mode", async ({ page }, 
   const errors: string[] = []
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto("/transactions")
-  await page.getByRole("button", { name: "Import CSV", exact: true }).first().click()
+  await page.getByRole("button", { name: "More transaction actions", exact: true }).click()
+  await page.getByRole("menuitem", { name: "Import CSV", exact: true }).click()
   await page.locator('input[type="file"]').setInputFiles({ name: "phone.csv", mimeType: "text/csv", buffer: Buffer.from(`Date,Description,Amount\n${today},Transfer to Bank Jago,-250000\n${today},Lunch,-25000`) })
   const dialog = page.getByRole("dialog")
   const select = dialog.getByRole("combobox", { name: "Record Transfer to Bank Jago as" })

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { DatabaseSync } from "node:sqlite"
@@ -129,9 +129,15 @@ describe("the last backup, in the data the app draws itself from", () => {
   })
 
   it("names the newest copy once there is one", () => {
-    const { store, db } = fileStack()
-    makeBackup(db, new Date(2026, 9, 3, 9, 0, 0))
-    const newest = store.backUp().backup
+    const { store, db, backups } = fileStack()
+    const olderAt = new Date(2026, 9, 3, 9, 0, 0)
+    const newerAt = new Date(2026, 9, 4, 15, 30, 12)
+    const older = makeBackup(db, olderAt).backup
+    const newest = makeBackup(db, newerAt).backup
+    // Filenames use the requested moment; discovery uses file metadata. Control both clocks.
+    // A real VACUUM can finish across a second boundary under a concurrent test load.
+    utimesSync(join(backups, older.name), olderAt, olderAt)
+    utimesSync(join(backups, newest.name), newerAt, newerAt)
     assert.deepEqual(store.getData().lastBackup, newest)
   })
 

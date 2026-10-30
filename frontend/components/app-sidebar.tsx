@@ -3,13 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { BrandMark } from "@/components/brand-mark"
 import { useData } from "@/components/data-provider"
 import { MENU_BUTTON_ID } from "@/components/mobile-topbar"
 import { PinDialog } from "@/components/lock/pin-dialog"
+import { MobileNavigation } from "@/components/mobile-navigation"
+import { EntryPreferencesDialog } from "@/components/transactions/entry-preferences-dialog"
 import { NameDialog } from "@/components/name-dialog"
 import { SidebarUser } from "@/components/sidebar-user"
 import {
@@ -34,6 +36,7 @@ export function AppSidebar() {
   const { updateUserName } = useData()
   const [nameOpen, setNameOpen] = useState(false)
   const [pinOpen, setPinOpen] = useState(false)
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   // Where keyboard focus goes when the box for the name closes.
   const returnFocus = useReturnFocus()
 
@@ -53,6 +56,13 @@ export function AppSidebar() {
     setPinOpen(true)
   }
 
+  function openEntryPreferences() {
+    returnFocus.remember()
+    if (isMobile) returnFocus.redirect(document.getElementById(MENU_BUTTON_ID))
+    closeMobile()
+    setPreferencesOpen(true)
+  }
+
   async function saveName(name: string) {
     try {
       const saved = await updateUserName(name)
@@ -65,11 +75,19 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar collapsible="icon" className="border-sidebar-border">
-        <SidebarHeader className="flex-row items-center justify-between gap-2 px-4 pt-5 pb-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+      {isMobile ? <MobileNavigation onChangeName={openNameBox} onPinSettings={openPinBox} onEntryPreferences={openEntryPreferences} /> : <Sidebar collapsible="icon" className="border-sidebar-border">
+        <SidebarHeader className="flex-row items-center justify-between gap-2 px-3 py-2 md:px-4 md:pt-5 md:pb-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
           <span className="pl-1.5 group-data-[collapsible=icon]:hidden">
             <BrandMark onNavigate={closeMobile} />
           </span>
+          <button
+            type="button"
+            onClick={closeMobile}
+            aria-label="Close menu"
+            className="grid size-11 shrink-0 place-items-center rounded-lg text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-sidebar-ring md:hidden"
+          >
+            <X className="size-5" aria-hidden />
+          </button>
           {/* Folds the menu down to icons, and opens it again. Only on a desktop: a phone's menu is a sheet. */}
           <button
             type="button"
@@ -82,7 +100,7 @@ export function AppSidebar() {
           </button>
         </SidebarHeader>
 
-        <SidebarContent className="px-3 group-data-[collapsible=icon]:px-2">
+        <SidebarContent className="px-2 md:px-3 group-data-[collapsible=icon]:px-2">
           <nav aria-label="Main">
             <SidebarMenu className="gap-0.5">
               {mainNav.map(({ href, label, icon: Icon }) => {
@@ -107,10 +125,11 @@ export function AppSidebar() {
           </nav>
         </SidebarContent>
 
-        <SidebarFooter className="px-4 pb-4 group-data-[collapsible=icon]:px-2">
-          <SidebarUser onChangeName={openNameBox} onBackupStart={closeMobile} onPinSettings={openPinBox} />
+        <SidebarFooter className="mx-2 mt-2 border-t border-sidebar-border px-2 pt-2 pb-2 md:mx-0 md:mt-0 md:border-0 md:px-4 md:pt-0 md:pb-4 group-data-[collapsible=icon]:px-2">
+          <SidebarUser onChangeName={openNameBox} onBackupStart={closeMobile} onPinSettings={openPinBox} onEntryPreferences={openEntryPreferences} />
         </SidebarFooter>
-      </Sidebar>
+      </Sidebar>}
+      <EntryPreferencesDialog open={preferencesOpen} onOpenChange={setPreferencesOpen} onCloseAutoFocus={returnFocus.restore} />
       <NameDialog open={nameOpen} onOpenChange={setNameOpen} onSave={saveName} onCloseAutoFocus={returnFocus.restore} />
       <PinDialog open={pinOpen} onOpenChange={setPinOpen} onCloseAutoFocus={returnFocus.restore} />
     </>

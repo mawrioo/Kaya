@@ -32,12 +32,12 @@ export function HomeContent({ nowIso }: { nowIso: string }) {
   const month = pickMonth(transactions, now)
 
   return (
-    <div className="mt-8 flex flex-col gap-6 md:mt-10">
+    <div className="home-content mt-4 flex flex-col gap-4 md:mt-10 md:gap-6">
       <TotalBalanceCard wallets={wallets} />
       <WalletCards wallets={wallets} />
       <QuietReminders today={toDateInput(now)} />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-5">
         <MonthSummary
           className="xl:col-span-2"
           totals={monthTotals(transactions, month)}
@@ -55,7 +55,7 @@ export function HomeContent({ nowIso }: { nowIso: string }) {
 
       <HomeBudgets categories={categories} transactions={transactions} monthlyBudget={monthlyBudget} month={month} />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:gap-6 xl:grid-cols-2">
         <SavingsGoals goals={goals} />
         <RecentTransactions
           transactions={recentTransactions(transactions, 5)}

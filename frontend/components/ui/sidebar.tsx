@@ -27,7 +27,7 @@ import { PanelLeftIcon } from "lucide-react"
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
+const SIDEBAR_WIDTH_MOBILE = "min(16rem, calc(100vw - 3rem))"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
@@ -189,7 +189,8 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="mobile-menu-panel w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground"
+          showCloseButton={false}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -216,7 +217,7 @@ function Sidebar({
             <SheetTitle>Menu</SheetTitle>
             <SheetDescription>Pages and appearance settings.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex min-h-0 w-full flex-col">{children}</div>
         </SheetContent>
       </Sheet>
     )
@@ -532,7 +533,8 @@ function SidebarMenuButton({
     />
   )
 
-  if (!tooltip) {
+  // Hidden tooltips still intercept Escape. Only mount them for icon-only navigation.
+  if (!tooltip || isMobile || state !== "collapsed") {
     return button
   }
 

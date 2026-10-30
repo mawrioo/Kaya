@@ -11,6 +11,7 @@ import { MonthChart } from "@/components/insights/month-chart"
 import { MonthRecap } from "@/components/insights/month-recap"
 import { WalletBreakdown } from "@/components/insights/wallet-breakdown"
 import { WeekdayBreakdown } from "@/components/insights/weekday-breakdown"
+import { MobileDetails } from "@/components/mobile-details"
 import { Money } from "@/components/money"
 import { MonthlyNote } from "@/components/monthly-note"
 import { StatCard } from "@/components/stat-card"
@@ -49,45 +50,48 @@ export function MonthTab({
 
   return (
     <>
-      <MonthRecap month={month} today={today} />
+      <div className="flex flex-col gap-2 md:gap-6">
+        <MobileDetails label="Month overview" className="order-2 md:order-none"><MonthRecap month={month} today={today} /></MobileDetails>
 
-      <MonthlyNote month={month} today={today} />
+        <MobileDetails label="Monthly note" className="order-3 md:order-none"><MonthlyNote month={month} today={today} /></MobileDetails>
 
-      {/* Three across only where each card has room for a long amount: from 1024px, since the sidebar takes 256px of a tablet. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <StatCard
-          icon={ArrowUpRight}
-          label="Spent"
-          value={<Money amount={-totals.spending} className={totals.spending === 0 ? "text-muted-foreground" : "text-negative"} />}
-          helper={compare(totals.spending, previous?.spending)}
-          helperTone="muted"
-        />
-        <StatCard
-          icon={ArrowDownLeft}
-          label="Earned"
-          value={<Money amount={totals.income} sign="always" className={totals.income === 0 ? "text-muted-foreground" : "text-positive"} />}
-          helper={compare(totals.income, previous?.income)}
-          helperTone="muted"
-        />
-        <StatCard
-          icon={PiggyBank}
-          label="Left over"
-          value={
-            <Money
-              amount={totals.net}
-              className={totals.net === 0 ? "text-muted-foreground" : totals.net > 0 ? "text-positive" : "text-negative"}
-            />
-          }
-          helper={compare(totals.net, previous?.net)}
-          helperTone="muted"
-        />
+        {/* Three across only where each card has room for a long amount: from 1024px, since the sidebar takes 256px of a tablet. */}
+        <div className="insight-stats order-1 md:order-none grid grid-cols-1 gap-2 md:gap-4 lg:grid-cols-3">
+          <StatCard
+            icon={ArrowUpRight}
+            label="Spent"
+            value={<Money amount={-totals.spending} className={totals.spending === 0 ? "text-muted-foreground" : "text-negative"} />}
+            helper={compare(totals.spending, previous?.spending)}
+            helperTone="muted"
+          />
+          <StatCard
+            icon={ArrowDownLeft}
+            label="Earned"
+            value={<Money amount={totals.income} sign="always" className={totals.income === 0 ? "text-muted-foreground" : "text-positive"} />}
+            helper={compare(totals.income, previous?.income)}
+            helperTone="muted"
+          />
+          <StatCard
+            icon={PiggyBank}
+            label="Left over"
+            value={
+              <Money
+                amount={totals.net}
+                className={totals.net === 0 ? "text-muted-foreground" : totals.net > 0 ? "text-positive" : "text-negative"}
+              />
+            }
+            helper={compare(totals.net, previous?.net)}
+            helperTone="muted"
+          />
+        </div>
+
       </div>
 
       <MonthChart transactions={transactions} categories={categories} bounds={bounds} selected={month} onSelect={onChooseMonth} />
 
       <BalancePanel {...monthDates(month)} today={today} caption={formatMonth(month)} scale="weeks" />
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 md:gap-6 xl:grid-cols-2">
         <div className="flex flex-col gap-6">
           <CategoryBreakdown
             title="Spending by category"

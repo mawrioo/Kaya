@@ -1,0 +1,81 @@
+{
+  "themes": {
+    "light": [
+      {
+        "width": 390,
+        "barHeight": 52,
+        "addHeight": 44,
+        "addWidth": 76,
+        "plusSize": 40,
+        "centreDifference": 0,
+        "lastWallet": 966.9375,
+        "barTop": 1081.1875,
+        "cardTop": 397.9375,
+        "cardHeight": 136,
+        "font": "\"Plus Jakarta Sans\", sans-serif",
+        "amountFont": "Inter, Arial, sans-serif",
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "barHeight": 52,
+        "addHeight": 44,
+        "addWidth": 76,
+        "plusSize": 40,
+        "centreDifference": 0,
+        "lastWallet": 966.9375,
+        "barTop": 1081.1875,
+        "cardTop": 397.9375,
+        "cardHeight": 136,
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "amountFont": "Inter, Arial, sans-serif",
+        "overflow": false
+      }
+    ],
+    "dark": [
+      {
+        "width": 390,
+        "barHeight": 52,
+        "addHeight": 44,
+        "addWidth": 76,
+        "plusSize": 40,
+        "centreDifference": 0,
+        "lastWallet": 966.9375,
+        "barTop": 1081.1875,
+        "cardTop": 397.9375,
+        "cardHeight": 136,
+        "font": "\"Plus Jakarta Sans\", sans-serif",
+        "amountFont": "Inter, Arial, sans-serif",
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "barHeight": 52,
+        "addHeight": 44,
+        "addWidth": 76,
+        "plusSize": 40,
+        "centreDifference": 0,
+        "lastWallet": 966.9375,
+        "barTop": 1081.1875,
+        "cardTop": 397.9375,
+        "cardHeight": 136,
+        "font": "\"Source Serif 4\", Georgia, serif",
+        "amountFont": "Inter, Arial, sans-serif",
+        "overflow": false
+      }
+    ]
+  },
+  "checks": [
+    "matching card geometry",
+    "six wallets clear of navigation",
+    "52px navigation and centred 40px plus",
+    "real bundled fonts",
+    "linked privacy and selected tabs",
+    "More focus trap and Escape",
+    "Current/New/Compare controls",
+    "linked scrolling",
+    "320/360/390/430px no overflow",
+    "no page errors"
+  ],
+  "renderer": "headless Chromium --disable-gpu"
+}

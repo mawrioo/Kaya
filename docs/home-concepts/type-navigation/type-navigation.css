@@ -1,0 +1,18 @@
+.board{max-width:1330px;padding:32px 40px 26px}.concepts{grid-template-columns:repeat(3,390px);gap:28px}.caption{height:45px;margin-bottom:15px}.caption h2{font-size:16px;margin-bottom:5px}.caption p{font-size:12px}.board-header{margin-bottom:24px}.board-header h1{font-size:32px}.theme{align-self:center}
+.refined .brand-row .brand{font-size:24px;letter-spacing:-.035em;line-height:1.15;font-weight:650;font-style:normal}
+.type-1 .brand-row .brand{font-weight:700}.type-2 .brand-row .brand{font-weight:600;letter-spacing:-.025em}
+.type-option .hero-amount{gap:6px;margin-top:17px;margin-bottom:9px;align-items:baseline}
+.type-option .hero-amount strong{font-family:Inter,sans-serif;font-size:34px;line-height:1.2;font-weight:500;font-style:normal;font-variant-numeric:lining-nums tabular-nums;font-feature-settings:'lnum' 1,'tnum' 1;letter-spacing:-.035em}
+.type-option .hero-amount>span{font-family:Inter,sans-serif;font-size:16px;font-weight:400;font-style:normal}
+.type-option .hero-amount>.eye{align-self:center}
+.type-option .bottom{padding:3px 5px 4px;background:var(--surface)}
+.type-option .bottom button{border-radius:0;background:none;gap:3px;font-size:10px;line-height:1.2;font-weight:400;color:var(--muted);padding:1px 0 4px}
+.type-option .bottom button>svg{width:18px;height:18px;stroke-width:1.6}
+.type-option .bottom button[aria-current]{border-radius:0;background:none;color:var(--orange);font-weight:600}
+.type-option .bottom button[aria-current]>svg{stroke-width:2}
+.type-option .bottom button[aria-current]:before{display:block;content:'';position:absolute;top:auto;bottom:0;left:50%;transform:translateX(-50%);width:14px;height:2px;border-radius:1px;background:var(--orange)}
+.type-option .bottom button[aria-expanded=true]{color:var(--orange)}
+.type-option .bottom button:hover{color:var(--text)}
+.type-option .bottom button[aria-current]:hover{color:var(--orange)}
+.type-option .bottom button:active{opacity:.7}
+@media(max-width:1300px){.board{padding:24px}.concepts{grid-template-columns:repeat(3,390px)}}@media(max-width:600px){.board{padding:20px 12px}.board-header h1{font-size:28px}.theme{align-self:flex-start}}

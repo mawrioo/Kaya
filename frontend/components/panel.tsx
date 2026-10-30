@@ -17,7 +17,7 @@ export function Panel({ title, caption, action, className, children }: PanelProp
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("flex flex-col rounded-xl border bg-card p-5 shadow-sm md:p-6", className)}
+      className={cn("flex flex-col rounded-xl border bg-card p-4 shadow-sm md:p-6", className)}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -28,7 +28,7 @@ export function Panel({ title, caption, action, className, children }: PanelProp
         </div>
         {action}
       </div>
-      <div className="mt-5 flex-1">{children}</div>
+      <div className="mt-3 flex-1 md:mt-5">{children}</div>
     </section>
   )
 }

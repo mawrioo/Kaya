@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-28",
+  "unit": {
+    "backend": 660,
+    "frontend": 256,
+    "total": 916,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "lint": "passed",
+  "initialDevelopmentBrowser": {
+    "passed": 136,
+    "failed": 1,
+    "skipped": 2,
+    "resolvedFailure": "outdated stale-poll setup"
+  },
+  "developmentDynamicRetest": {
+    "passed": 7,
+    "failed": 0
+  },
+  "fullProductionBrowser": {
+    "passed": 137,
+    "failed": 0,
+    "skipped": 2,
+    "skipReason": "live suites require explicit opt-in"
+  },
+  "postFixProductionInsightsAndSingleLive": {
+    "passed": 9,
+    "failed": 0
+  },
+  "productionBatchLive": {
+    "passed": 1,
+    "failed": 0
+  },
+  "singleLiveMeasurements": [
+    {
+      "type": "expense",
+      "previewMs": 8588,
+      "modelTimings": [
+        8231
+      ]
+    },
+    {
+      "type": "income",
+      "previewMs": 1922,
+      "modelTimings": [
+        8231,
+        1725
+      ]
+    },
+    {
+      "type": "transfer",
+      "previewMs": 83,
+      "modelTimings": [
+        8231,
+        1725
+      ]
+    }
+  ],
+  "batchLiveMeasurements": {
+    "elapsedMs": 12906,
+    "inferenceCalls": 3,
+    "modelTimings": [
+      5297,
+      2067,
+      1697
+    ],
+    "retries": 2,
+    "batchRecords": 3
+  },
+  "newQueryRegressionCases": 16,
+  "browserEngine": "Chromium",
+  "realPhoneTested": false,
+  "safariTested": false,
+  "firefoxTested": false
+}

@@ -274,10 +274,11 @@ export type Transaction = IncomeTransaction | ExpenseTransaction | TransferTrans
 export type TransactionType = Transaction["type"]
 
 /** A transaction before it has been saved, so it has no id yet. */
-export type NewTransaction =
+export type NewTransaction = (
   | Omit<IncomeTransaction, "id">
   | Omit<ExpenseTransaction, "id">
   | Omit<TransferTransaction, "id">
+) & { /** Explicit opt-in; saved atomically with this confirmed transaction. */ rememberCategory?: boolean }
 
 /** The icons a goal can wear (lucide-react names in kebab-case). */
 export type GoalIconName =
@@ -593,4 +594,55 @@ export interface PreviewConversation {
   draft: TransactionPreviewDraft
   sources: Partial<Record<PreviewField, PreviewSource>>
   pending?: PreviewQuestion
+}
+
+/** Explicit local rules, separate from model suggestions and abandoned drafts. */
+export interface CategoryRule {
+  id: string
+  type: "expense" | "income"
+  phrase: string
+  categoryId: string
+}
+
+export interface TransactionTemplate {
+  id: string
+  name: string
+  draft: TransactionPreviewDraft & { type: TransactionType }
+}
+
+export interface SubscriptionPreference {
+  key: string
+  status: "tracked" | "dismissed"
+  name: string
+}
+
+export interface AssistantData {
+  rules: CategoryRule[]
+  templates: TransactionTemplate[]
+  subscriptions: SubscriptionPreference[]
+}
+
+export interface AssistantBatchResult {
+  requestId: string
+  transactions: Transaction[]
+  wallets: Wallet[]
+}
+
+export interface SpendingAnswer {
+  status: "answer" | "clarify"
+  message: string
+  parts: { label: string; amount: Rupiah; count: number; href: string }[]
+}
+
+export interface SubscriptionCandidate {
+  key: string
+  name: string
+  walletId: string
+  categoryId?: string
+  cadence: "weekly" | "monthly" | "annual"
+  amount: Rupiah
+  variable: boolean
+  nextDate: string
+  transactionIds: string[]
+  status: "candidate" | "tracked" | "dismissed"
 }

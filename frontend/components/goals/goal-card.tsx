@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 import { Check, Clock, Ellipsis, History, Pencil, Trash2, TrendingUp } from "lucide-react"
 
 import { MoveMoneyPopover, type MoveMoneyInput } from "@/components/goals/move-money-popover"
+import { MobileDetails } from "@/components/mobile-details"
 import { Money } from "@/components/money"
 import { Button } from "@/components/ui/button"
 import {
@@ -47,6 +48,8 @@ interface GoalCardProps {
 export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, onDelete, onMoveMoney }: GoalCardProps) {
   const Icon = goalIconChoices[goal.icon]
   const { done, fill, percent, remaining } = goalProgress(goal)
+  const pace = goalPace(goal, today)
+  const detailsLabel = pace.kind === "on-pace" ? "On pace · Details" : pace.kind === "behind" ? "A little behind · Details" : "Details"
   // When more has been saved than before, a coin drops into the bar (not on the first paint).
   const [lastSaved, setLastSaved] = useState(goal.savedAmount)
   const [drops, setDrops] = useState(0)
@@ -60,19 +63,19 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
       id={`goal-card-${goal.id}`}
       className={cn("flex scroll-mt-24", isNew && "animate-in duration-500 fade-in-0 slide-in-from-bottom-3")}
     >
-      <div className="flex w-full flex-col rounded-xl border bg-card p-5 shadow-sm md:p-6">
-        <div className="flex items-start gap-3.5">
+      <div className="flex w-full flex-col rounded-xl border bg-card p-3 md:p-6 md:shadow-sm">
+        <div className="flex items-center gap-2.5 md:items-start md:gap-3.5">
           <span
             className={cn(
-              "coin-rim grid size-11 shrink-0 place-items-center rounded-full",
+              "coin-rim grid size-8 shrink-0 md:size-11 place-items-center rounded-full",
               done ? "bg-positive/15 text-positive" : "bg-sage text-sage-foreground"
             )}
           >
-            <Icon className="size-5" aria-hidden />
+            <Icon className="size-4 md:size-5" aria-hidden />
           </span>
-          <div className="min-w-0 flex-1 pt-0.5">
-            <h2 className="font-medium wrap-anywhere">{goal.name}</h2>
-            <p className="mt-0.5 text-sm wrap-anywhere text-muted-foreground">Saved in {walletName}</p>
+          <div className="min-w-0 flex-1 md:pt-0.5">
+            <h2 className="text-sm font-medium md:text-base wrap-anywhere">{goal.name}</h2>
+            <p className="text-xs wrap-anywhere md:mt-0.5 md:text-sm text-muted-foreground">Saved in {walletName}</p>
           </div>
           {/* Negative margins let the round button bleed into the padding so the row stays as tall as the icon */}
           <div className="-mt-1 -mr-2 flex shrink-0">
@@ -80,10 +83,12 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="type-amount">
-              <Money amount={goal.savedAmount} roll />
+        <div className="md:mt-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <p className="min-w-0 text-base font-semibold tabular-nums wrap-anywhere md:type-amount">
+              <span className="md:hidden">{formatRupiah(goal.savedAmount)}</span>
+              <span className="hidden md:inline"><Money amount={goal.savedAmount} roll /></span>
+              <span className="ml-1 text-xs font-normal text-muted-foreground md:hidden">of {formatRupiah(goal.targetAmount)}</span>
             </p>
             {done ? (
               <span className="inline-flex shrink-0 items-center gap-1 self-center rounded-full bg-sage px-2.5 py-0.5 text-xs font-medium text-sage-foreground">
@@ -94,7 +99,7 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
               <p className="shrink-0 text-sm font-medium tabular-nums">{formatPercent(percent)}</p>
             )}
           </div>
-          <div className="relative mt-3">
+          <div className="relative mt-1.5 md:mt-3">
             <Progress value={fill} aria-label={`${goal.name} progress`} indicatorClassName={done ? "bg-positive" : undefined} />
             {drops > 0 && !done ? (
               <span
@@ -105,7 +110,7 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
               />
             ) : null}
           </div>
-          <div className="mt-2.5 flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-muted-foreground tabular-nums">
+          <div className="mt-2.5 hidden flex-wrap justify-between md:flex gap-x-4 gap-y-1 text-sm text-muted-foreground tabular-nums">
             <p>of {formatRupiah(goal.targetAmount)}</p>
             {done ? (
               // A goal reached before dates were kept has none to show.
@@ -117,23 +122,27 @@ export function GoalCard({ goal, walletName, today, isNew, onEdit, onHistory, on
         </div>
 
         {done ? (
-          <div className="mt-auto flex justify-end pt-6">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1 md:justify-end md:pt-6">
+            {goal.reachedAt ? <p className="text-xs text-muted-foreground md:hidden">Reached on {formatDate(goal.reachedAt)}</p> : null}
             <MoveMoneyPopover goal={goal} walletName={walletName} directions={["take-out"]} onSave={onMoveMoney}>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-auto max-md:px-3 max-md:text-sm">
                 Take money out
                 <span className="sr-only"> of {goal.name}</span>
               </Button>
             </MoveMoneyPopover>
           </div>
         ) : (
-          <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-6">
+          <div className="mt-auto flex flex-wrap items-start justify-between gap-x-2 gap-y-1 pt-1 md:items-end md:gap-x-4 md:gap-y-3 md:pt-6">
             <div className="min-w-0 flex-1">
-              <Pace pace={goalPace(goal, today)} />
-              <Plan plan={goalPlan(goal, today)} date={goal.targetDate} />
+              <MobileDetails label={detailsLabel} contentClassName="pb-2 md:pb-0">
+                <p className="mb-2 text-sm text-muted-foreground tabular-nums md:hidden">{formatRupiah(remaining)} to go</p>
+                <Pace pace={pace} />
+                {goal.targetDate ? <Plan plan={goalPlan(goal, today)} date={goal.targetDate} /> : null}
+              </MobileDetails>
             </div>
-            <div className="w-full sm:ml-auto sm:w-auto">
+            <div className="ml-auto w-auto">
               <MoveMoneyPopover goal={goal} walletName={walletName} onSave={onMoveMoney}>
-                <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+                <Button variant="secondary" size="lg" className="w-auto max-md:px-3 max-md:text-sm">
                   Add money
                   <span className="sr-only"> to {goal.name}</span>
                 </Button>

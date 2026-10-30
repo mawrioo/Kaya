@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-29",
+  "unitTests": {
+    "backend": 660,
+    "frontend": 256,
+    "failed": 0
+  },
+  "productionRuns": [
+    {
+      "log": "selected-phone-production.log",
+      "passed": 90,
+      "summary": [
+        "11 failed",
+        "90 passed (2.9m)"
+      ]
+    },
+    {
+      "log": "selected-phone-production-final.log",
+      "passed": 50,
+      "summary": [
+        "3 failed",
+        "50 passed (1.6m)"
+      ]
+    },
+    {
+      "log": "selected-phone-confirmation.log",
+      "passed": 33,
+      "summary": [
+        "33 passed (1.2m)"
+      ]
+    }
+  ],
+  "distinctProductionCasesPassed": 101,
+  "projects": [
+    "assistant-expansion",
+    "brand",
+    "mobile-compact",
+    "mobile-goals-menu",
+    "mobile-touch",
+    "quick-add",
+    "selected-phone-design",
+    "shortcut",
+    "simple-phone-entry",
+    "smart-conversation",
+    "smart-entry",
+    "smart-entry-improvements"
+  ],
+  "finalConfirmationPassed": 33,
+  "limitations": [
+    "Chromium only, with GPU disabled",
+    "No physical phone/Safari checks",
+    "No real local-model execution in this presentation change",
+    "No reproduction or resolution established for Windows display timeout"
+  ],
+  "isolation": "Copied apps, localhost:3200/4200, throwaway database; BCA 8742300 and 41 transactions proven by harness"
+}

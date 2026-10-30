@@ -48,8 +48,8 @@ export function TransactionRowContent({
         : { text: formatRupiah(tx.amount, { sign: "never" }), className: "text-muted-foreground" }
 
   return (
-    <div className="flex items-center gap-4">
-      <span className={cn("grid size-10 shrink-0 place-items-center rounded-full", badge)}>
+    <div className="flex items-center gap-2 md:gap-4">
+      <span className={cn("grid size-8 md:size-10 shrink-0 place-items-center rounded-full", badge)}>
         <Icon className="size-[1.125rem]" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
@@ -79,7 +79,7 @@ export function TransactionRowContent({
 /** A row in a plain list, such as Home's recent transactions. */
 export function TransactionRow(props: TransactionRowContentProps) {
   return (
-    <li className="py-3.5 first:pt-0 last:pb-0">
+    <li className="py-2.5 md:py-3.5 first:pt-0 last:pb-0">
       <TransactionRowContent {...props} />
     </li>
   )

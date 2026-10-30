@@ -9,6 +9,7 @@ import { LockScreen } from "@/components/lock/lock-screen"
 import { MobileTopbar } from "@/components/mobile-topbar"
 import { MotionProvider } from "@/components/motion-provider"
 import { QuickAddButton } from "@/components/quick-add-button"
+import { QuickAddProvider } from "@/components/quick-add-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
@@ -78,23 +79,25 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <BalanceVisibilityProvider initialHidden={hiddenBalances}>
                   <DataProvider initial={data}>
                     <TooltipProvider delayDuration={400}>
-                      {/* On desktop the menu is 224px wide and can fold down to icons with the button beside the name; below md it is a sheet opened from the top bar */}
+                      {/* On desktop the menu is 224px wide and can fold down to icons with the button beside the name; phones use compact bottom navigation */}
                       <SidebarProvider defaultOpen={menuOpen} style={{ "--sidebar-width": "14rem" } as React.CSSProperties}>
-                        <AppSidebar />
-                        <SidebarInset id="main-content" tabIndex={-1} className="outline-none">
-                          <MobileTopbar />
-                          <div className="mx-auto w-full max-w-[1200px] px-5 pt-8 pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-8 md:pt-10 md:pb-24 xl:px-12 print:max-w-none print:p-0">
-                            {children}
-                          </div>
-                        </SidebarInset>
-                        <QuickAddButton />
+                        <QuickAddProvider>
+                          <AppSidebar />
+                          <SidebarInset id="main-content" tabIndex={-1} className="outline-none">
+                            <MobileTopbar nowIso={new Date().toISOString()} />
+                            <div className="main-page-content mx-auto w-full max-w-[1200px] px-4 pt-2 md:px-8 md:pt-10 md:pb-24 xl:px-12 print:max-w-none print:p-0">
+                              {children}
+                            </div>
+                          </SidebarInset>
+                          <QuickAddButton />
+                        </QuickAddProvider>
                       </SidebarProvider>
                     </TooltipProvider>
-                    {/* Messages come from the top right (the owner's pick, 8 Oct 2026). On a phone they start under the 64px top bar. */}
+                    {/* Messages start at the top right, clear of the device safe area. */}
                     <Toaster
                       position="top-right"
                       offset={{ top: "calc(1.5rem + env(safe-area-inset-top))" }}
-                      mobileOffset={{ top: "calc(4.5rem + env(safe-area-inset-top))" }}
+                      mobileOffset={{ top: "calc(1rem + env(safe-area-inset-top))" }}
                     />
                   </DataProvider>
                 </BalanceVisibilityProvider>

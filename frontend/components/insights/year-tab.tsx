@@ -60,7 +60,7 @@ export function YearTab({ year, today, onChooseMonth }: YearTabProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="insight-stats grid grid-cols-1 gap-2 md:gap-4 lg:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={ArrowUpRight}
           label="Spent"
@@ -157,7 +157,7 @@ export function YearTab({ year, today, onChooseMonth }: YearTabProps) {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 md:gap-6 xl:grid-cols-2">
         <CategoryBreakdown
           title="Spending by category"
           emptyText="Nothing spent this year."

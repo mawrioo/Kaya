@@ -38,21 +38,21 @@ export async function PageHeader({ title, description }: PageHeaderProps) {
   const Sky = SKY[skyFor(now.getHours())]
 
   return (
-    <header className="flex flex-col-reverse gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+    <header className={cn("phone-page-header flex flex-col-reverse gap-2 md:gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8", !title && "phone-home-heading")}>
       <div className="min-w-0">
-        {/* On Home the greeting types itself in many languages. A phone needs two lines of height for the longer ones, so the page
-            below never jumps, and the words wrap as they come (balanced wrapping would shuffle them about while it types). */}
-        <h1 className={cn("type-display wrap-anywhere", !title && "min-h-[2.6em] text-wrap! md:min-h-0")}>
+        {/* The phone greeting stays still and needs no reserved typing space. */}
+        <h1 className={cn("type-display wrap-anywhere", !title && "text-wrap!")}>
           {title ?? <RotatingGreeting part={dayPartFor(now.getHours())} />}
         </h1>
-        {description ? <p className="mt-2 max-w-[60ch] text-muted-foreground">{description}</p> : null}
+        {description ? <p className="mt-1 max-w-[60ch] text-sm text-muted-foreground md:mt-2 md:text-base">{description}</p> : null}
       </div>
       <time
         dateTime={toCalendarDate(now)}
-        className="inline-flex h-9 w-fit shrink-0 items-center gap-2 rounded-full border bg-card px-4 text-sm font-medium whitespace-nowrap shadow-xs lg:mt-1.5"
+        className={cn("hidden md:inline-flex", "h-7 md:h-9 w-fit shrink-0 items-center gap-2 rounded-full border bg-card px-4 text-sm font-medium whitespace-nowrap shadow-xs lg:mt-1.5")}
       >
         <Sky className="size-4 text-highlight" aria-hidden />
-        {formatDate(now, { weekday: true })}
+        <span className="md:hidden">{formatDate(now)}</span>
+        <span className="hidden md:inline">{formatDate(now, { weekday: true })}</span>
       </time>
     </header>
   )

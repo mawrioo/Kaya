@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 
 /** The look shared by every field: same height, border and white fill as the inputs and dropdowns. */
 const triggerClasses =
-  "flex h-10 w-full items-center gap-2 rounded-md border border-input bg-card px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[invalid=true]:border-destructive data-[invalid=true]:ring-3 data-[invalid=true]:ring-destructive/20 dark:bg-card dark:hover:bg-muted"
+  "flex min-h-11 md:min-h-0 md:h-10 w-full items-center gap-2 rounded-md border border-input bg-card px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[invalid=true]:border-destructive data-[invalid=true]:ring-3 data-[invalid=true]:ring-destructive/20 dark:bg-card dark:hover:bg-muted"
 
 interface DatePickerProps {
   id: string
@@ -117,12 +117,15 @@ export function DateRangePicker({ from, to, onChange, today, className }: DateRa
       ? `${formatDate(start)} – ${formatDate(end)}`
       : `From ${formatDate(start)}`
 
+  const fullMonth = from.endsWith("-01") && to === toDateInput(new Date(start!.getFullYear(), start!.getMonth() + 1, 0))
+  const phoneLabel = fullMonth ? new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric" }).format(start!) : label
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button type="button" aria-label={`Date range: ${label}`} className={cn(triggerClasses, className)}>
           <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span className={cn("truncate", !start && "text-muted-foreground")}>{label}</span>
+          <span className={cn("min-w-0 text-xs md:text-sm", !start && "text-muted-foreground")}><span className="md:hidden">{phoneLabel}</span><span className="hidden md:inline">{label}</span></span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto gap-0 p-0" align="start">

@@ -1,0 +1,46 @@
+{
+  "fontsLoaded": [
+    [
+      "Manrope",
+      true
+    ],
+    [
+      "Outfit",
+      true
+    ],
+    [
+      "Plus Jakarta Sans",
+      true
+    ]
+  ],
+  "geometry": [
+    {
+      "last": 866.03125,
+      "barTop": 969.6875,
+      "barHeight": 52,
+      "overflow": false,
+      "numeric": "lining-nums tabular-nums",
+      "numberFamily": "Inter, sans-serif",
+      "activeBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "last": 866.03125,
+      "barTop": 969.6875,
+      "barHeight": 52,
+      "overflow": false,
+      "numeric": "lining-nums tabular-nums",
+      "numberFamily": "Inter, sans-serif",
+      "activeBackground": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "last": 866.03125,
+      "barTop": 969.6875,
+      "barHeight": 52,
+      "overflow": false,
+      "numeric": "lining-nums tabular-nums",
+      "numberFamily": "Inter, sans-serif",
+      "activeBackground": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "checks": "3 fonts × 2 themes; 6 wallets visible; no Record/Add/Breakdown; transparent selected tab; interactive selection/More/Escape/privacy; no page errors or phone overflow."
+}

@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef } from "react"
-import { Plus, Search, Upload, X } from "lucide-react"
+import { useId, useRef, useState } from "react"
+import { Ellipsis, Plus, Search, SlidersHorizontal, Upload, X } from "lucide-react"
 
 import { DateRangePicker } from "@/components/date-picker"
 import { CategoryOption, WalletOption, selectTriggerClasses } from "@/components/transactions/options"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   Select,
   SelectContent,
@@ -45,6 +46,13 @@ export function TransactionFiltersBar({
   today,
 }: TransactionFiltersBarProps) {
   const searchRef = useRef<HTMLInputElement>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersId = useId()
+  const selectedFilters = [
+    filters.type !== "all" ? filters.type[0].toUpperCase() + filters.type.slice(1) : undefined,
+    filters.categoryId !== "all" ? categories.find((item) => item.id === filters.categoryId)?.name : undefined,
+    filters.walletId !== "all" ? wallets.find((item) => item.id === filters.walletId)?.name : undefined,
+  ].filter(Boolean)
   const spendingCategories = categories.filter((category) => category.type === "expense")
   const incomeCategories = categories.filter((category) => category.type === "income")
   const showSpending = filters.type === "all" || filters.type === "expense"
@@ -61,7 +69,7 @@ export function TransactionFiltersBar({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-3">
-        <div className="relative min-w-60 flex-1 basis-60">
+        <div className="relative min-w-0 flex-1 basis-60">
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -73,7 +81,7 @@ export function TransactionFiltersBar({
             placeholder="Search notes and categories"
             value={filters.search}
             onChange={(event) => onChange({ ...filters, search: event.target.value })}
-            className="h-10 bg-card pr-11 pl-10 dark:bg-card"
+            className="h-11 md:h-10 bg-card pr-11 pl-10 dark:bg-card"
           />
           {filters.search ? (
             <button
@@ -89,7 +97,7 @@ export function TransactionFiltersBar({
             </button>
           ) : null}
         </div>
-        <div className="flex w-full gap-3 sm:ml-auto sm:w-auto">
+        <div className="hidden w-full gap-3 md:flex sm:ml-auto sm:w-auto">
           <Button variant="outline" size="lg" onClick={onImport} className="flex-1 sm:flex-none">
             <Upload aria-hidden />
             Import CSV
@@ -101,81 +109,95 @@ export function TransactionFiltersBar({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:flex xl:flex-wrap xl:items-center">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-2 gap-2 md:gap-3 xl:flex xl:flex-wrap xl:items-center">
         <DateRangePicker
-          className="col-span-2 sm:col-span-1 xl:w-64"
+          className="min-w-0 md:col-span-1 xl:w-64"
           from={filters.from}
           to={filters.to}
           today={today}
           onChange={(from, to) => onChange({ ...filters, from, to })}
         />
 
-        <Select value={filters.type} onValueChange={(value) => changeType(value as TransactionFilters["type"])}>
-          <SelectTrigger aria-label="Filter by type" className={cn(selectTriggerClasses, "xl:w-40")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="income">Income</SelectItem>
-            <SelectItem value="expense">Expense</SelectItem>
-            <SelectItem value="transfer">Transfer</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.categoryId}
-          onValueChange={(categoryId) => onChange({ ...filters, categoryId })}
-          disabled={filters.type === "transfer"}
-        >
-          <SelectTrigger aria-label="Filter by category" className={cn(selectTriggerClasses, "xl:w-52")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value="all">All categories</SelectItem>
-            {showSpending ? (
-              <SelectGroup>
-                <SelectLabel>Spending</SelectLabel>
-                {spendingCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <CategoryOption category={category} />
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ) : null}
-            {showIncome ? (
-              <SelectGroup>
-                <SelectLabel>Income</SelectLabel>
-                {incomeCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <CategoryOption category={category} />
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ) : null}
-          </SelectContent>
-        </Select>
-
-        <Select value={filters.walletId} onValueChange={(walletId) => onChange({ ...filters, walletId })}>
-          <SelectTrigger aria-label="Filter by wallet" className={cn(selectTriggerClasses, "col-span-2 sm:col-span-1 xl:w-44")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="popper">
-            <SelectItem value="all">All wallets</SelectItem>
-            {wallets.map((wallet) => (
-              <SelectItem key={wallet.id} value={wallet.id}>
-                <WalletOption wallet={wallet} />
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters(filters) ? (
-          <Button variant="ghost" size="lg" onClick={onClear} className="col-span-2 sm:col-span-1 xl:col-span-1">
-            <X aria-hidden />
-            Clear filters
+        <div className="flex items-center gap-1 md:hidden">
+          <Button variant="outline" size="lg" aria-expanded={filtersOpen} aria-controls={filtersId} onClick={() => setFiltersOpen(!filtersOpen)} className="px-2.5">
+            <SlidersHorizontal aria-hidden />Filters{selectedFilters.length ? ` (${selectedFilters.length})` : ""}
           </Button>
-        ) : null}
+          <Button size="icon-lg" aria-label="Add transaction" onClick={onAdd}><Plus aria-hidden /></Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-lg" aria-label="More transaction actions"><Ellipsis aria-hidden /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end"><DropdownMenuItem onSelect={onImport}><Upload aria-hidden />Import CSV</DropdownMenuItem></DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div id={filtersId} className={cn("col-span-2 grid grid-cols-2 gap-2 md:gap-3 xl:contents", !filtersOpen && "hidden md:grid")}>
+          <Select value={filters.type} onValueChange={(value) => changeType(value as TransactionFilters["type"])}>
+            <SelectTrigger aria-label="Filter by type" className={cn(selectTriggerClasses, "xl:w-40")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expense</SelectItem>
+              <SelectItem value="transfer">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.categoryId}
+            onValueChange={(categoryId) => onChange({ ...filters, categoryId })}
+            disabled={filters.type === "transfer"}
+          >
+            <SelectTrigger aria-label="Filter by category" className={cn(selectTriggerClasses, "xl:w-52")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="all">All categories</SelectItem>
+              {showSpending ? (
+                <SelectGroup>
+                  <SelectLabel>Spending</SelectLabel>
+                  {spendingCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <CategoryOption category={category} />
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ) : null}
+              {showIncome ? (
+                <SelectGroup>
+                  <SelectLabel>Income</SelectLabel>
+                  {incomeCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <CategoryOption category={category} />
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ) : null}
+            </SelectContent>
+          </Select>
+
+          <Select value={filters.walletId} onValueChange={(walletId) => onChange({ ...filters, walletId })}>
+            <SelectTrigger aria-label="Filter by wallet" className={cn(selectTriggerClasses, "col-span-2 sm:col-span-1 xl:w-44")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="all">All wallets</SelectItem>
+              {wallets.map((wallet) => (
+                <SelectItem key={wallet.id} value={wallet.id}>
+                  <WalletOption wallet={wallet} />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters(filters) ? (
+            <Button variant="ghost" size="lg" onClick={onClear} className="col-span-2 sm:col-span-1 xl:col-span-1">
+              <X aria-hidden />
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
       </div>
+      {selectedFilters.length > 0 ? <p className="text-sm wrap-anywhere text-muted-foreground md:hidden" aria-live="polite">Filtered by: {selectedFilters.join(" · ")}</p> : null}
+      {hasActiveFilters(filters) && !filtersOpen ? <button type="button" onClick={onClear} className="min-h-11 self-start rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring md:hidden">Clear filters</button> : null}
     </div>
   )
 }

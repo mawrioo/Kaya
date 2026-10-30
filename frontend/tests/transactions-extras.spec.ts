@@ -1,3 +1,4 @@
+import { editQuickDraft, entryOption, saveAnotherQuickDraft } from "./quick-entry-helpers"
 import { expect, test, type APIRequestContext, type Page } from "./browser-fixtures"
 import type { AppData, Transaction } from "../lib/types"
 
@@ -205,16 +206,17 @@ test("Quick add can save and add another: it goes back to the one-line box, read
   await page.goto("/")
   await expect(quickAddCoin(page)).toBeEnabled()
   await quickAddCoin(page).click()
-  await page.getByRole("button", { name: "Simple expense", exact: true }).click()
+  await entryOption(page, "Simple expense")
   // Its title changes from "Quick add" to "Add transaction" once the line has filled the form, so it is found as the only dialog.
   const dialog = page.getByRole("dialog")
   const line = dialog.getByRole("textbox", { name: "Your expense" })
   await line.fill("bakso 30rb BCA")
   await line.press("Enter")
+  await editQuickDraft(page)
   await expect(dialog.getByLabel("Note (optional)")).toHaveValue("bakso")
   await dialog.locator("#tx-category").click()
   await page.getByRole("option", { name: "Food" }).click()
-  await dialog.getByRole("button", { name: "Save and add another" }).click()
+  await saveAnotherQuickDraft(page)
 
   await expect(dialog.getByRole("textbox", { name: "Your expense" })).toHaveValue("")
   await expect(dialog.getByRole("textbox", { name: "Your expense" })).toBeFocused()

@@ -116,7 +116,7 @@ export function TransactionList({
                           className="group/row overflow-hidden border-t first:border-t-0"
                         >
                           {isLocked(tx) ? (
-                            <div className="px-5 py-3.5 md:px-6">
+                            <div className="px-3 py-2.5 md:px-6 md:py-3.5">
                               <TransactionRowContent tx={tx} wallets={wallets} categories={categories} showDate={false} />
                             </div>
                           ) : (
@@ -165,7 +165,7 @@ export function TransactionList({
                               </>
                             }
                           >
-                            <div className="px-5 py-3.5 md:px-6">
+                            <div className="px-3 py-2.5 md:px-6 md:py-3.5">
                               <TransactionRowContent
                                 tx={tx}
                                 wallets={wallets}

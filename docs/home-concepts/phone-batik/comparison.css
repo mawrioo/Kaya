@@ -1,0 +1,117 @@
+* { box-sizing: border-box; }
+html { font-size: 16px; color-scheme: light; }
+body { margin: 0; background: #e9e3d8; color: #18261e; font-family: Inter, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
+button svg { flex-shrink: 0; }
+svg { vertical-align: middle; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid #a85623; outline-offset: 3px; }
+button:active { opacity: .8; }
+::selection { background: #e5b88f; color: #18261e; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.board { max-width: 940px; margin: auto; padding: 36px 40px 28px; }
+.board-header h1 { font: 400 32px/1.15 'Source Serif 4', Georgia, serif; letter-spacing: -.02em; margin: 0 0 10px; }
+.board-header p { font-size: 14px; line-height: 1.6; color: #536056; margin: 0; }
+.toolbar { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 26px 0 28px; padding-bottom: 22px; border-bottom: 1px solid #c9c5b8; }
+.control-group { display: flex; align-items: center; gap: 3px; padding: 3px; background: #ded8cc; border-radius: 11px; }
+.control-group button { font-size: 13px; min-height: 44px; padding: 0 16px; border-radius: 8px; }
+.control-group button[aria-pressed=true] { background: #f6f1e7; color: #18261e; box-shadow: 0 2px 5px #18261e0d; font-weight: 600; }
+.control-group button:hover { color: #81481e; }
+.concepts { display: grid; grid-template-columns: repeat(2, minmax(0, 390px)); justify-content: center; gap: 32px; }
+.concept-heading { min-height: 57px; }
+.concept-heading h2 { font-size: 16px; font-weight: 600; margin: 0 0 5px; letter-spacing: -.015em; }
+.concept-heading p { font-size: 12px; line-height: 1.5; margin: 0; color: #536056; }
+.phone { --bg: #ede5d7; --surface: #f4eee3; --text: #18261e; --muted: #536056; --line: #dcd5c8; --orange: #a74d16; --card: #23432f; width: 100%; height: 844px; position: relative; isolation: isolate; overflow: hidden; border-radius: 22px; background: var(--bg); color: var(--text); box-shadow: 0 12px 28px #18261e14; outline: 1px solid #18261e20; }
+.phone-scroll { height: calc(100% - 52px); overflow: auto; overscroll-behavior: contain; padding: 0 16px 24px; scrollbar-width: none; }
+.phone-scroll::-webkit-scrollbar { display: none; }
+.brand-row { height: 56px; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24px; font-weight: 650; letter-spacing: -.035em; line-height: 1.15; }
+.brand-row time { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.concept[data-variant=new] .brand { font-family: 'Source Serif 4', Georgia, serif; font-size: 20px; font-weight: 600; letter-spacing: .04em; line-height: 1.4; }
+.greeting { font: 400 23px/1.25 'Source Serif 4', Georgia, serif; letter-spacing: -.02em; margin: 8px 0 16px; }
+.balance { position: relative; isolation: isolate; overflow: hidden; border-radius: 16px; padding: 18px; background: var(--card); color: #f7f2e7; }
+.balance h4 { font-size: 12px; font-weight: 500; line-height: 18px; color: #e1e9db; margin: 0; }
+.hero-amount { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: 14px 0 6px; min-width: 0; }
+.total-money { font-size: 34px; font-weight: 500; line-height: 1.2; letter-spacing: -.035em; font-variant-numeric: lining-nums tabular-nums; white-space: nowrap; }
+.total-money strong { font: inherit; }
+.currency { font-size: 16px; font-weight: 500; letter-spacing: 0; }
+.eye { width: 44px; height: 44px; min-width: 44px; display: grid; place-items: center; color: var(--muted); padding: 0; border-radius: 8px; }
+.eye svg { width: 16px; height: 16px; }
+.balance .eye { color: #d4dfcf; }
+.balance-caption { color: #d4dfcf; font-size: 12px; line-height: 18px; margin: 0; }
+.leaf-pattern { position: absolute; z-index: -1; pointer-events: none; width: 130px; height: 170px; right: -32px; top: -24px; color: #f7f2e7; opacity: .12; }
+.batik-pattern { position: absolute; z-index: -1; pointer-events: none; inset: 0 0 0 auto; width: 70%; background-image: linear-gradient(to right, var(--card), transparent 86%), url("data:image/svg+xml,KAWUNG_TILE"); background-size: auto, 36px 36px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; height: 44px; }
+.section-heading h4 { font-size: 14px; font-weight: 600; margin: 0; }
+.section-heading button { min-height: 44px; font-size: 12px; display: flex; align-items: center; gap: 4px; padding: 0; color: var(--muted); }
+.section-heading svg { width: 12px; height: 12px; }
+.wallets { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.wallet { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; align-items: center; gap: 0; min-height: 55px; padding: 5px 2px 5px 10px; border-radius: 12px; background: var(--surface); }
+.wallet-name { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; text-align: left; min-width: 0; padding: 0; min-height: 44px; }
+.wallet-name>span:last-child { overflow-wrap: anywhere; }
+.wallet-icon { display: grid; place-items: center; flex-shrink: 0; height: 24px; width: 24px; border-radius: 50%; background: var(--wallet-soft); color: var(--wallet-ink); }
+.wallet-icon svg { width: 14px; height: 14px; }
+.wallet-amount { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.015em; white-space: nowrap; }
+.month-summary { margin-top: 16px; padding: 16px; border-radius: 16px; background: var(--surface); }
+.month-summary>div { display: flex; align-items: center; justify-content: space-between; }
+.month-summary h4 { font: 400 22px/1.25 'Source Serif 4', Georgia, serif; margin: 0; letter-spacing: -.012em; }
+.month-summary button { display: grid; place-items: center; width: 44px; height: 44px; margin: -10px -10px -10px 0; color: var(--muted); }
+.month-summary p { font-size: 13px; color: var(--muted); margin: 6px 0 14px; }
+.month-summary dl { margin: 0; font-size: 13px; }
+.month-summary dl>div { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.month-summary dt { color: var(--muted); }
+.month-summary dd { margin: 0; font-variant-numeric: tabular-nums; }
+.bottom { height: 52px; position: absolute; bottom: 0; left: 0; right: 0; z-index: 3; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 3px 5px 4px; background: var(--surface); border-top: 1px solid var(--line); }
+.bottom button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 44px; min-height: 44px; padding: 0 0 4px; font-size: 10px; line-height: 1.2; color: var(--muted); }
+.bottom button>svg { width: 18px; height: 18px; stroke-width: 1.6; }
+.bottom button[aria-current] { color: var(--orange); font-weight: 600; }
+.bottom button[aria-current]>svg { stroke-width: 2; }
+.bottom button[aria-current]:after { content: ''; position: absolute; bottom: 0; height: 2px; width: 14px; border-radius: 1px; background: currentColor; }
+.bottom .centre-add { padding: 0; gap: 0; }
+.plus-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #cc854c; color: #23190f; }
+.plus-mark svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.phone :focus-visible { outline-color: var(--orange); outline-offset: -2px; }
+.balance :focus-visible { outline-color: #f7f2e7; }
+.scrim { position: absolute; z-index: 4; inset: 0; background: #07120c88; }
+.more { position: absolute; z-index: 5; bottom: 60px; left: 8px; right: 8px; max-height: calc(100% - 80px); overflow: auto; background: #1a3826; color: #ece9de; border-radius: 16px; padding: 12px 16px; }
+.more-heading { display: flex; align-items: center; justify-content: space-between; }
+.more-heading h4 { font-size: 16px; font-weight: 500; margin: 0; }
+.more-heading button { width: 44px; height: 44px; display: grid; place-items: center; }
+.more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.more-grid button { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; text-align: left; padding: 0 8px; }
+.more-grid button:last-child { grid-column: 1/-1; margin-top: 8px; border-top: 1px solid #ffffff20; padding-top: 8px; }
+.more :focus-visible { outline-color: #f7f2e7; }
+.preview-message { position: absolute; z-index: 6; left: 12px; right: 12px; bottom: 64px; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 12px; background: var(--text); color: var(--bg); font-size: 12px; line-height: 1.5; box-shadow: 0 6px 18px #0002; }
+.preview-message button { min-width: 44px; min-height: 44px; display: grid; place-items: center; margin-left: auto; }
+.preview-message svg { width: 16px; height: 16px; }
+.comparison-note { font-size: 12px; line-height: 1.7; color: #536056; margin: 22px 0 0; }
+.dark .phone { --bg: #0f1712; --surface: #1a271e; --text: #f0ebdf; --muted: #abb8a8; --line: #344235; --orange: #e4a36e; --card: #294b35; }
+.dark .wallet-icon { background: color-mix(in srgb, var(--wallet-ink) 22%, #1a271e); color: color-mix(in srgb, var(--wallet-soft) 75%, var(--wallet-ink)); }
+.dark .plus-mark { background: #dda16e; color: #21190f; }
+body[data-view=current] .concept[data-variant=new], body[data-view=new] .concept[data-variant=current] { display: none; }
+body:not([data-view=both]) .concepts { grid-template-columns: minmax(0, 390px); }
+@media (hover:hover) {
+ .phone button:hover { color: var(--orange); }
+ .balance button:hover { color: #fff; }
+ .wallet-name:hover { color: var(--orange); }
+ .bottom .centre-add:hover .plus-mark { background: #b7733f; }
+ .dark .bottom .centre-add:hover .plus-mark { background: #e6b487; }
+ .more button:hover { background: #ffffff0b; color: #fff; }
+}
+@media (max-width:650px) {
+ .board { padding: 24px 16px; }
+ .board-header h1 { font-size: 28px; }
+ .toolbar { gap: 10px; margin: 20px 0 24px; }
+ .control-group button { padding: 0 13px; }
+ .concepts { grid-template-columns: minmax(0, 390px); gap: 28px; }
+ .comparison-note { max-width: 390px; margin: 20px auto 0; }
+}
+@media (max-width:380px) {
+ .wallet { grid-template-columns: minmax(0, 1fr) 44px; }
+ .wallet-name { grid-column: 1; grid-row: 1; }
+ .wallet .eye { grid-column: 2; grid-row: 1/3; }
+ .wallet-amount { grid-column: 1; grid-row: 2; padding-left: 32px; padding-bottom: 4px; }
+ .total-money { font-size: clamp(24px, 8vw, 34px); }
+ .brand-row { gap: 8px; }
+}
+@media (prefers-reduced-motion:reduce) { * { scroll-behavior: auto; } }

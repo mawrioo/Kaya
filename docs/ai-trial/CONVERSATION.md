@@ -1,5 +1,7 @@
 # Smart entry: follow-ups and corrections
 
+Update 28 Oct: [the next release](ENTRY-IMPROVEMENTS.md) adds duplicate notices, draft undo and broader dates. The date limits and measurements below describe the earlier 27 Oct release.
+
 Delivered 27 Oct 2026. The owner authorised all five next-version steps in one pass, overriding the earlier review stops. These correspond to steps 5-9 in [the plan](../AI-ASSISTANT-NEXT-STEPS.md).
 
 ## Delivered behaviour

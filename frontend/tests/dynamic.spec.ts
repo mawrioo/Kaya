@@ -1,3 +1,4 @@
+import { editQuickDraft, entryOption, saveQuickDraft, finishQuickDraft } from "./quick-entry-helpers"
 import { expect, test, type APIRequestContext } from "./browser-fixtures"
 
 const read = async (request: APIRequestContext) => (await request.get("/api/data")).json()
@@ -33,15 +34,26 @@ test("a stale poll cannot undo the visible result of a local save", async ({ pag
   const held = new Promise<void>((resolve) => { release = resolve })
   let reading!: () => void
   const started = new Promise<void>((resolve) => { reading = resolve })
-  await page.route("**/api/data", async (route) => { reading(); await held; await route.fulfill({ json: before }) })
+  let heldFirstRead = false
+  await page.route("**/api/data", async (route) => {
+    // Hold the polling read only; the save's fresh duplicate check must still reach the server.
+    if (heldFirstRead) return route.continue()
+    heldFirstRead = true
+    reading()
+    await held
+    await route.fulfill({ json: before })
+  })
   await started
   await page.getByRole("button", { name: "Quick add", exact: true }).click()
+  await entryOption(page, "Simple expense")
   await page.getByLabel("Your expense").fill("kopi 23rb BCA")
-  await page.getByRole("button", { name: "Fill form", exact: true }).click()
+  await page.getByRole("button", { name: "Review", exact: true }).click()
+  await editQuickDraft(page)
   await page.getByLabel("Note (optional)").fill("Stale poll check")
   await page.locator("#tx-category").click()
   await page.getByRole("option", { name: "Food", exact: true }).click()
-  await page.getByRole("button", { name: "Add transaction", exact: true }).click()
+  await saveQuickDraft(page)
+  await finishQuickDraft(page)
   await expect(page.getByRole("dialog")).toHaveCount(0)
   release()
   await page.waitForTimeout(500)

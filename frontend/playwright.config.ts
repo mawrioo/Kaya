@@ -10,6 +10,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: "http://localhost:3200",
+    launchOptions: { args: process.env.KAYA_BROWSER_DISABLE_GPU === "1" ? ["--disable-gpu"] : [] },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
